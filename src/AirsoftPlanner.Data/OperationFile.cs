@@ -17,10 +17,10 @@ public sealed class OperationFile : IDisposable
     /// 4 = membres, véhicules, radio, matériel de jeu, positions des équipes ; 5 = règles et packages ;
     /// 6 = statut d'inscription des équipes ; 7 = suivi des objets d'objectif ;
     /// 8 = joueurs hors jeu ; 9 = finances (tarif, paiements, dépenses) ;
-    /// 10 = identifiants GPS des équipes.
+    /// 10 = identifiants GPS des équipes ; 11 = remises, cadeaux, véhicules en jeu et leurs traces.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 10;
+    public const int CurrentFormatVersion = 11;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -113,6 +113,10 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<TeamVehicle> LoadVehicles() => Context.TeamVehicles.OrderBy(v => v.SortOrder).ToList();
 
     public IReadOnlyList<RuleDocument> LoadRuleDocuments() => Context.RuleDocuments.OrderBy(r => r.SortOrder).ToList();
+
+    public IReadOnlyList<TeamAdjustment> LoadAdjustments() => Context.TeamAdjustments.ToList();
+
+    public IReadOnlyList<VehiclePosition> LoadVehiclePositions() => Context.VehiclePositions.AsEnumerable().OrderBy(p => p.At).ToList();
 
     public IReadOnlyList<Payment> LoadPayments() => Context.Payments.AsEnumerable().OrderBy(p => p.Date).ToList();
 

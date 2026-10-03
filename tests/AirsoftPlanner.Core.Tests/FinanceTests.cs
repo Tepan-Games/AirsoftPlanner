@@ -31,6 +31,27 @@ public class FinanceTests
     }
 
     [Fact]
+    public void Discount_after_payment_becomes_a_refund()
+    {
+        var dues = new Dictionary<Guid, decimal> { [Alpha] = 179.5m }; // 200 - 20 de remise - 0,50 de carburant
+        var summary = FinanceCalculator.Summarize(dues, [new Payment { TeamId = Alpha, Amount = 200m }], []);
+
+        Assert.Equal(179.5m, summary.ExpectedIncome);
+        Assert.Equal(20.5m, summary.Refunds);
+        Assert.Equal(0m, summary.Outstanding);
+    }
+
+    [Fact]
+    public void Fuel_refund_larger_than_the_participation_is_owed_to_the_team()
+    {
+        var summary = FinanceCalculator.Summarize(new Dictionary<Guid, decimal> { [Alpha] = -15m }, [], []);
+
+        Assert.Equal(15m, summary.Refunds);
+        Assert.Equal(-15m, summary.ExpectedIncome);
+        Assert.Equal(0m, summary.Outstanding);
+    }
+
+    [Fact]
     public void Summary_combines_team_dues_other_income_and_expenses()
     {
         var dues = new Dictionary<Guid, decimal> { [Alpha] = 200m, [Bravo] = 150m };
@@ -49,12 +70,13 @@ public class FinanceTests
 
         var summary = FinanceCalculator.Summarize(dues, payments, expenses);
 
-        Assert.Equal(200m + 150m + 30m + 100m, summary.ExpectedIncome);
+        Assert.Equal(200m + 150m + 100m, summary.ExpectedIncome);
         Assert.Equal(380m, summary.ReceivedIncome);
         Assert.Equal(100m, summary.Outstanding);
+        Assert.Equal(30m, summary.Refunds); // l'équipe annulée doit être remboursée
         Assert.Equal(380m, summary.Expenses);
         Assert.Equal(80m, summary.UnpaidExpenses);
         Assert.Equal(80m, summary.CurrentBalance);   // 380 encaissés - 300 réglés
-        Assert.Equal(100m, summary.ProjectedBalance); // 480 attendus - 380 de dépenses
+        Assert.Equal(70m, summary.ProjectedBalance); // 450 gardés - 380 de dépenses
     }
 }

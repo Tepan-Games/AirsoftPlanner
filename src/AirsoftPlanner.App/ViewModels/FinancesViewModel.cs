@@ -67,6 +67,22 @@ public record ExpenseCategoryOption(ExpenseCategory Value, string Label)
     public override string ToString() => Label;
 }
 
+public record AdjustmentKindOption(AdjustmentKind Value, string Label)
+{
+    public static IReadOnlyList<AdjustmentKindOption> All { get; } =
+    [
+        new(AdjustmentKind.Discount, "Remise"),
+        new(AdjustmentKind.Gift, "Cadeau"),
+    ];
+
+    public static AdjustmentKindOption Of(AdjustmentKind kind) => All.First(o => o.Value == kind);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Ligne de remise, cadeau ou carburant d'une équipe.</summary>
+public record CreditRow(TeamAdjustment? Model, string Text, string AmountText);
+
 /// <summary>Ligne affichée d'un paiement ou d'une autre recette.</summary>
 public record PaymentRow(Payment Model, string DateText, string AmountText, string MethodText, string Details);
 
@@ -76,6 +92,11 @@ public partial class TeamFinanceRow(TeamViewModel team, FinancesViewModel owner)
     public TeamViewModel Team => team;
 
     public TeamBalance Balance { get; private set; } = new(0, 0);
+
+    /// <summary>« 300,00 € − remises 20,00 € − carburant 12,35 € (61,7 km) ».</summary>
+    public string BreakdownText { get; private set; } = "";
+
+    public IReadOnlyList<CreditRow> Credits { get; private set; } = [];
 
     public string DueText => Money.Format(Balance.Due);
 
@@ -113,9 +134,11 @@ public partial class TeamFinanceRow(TeamViewModel team, FinancesViewModel owner)
         }
     }
 
-    public void Update(TeamBalance balance)
+    public void Update(TeamBalance balance, string breakdown, IReadOnlyList<CreditRow> credits)
     {
         Balance = balance;
+        BreakdownText = breakdown;
+        Credits = credits;
         OnPropertyChanged(string.Empty);
     }
 }
@@ -193,13 +216,18 @@ public partial class FinancesViewModel : ViewModelBase
     private readonly TeamsViewModel _teams;
     private readonly IFileDialogService _dialogs;
     private readonly List<Payment> _payments;
+    private readonly List<TeamAdjustment> _adjustments;
+    private readonly VehicleTracker _vehicles;
 
-    public FinancesViewModel(OperationFile file, TeamsViewModel teams, IFileDialogService dialogs)
+    public FinancesViewModel(OperationFile file, TeamsViewModel teams, IFileDialogService dialogs, VehicleTracker vehicles)
     {
         _file = file;
         _teams = teams;
         _dialogs = dialogs;
+        _vehicles = vehicles;
         _payments = file.LoadPayments().ToList();
+        _adjustments = file.LoadAdjustments().ToList();
+        vehicles.Changed += Refresh;
         Expenses = new ObservableCollection<ExpenseViewModel>(file.LoadExpenses().Select(e => new ExpenseViewModel(e, Refresh)));
         teams.Items.CollectionChanged += (_, e) =>
         {
@@ -232,8 +260,69 @@ public partial class FinancesViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Carburant remboursé par kilomètre aux véhicules mis en jeu.</summary>
+    public string FuelRatePerKmText
+    {
+        get => _file.Operation.FuelRatePerKm.ToString("0.###", French);
+        set
+        {
+            _file.Operation.FuelRatePerKm = Money.Parse(value);
+            OnPropertyChanged();
+            Refresh();
+        }
+    }
+
+    public IReadOnlyList<AdjustmentKindOption> AdjustmentKinds => AdjustmentKindOption.All;
+
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AddPaymentCommand))]
+    private AdjustmentKindOption _newAdjustmentKind = AdjustmentKindOption.Of(AdjustmentKind.Discount);
+
+    [ObservableProperty]
+    private string _newAdjustmentLabel = "";
+
+    [ObservableProperty]
+    private string _newAdjustmentAmount = "";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveAdjustmentCommand))]
+    private CreditRow? _selectedCredit;
+
+    [RelayCommand(CanExecute = nameof(HasSelectedTeam))]
+    private async Task AddAdjustmentAsync()
+    {
+        var amount = 0m;
+        if (NewAdjustmentAmount.Trim().Length > 0 && (!Money.TryParse(NewAdjustmentAmount, out amount) || amount < 0))
+        {
+            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 20 ou 12,50 ; vide pour un cadeau sans valeur).");
+            return;
+        }
+
+        var adjustment = new TeamAdjustment
+        {
+            TeamId = SelectedTeam!.Team.Model.Id,
+            Kind = NewAdjustmentKind.Value,
+            Label = NewAdjustmentLabel.Trim().Length > 0 ? NewAdjustmentLabel.Trim() : NewAdjustmentKind.Label,
+            Amount = amount,
+        };
+        _file.Add(adjustment);
+        _adjustments.Add(adjustment);
+        NewAdjustmentLabel = "";
+        NewAdjustmentAmount = "";
+        Refresh();
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveAdjustment))]
+    private void RemoveAdjustment()
+    {
+        _file.Remove(SelectedCredit!.Model!);
+        _adjustments.Remove(SelectedCredit.Model!);
+        Refresh();
+    }
+
+    private bool CanRemoveAdjustment => SelectedCredit?.Model is not null;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddPaymentCommand), nameof(AddAdjustmentCommand))]
     private TeamFinanceRow? _selectedTeam;
 
     [ObservableProperty]
@@ -277,6 +366,10 @@ public partial class FinancesViewModel : ViewModelBase
     public string ReceivedIncomeText => Money.Format(Summary.ReceivedIncome);
 
     public string OutstandingText => Money.Format(Summary.Outstanding);
+
+    public string RefundsText => Money.Format(Summary.Refunds);
+
+    public bool HasRefunds => Summary.Refunds > 0;
 
     public string ExpensesText => Money.Format(Summary.Expenses);
 
@@ -399,12 +492,31 @@ public partial class FinancesViewModel : ViewModelBase
         }
 
         var dues = new Dictionary<Guid, decimal>();
+        var fuelRate = _file.Operation.FuelRatePerKm;
         foreach (var row in TeamRows)
         {
-            var due = row.Team.IsPlaying ? FinanceCalculator.AmountDue(row.Team.Size, price, row.Team.Model.AmountDueOverride) : 0;
+            var gross = row.Team.IsPlaying ? FinanceCalculator.AmountDue(row.Team.Size, price, row.Team.Model.AmountDueOverride) : 0;
+            var credits = new List<CreditRow>();
+            foreach (var adjustment in _adjustments.Where(a => a.TeamId == row.Team.Model.Id))
+                credits.Add(new CreditRow(adjustment, $"{AdjustmentKindOption.Of(adjustment.Kind).Label} : {adjustment.Label}",
+                    adjustment.Amount > 0 ? $"− {Money.Format(adjustment.Amount)}" : "offert"));
+            var fuel = 0m;
+            foreach (var vehicle in row.Team.Vehicles.Where(v => v.InGame))
+            {
+                var km = _vehicles.Kilometers(vehicle.Model);
+                var refund = VehicleMileage.FuelRefund(km, fuelRate);
+                fuel += refund;
+                credits.Add(new CreditRow(null, $"Carburant {vehicle.Kind} ({vehicle.KilometersText})", $"− {Money.Format(refund)}"));
+            }
+
+            var discounts = _adjustments.Where(a => a.TeamId == row.Team.Model.Id).Sum(a => a.Amount);
+            // Remises et carburant viennent en déduction ; au-delà de la somme due, c'est l'orga qui doit à l'équipe.
+            var due = gross - discounts - fuel;
             if (row.Team.IsPlaying)
                 dues[row.Team.Model.Id] = due;
-            row.Update(FinanceCalculator.Balance(due, _payments.Where(p => p.TeamId == row.Team.Model.Id)));
+            var breakdown = discounts + fuel == 0 ? ""
+                : $"{Money.Format(gross)}{(discounts > 0 ? $" − remises {Money.Format(discounts)}" : "")}{(fuel > 0 ? $" − carburant {Money.Format(fuel)}" : "")}";
+            row.Update(FinanceCalculator.Balance(due, _payments.Where(p => p.TeamId == row.Team.Model.Id)), breakdown, credits);
         }
 
         SelectedTeam = TeamRows.FirstOrDefault(r => r.Team == selected) ?? SelectedTeam;
@@ -443,7 +555,8 @@ public partial class FinancesViewModel : ViewModelBase
 
     private void OnTeamChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Status) or nameof(TeamViewModel.Name))
+        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Status) or nameof(TeamViewModel.Name)
+            or nameof(TeamViewModel.VehicleSummary))
             Refresh();
     }
 }

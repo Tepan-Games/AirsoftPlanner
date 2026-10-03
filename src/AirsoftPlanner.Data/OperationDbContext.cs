@@ -41,6 +41,10 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<Expense> Expenses => Set<Expense>();
 
+    public DbSet<TeamAdjustment> TeamAdjustments => Set<TeamAdjustment>();
+
+    public DbSet<VehiclePosition> VehiclePositions => Set<VehiclePosition>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -100,6 +104,10 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<Payment>().Property(p => p.Method).HasConversion<string>();
         modelBuilder.Entity<Expense>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Expense>().Property(e => e.Category).HasConversion<string>();
+        modelBuilder.Entity<TeamAdjustment>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<TeamAdjustment>().Property(a => a.Kind).HasConversion<string>();
+        modelBuilder.Entity<VehiclePosition>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<VehiclePosition>().Ignore(p => p.Point);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

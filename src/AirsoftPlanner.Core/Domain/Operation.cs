@@ -23,4 +23,7 @@ public class Operation : Entity
 
     /// <summary>Participation aux frais demandée par joueur.</summary>
     public decimal PricePerPlayer { get; set; }
+
+    /// <summary>Carburant remboursé par kilomètre aux véhicules mis en jeu.</summary>
+    public decimal FuelRatePerKm { get; set; }
 }

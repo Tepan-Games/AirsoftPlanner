@@ -33,12 +33,14 @@ public record TeamBalance(decimal Due, decimal Paid)
     };
 }
 
-/// <param name="ExpectedIncome">Recettes attendues : sommes dues par les équipes + autres recettes reçues.</param>
+/// <param name="ExpectedIncome">Recettes définitives attendues : sommes dues par les équipes (après remises) + autres recettes.</param>
 /// <param name="ReceivedIncome">Recettes encaissées.</param>
 /// <param name="Outstanding">Reste à encaisser auprès des équipes.</param>
 /// <param name="Expenses">Total des dépenses.</param>
 /// <param name="PaidExpenses">Dépenses déjà réglées.</param>
-public record FinanceSummary(decimal ExpectedIncome, decimal ReceivedIncome, decimal Outstanding, decimal Expenses, decimal PaidExpenses)
+/// <param name="Refunds">Sommes à rendre (trop-perçus, équipes annulées qui avaient payé, remises après paiement).</param>
+public record FinanceSummary(decimal ExpectedIncome, decimal ReceivedIncome, decimal Outstanding, decimal Expenses, decimal PaidExpenses,
+    decimal Refunds = 0)
 {
     public decimal UnpaidExpenses => Expenses - PaidExpenses;
 
@@ -70,10 +72,13 @@ public static class FinanceCalculator
             .ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
         var teams = teamDues.Keys.Union(paidByTeam.Keys);
 
-        // Par équipe : la somme due, ou ce qu'elle a déjà versé si c'est plus (trop-perçu, équipe annulée qui a payé).
-        var expectedFromTeams = teams.Sum(t => Math.Max(teamDues.GetValueOrDefault(t), paidByTeam.GetValueOrDefault(t)));
+        // Ce que l'orga garde au final : la somme due, qui peut être négative (carburant remboursé supérieur à la
+        // participation). Tout ce qui a été versé au-delà, ou dû par l'orga, est à rendre.
+        var expectedFromTeams = teamDues.Values.Sum();
         var outstanding = teamDues.Sum(due => Math.Max(0, due.Value - paidByTeam.GetValueOrDefault(due.Key)));
+        var refunds = teams.Sum(t => Math.Max(0, paidByTeam.GetValueOrDefault(t) - teamDues.GetValueOrDefault(t)));
         return new FinanceSummary(
+            Refunds: refunds,
             ExpectedIncome: expectedFromTeams + otherIncome,
             ReceivedIncome: payments.Sum(p => p.Amount),
             Outstanding: outstanding,

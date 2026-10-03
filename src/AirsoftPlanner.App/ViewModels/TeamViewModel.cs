@@ -13,12 +13,13 @@ public class TeamViewModel : ViewModelBase
     private readonly IReadOnlyCollection<FactionViewModel> _factions;
 
     public TeamViewModel(Team team, IReadOnlyCollection<FactionViewModel> factions,
-        IEnumerable<TeamMember> members, IEnumerable<TeamVehicle> vehicles)
+        IEnumerable<TeamMember> members, IEnumerable<TeamVehicle> vehicles, VehicleTracker? tracker = null)
     {
+        Tracker = tracker;
         _team = team;
         _factions = factions;
         Members = new ObservableCollection<MemberViewModel>(members.Select(m => new MemberViewModel(m, OnLeaderChanged)));
-        Vehicles = new ObservableCollection<VehicleViewModel>(vehicles.Select(v => new VehicleViewModel(v)));
+        Vehicles = new ObservableCollection<VehicleViewModel>(vehicles.Select(v => new VehicleViewModel(v, tracker)));
         Members.CollectionChanged += (_, e) =>
         {
             foreach (var member in e.NewItems?.OfType<MemberViewModel>() ?? [])
@@ -38,6 +39,8 @@ public class TeamViewModel : ViewModelBase
     }
 
     public Team Model => _team;
+
+    public VehicleTracker? Tracker { get; }
 
     public ObservableCollection<MemberViewModel> Members { get; }
 

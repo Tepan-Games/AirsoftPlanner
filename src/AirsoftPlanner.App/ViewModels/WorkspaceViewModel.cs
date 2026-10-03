@@ -10,18 +10,23 @@ public class WorkspaceViewModel : ViewModelBase
     {
         General = new OperationViewModel(file.Operation);
         Factions = new FactionsViewModel(file);
-        Teams = new TeamsViewModel(file, Factions, dialogs);
+        Vehicles = new VehicleTracker(file);
+        Teams = new TeamsViewModel(file, Factions, dialogs, Vehicles);
         Factions.AttachTeams(Teams);
         Terrain = new TerrainViewModel(file, General, dialogs);
         GameItems = new GameItemsViewModel(file);
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
-        Tracking.Gps = new GpsViewModel(Tracking, Teams, dialogs);
-        Finances = new FinancesViewModel(file, Teams, dialogs);
+        Tracking.Vehicles = Vehicles;
+        Tracking.Gps = new GpsViewModel(Tracking, Teams, dialogs, Vehicles);
+        Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }
 
     public OperationViewModel General { get; }
+
+    /// <summary>Traces GPS des véhicules mis en jeu.</summary>
+    public VehicleTracker Vehicles { get; }
 
     public FactionsViewModel Factions { get; }
 

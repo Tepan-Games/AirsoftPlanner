@@ -637,6 +637,9 @@ public partial class TrackingViewModel : ViewModelBase
 
     partial void OnSimulatedMinutesChanged(double value) => Refresh();
 
+    /// <summary>Traces des véhicules mis en jeu (affichés sur la carte).</summary>
+    public VehicleTracker? Vehicles { get; set; }
+
     /// <summary>Réception automatique des positions (smartphones, Meshtastic, Traccar, fichiers).</summary>
     public GpsViewModel? Gps { get; set; }
 
@@ -734,9 +737,16 @@ public partial class TrackingViewModel : ViewModelBase
                 s == Selected))
             .ToList();
 
+        var nowDate = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
+        var vehicleMarkers = Vehicles is null ? [] : _teams.Items
+            .SelectMany(t => t.Vehicles.Where(v => v.InGame).Select(v => (Team: t, Vehicle: v)))
+            .Select(x => (x.Team, x.Vehicle, Point: Vehicles.LastPosition(x.Vehicle.Model.Id, nowDate)))
+            .Where(x => x.Point is not null)
+            .Select(x => new ItemMarker(x.Point!.Value, $"🚙 {x.Team.Name} {x.Vehicle.Kind}", false));
         ItemMarkers = TrackedItems
             .Where(t => t.Location is not null && t.StateColor != "#2E7D32")
             .Select(t => new ItemMarker(t.Location!.Value, $"📦 {t.Item.Name}", t == SelectedItem))
+            .Concat(vehicleMarkers)
             .ToList();
 
         var now = NowMinutes;

@@ -127,8 +127,13 @@
                           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Type (4x4, quad, pick-up…)" Binding="{Binding Kind}" Width="*" />
-                        <DataGridTextColumn Header="Nombre" Binding="{Binding Quantity}" Width="90" />
-                        <DataGridTextColumn Header="Remarques (immatriculation, places…)" Binding="{Binding Notes}" Width="2*" />
+                        <DataGridTextColumn Header="Nombre" Binding="{Binding Quantity}" Width="80" />
+                        <DataGridCheckBoxColumn Header="En jeu" Binding="{Binding InGame}" Width="70" />
+                        <DataGridTextColumn Header="ID GPS" Binding="{Binding GpsDeviceId}" Width="*" />
+                        <DataGridTextColumn Header="Compteur départ" Binding="{Binding OdometerStartText}" Width="*" />
+                        <DataGridTextColumn Header="Compteur arrivée" Binding="{Binding OdometerEndText}" Width="*" />
+                        <DataGridTextColumn Header="Km sur l'OP" Binding="{Binding KilometersText}" Width="*" IsReadOnly="True" />
+                        <DataGridTextColumn Header="Remarques (immatriculation, places…)" Binding="{Binding Notes}" Width="1.5*" />
                     </DataGrid.Columns>
                 </DataGrid>
                 <StackPanel Orientation="Horizontal" Spacing="8">

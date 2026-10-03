@@ -187,7 +187,10 @@ public sealed class OperationFileTests : IDisposable
         {
             file.Add(team);
             file.Add(new TeamMember { TeamId = team.Id, FirstName = "Jean", Callsign = "Faucon", Phone = "06 00 00 00 00", IsLeader = true });
-            file.Add(new TeamVehicle { TeamId = team.Id, Kind = "4x4", Quantity = 2 });
+            var vehicle = new TeamVehicle { TeamId = team.Id, Kind = "4x4", Quantity = 2, InGame = true, GpsDeviceId = "4x4-alpha", OdometerStartKm = 12000 };
+            file.Add(vehicle);
+            file.Add(new VehiclePosition { VehicleId = vehicle.Id, Point = new GeoPoint(45, 5), At = DateTimeOffset.UtcNow });
+            file.Add(new TeamAdjustment { TeamId = team.Id, Kind = AdjustmentKind.Discount, Label = "Aide au montage", Amount = 20m });
             file.Add(crate);
             file.Operation.PricePerPlayer = 25.5m;
             team.AmountDueOverride = 120m;
@@ -204,7 +207,10 @@ public sealed class OperationFileTests : IDisposable
 
         using var reopened = OperationFile.Open(path);
         Assert.Equal("Faucon", Assert.Single(reopened.LoadMembers()).Callsign);
-        Assert.Equal(2, Assert.Single(reopened.LoadVehicles()).Quantity);
+        var reloadedVehicle = Assert.Single(reopened.LoadVehicles());
+        Assert.Equal((2, true, "4x4-alpha", 12000m), (reloadedVehicle.Quantity, reloadedVehicle.InGame, reloadedVehicle.GpsDeviceId, reloadedVehicle.OdometerStartKm!.Value));
+        Assert.Equal(reloadedVehicle.Id, Assert.Single(reopened.LoadVehiclePositions()).VehicleId);
+        Assert.Equal((AdjustmentKind.Discount, 20m), (Assert.Single(reopened.LoadAdjustments()).Kind, reopened.LoadAdjustments()[0].Amount));
         Assert.Equal(GameItemCategory.Crate, Assert.Single(reopened.LoadGameItems()).Category);
         Assert.Equal(25.5m, reopened.Operation.PricePerPlayer);
         Assert.Equal(120m, reopened.LoadTeams().Single().AmountDueOverride);

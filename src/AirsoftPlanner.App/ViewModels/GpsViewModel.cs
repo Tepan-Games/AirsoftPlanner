@@ -28,8 +28,11 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private readonly MeshtasticMqttSource _meshtastic = new();
     private readonly TraccarServerSource _traccar = new();
 
-    public GpsViewModel(TrackingViewModel tracking, TeamsViewModel teams, IFileDialogService dialogs)
+    private readonly VehicleTracker _vehicles;
+
+    public GpsViewModel(TrackingViewModel tracking, TeamsViewModel teams, IFileDialogService dialogs, VehicleTracker vehicles)
     {
+        _vehicles = vehicles;
         _tracking = tracking;
         _teams = teams;
         _dialogs = dialogs;
@@ -247,6 +250,17 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 
     private void Apply(GpsFix fix)
     {
+        // Traceur d'un véhicule mis en jeu : alimente son kilométrage (et sa position sur la carte).
+        var vehicle = _teams.Items.SelectMany(t => t.Vehicles)
+            .FirstOrDefault(v => v.GpsDeviceId.Length > 0 && v.GpsDeviceId.Equals(fix.DeviceId.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (vehicle is not null)
+        {
+            _vehicles.Add(vehicle.Model, fix.Point, fix.Time ?? DateTimeOffset.Now);
+            Log($"{(fix.Time ?? DateTimeOffset.Now).LocalDateTime:HH:mm:ss} véhicule {vehicle.Kind} ({fix.Source}, {fix.DeviceId}) — {vehicle.KilometersText}");
+            _tracking.Refresh();
+            return;
+        }
+
         var team = GpsParsers.FindTeam(_teams.Items.Select(t => t.Model), fix.DeviceId) is { } model
             ? _teams.Items.First(t => t.Model == model)
             : null;

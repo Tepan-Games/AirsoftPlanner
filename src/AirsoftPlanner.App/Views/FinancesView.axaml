@@ -22,7 +22,10 @@
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
                 <TextBlock Text="Participation par joueur (€)" VerticalAlignment="Center" />
-                <TextBox Text="{Binding PricePerPlayerText}" Width="90" />
+                <TextBox Text="{Binding PricePerPlayerText}" Width="80" />
+                <TextBlock Text="Carburant remboursé (€/km)" VerticalAlignment="Center"
+                           ToolTip.Tip="Pour les véhicules mis en jeu (onglet Équipes) : kilomètres au compteur ou d'après la trace GPS" />
+                <TextBox Text="{Binding FuelRatePerKmText}" Width="80" />
                 <Button Content="Exporter (CSV)…" Command="{Binding ExportCsvCommand}" />
             </StackPanel>
             <TextBlock Text="Finances de l'OP" Classes="h1" />
@@ -43,6 +46,13 @@
                 <StackPanel>
                     <TextBlock Text="Reste à encaisser" Classes="label" />
                     <TextBlock Text="{Binding OutstandingText}" Classes="amount" Foreground="#EF6C00" />
+                </StackPanel>
+            </Border>
+            <Border Classes="card" IsVisible="{Binding HasRefunds}">
+                <StackPanel>
+                    <TextBlock Text="Remboursements à faire" Classes="label" />
+                    <TextBlock Text="{Binding RefundsText}" Classes="amount" Foreground="#6A1B9A" />
+                    <TextBlock Text="trop-perçus, remises après paiement" FontSize="11" Opacity="0.7" />
                 </StackPanel>
             </Border>
             <Border Classes="card">
@@ -98,6 +108,7 @@
                                         <Run Text="{Binding DueText}" />
                                     </TextBlock>
                                     <TextBlock Text="{Binding RemainingText}" FontSize="11" HorizontalAlignment="Right" Opacity="0.75" />
+                                    <TextBlock Text="{Binding BreakdownText}" FontSize="10" HorizontalAlignment="Right" Opacity="0.6" />
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>
@@ -109,6 +120,23 @@
                         <TextBlock Text="Somme due fixée (vide = effectif × tarif) :" VerticalAlignment="Center" />
                         <TextBox Text="{Binding SelectedTeam.OverrideText, FallbackValue=''}" Width="90" />
                     </StackPanel>
+                    <ListBox ItemsSource="{Binding SelectedTeam.Credits, FallbackValue={x:Null}}" SelectedItem="{Binding SelectedCredit}" MaxHeight="110">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CreditRow">
+                                <TextBlock FontSize="12">
+                                    <Run Text="{Binding Text}" />
+                                    <Run Text="{Binding AmountText}" FontWeight="SemiBold" Foreground="#2E7D32" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                    <WrapPanel>
+                        <ComboBox ItemsSource="{Binding AdjustmentKinds}" SelectedItem="{Binding NewAdjustmentKind}" MinWidth="100" Margin="0,0,6,4" />
+                        <TextBox Text="{Binding NewAdjustmentLabel}" Width="170" PlaceholderText="Motif (ex. véhicule en jeu)" Margin="0,0,6,4" />
+                        <TextBox Text="{Binding NewAdjustmentAmount}" Width="80" PlaceholderText="Montant" Margin="0,0,6,4" />
+                        <Button Content="Accorder" Command="{Binding AddAdjustmentCommand}" Margin="0,0,6,4" />
+                        <Button Content="Retirer" Command="{Binding RemoveAdjustmentCommand}" Margin="0,0,6,4" />
+                    </WrapPanel>
                     <ItemsControl ItemsSource="{Binding TeamPayments}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:PaymentRow">

@@ -64,9 +64,65 @@ public class MemberViewModel(TeamMember member, Action<MemberViewModel> onLeader
     }
 }
 
-public class VehicleViewModel(TeamVehicle vehicle) : ViewModelBase
+public class VehicleViewModel(TeamVehicle vehicle, VehicleTracker? tracker = null) : ViewModelBase
 {
+    private static readonly System.Globalization.CultureInfo French = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+
     public TeamVehicle Model => vehicle;
+
+    /// <summary>Véhicule utilisé dans le jeu : carburant remboursé à l'équipe.</summary>
+    public bool InGame
+    {
+        get => vehicle.InGame;
+        set => SetProperty(vehicle.InGame, value, vehicle, (v, x) => v.InGame = x);
+    }
+
+    public string GpsDeviceId
+    {
+        get => vehicle.GpsDeviceId;
+        set => SetProperty(vehicle.GpsDeviceId, value.Trim(), vehicle, (v, x) => v.GpsDeviceId = x);
+    }
+
+    public string OdometerStartText
+    {
+        get => vehicle.OdometerStartKm?.ToString("0.#", French) ?? "";
+        set
+        {
+            vehicle.OdometerStartKm = ParseKm(value);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(KilometersText));
+        }
+    }
+
+    public string OdometerEndText
+    {
+        get => vehicle.OdometerEndKm?.ToString("0.#", French) ?? "";
+        set
+        {
+            vehicle.OdometerEndKm = ParseKm(value);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(KilometersText));
+        }
+    }
+
+    public double Kilometers => tracker?.Kilometers(vehicle) ?? 0;
+
+    /// <summary>« 61,7 km (GPS) » ou « 42 km (compteur) ».</summary>
+    public string KilometersText => vehicle.OdometerStartKm is not null && vehicle.OdometerEndKm is not null
+        ? $"{Kilometers.ToString("0.#", French)} km (compteur)"
+        : $"{Kilometers.ToString("0.#", French)} km (GPS)";
+
+    public void RefreshKilometers()
+    {
+        OnPropertyChanged(nameof(Kilometers));
+        OnPropertyChanged(nameof(KilometersText));
+    }
+
+    private static decimal? ParseKm(string text) =>
+        string.IsNullOrWhiteSpace(text) ? null
+        : decimal.TryParse(text.Replace(" ", "").Replace(',', '.'), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var km)
+            ? km
+            : throw new FormatException("Kilométrage non reconnu.");
 
     public string Kind
     {

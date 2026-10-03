@@ -19,15 +19,23 @@ public partial class TeamsViewModel : ViewModelBase
     private readonly OperationFile _file;
     private readonly IFileDialogService _dialogs;
 
-    public TeamsViewModel(OperationFile file, FactionsViewModel factions, IFileDialogService dialogs)
+    private readonly VehicleTracker _tracker;
+
+    public TeamsViewModel(OperationFile file, FactionsViewModel factions, IFileDialogService dialogs, VehicleTracker tracker)
     {
         _file = file;
         _dialogs = dialogs;
+        _tracker = tracker;
         Factions = factions.Items;
         var members = file.LoadMembers().ToLookup(m => m.TeamId);
         var vehicles = file.LoadVehicles().ToLookup(v => v.TeamId);
         Items = new ObservableCollection<TeamViewModel>(file.LoadTeams()
-            .Select(t => new TeamViewModel(t, Factions, members[t.Id], vehicles[t.Id])));
+            .Select(t => new TeamViewModel(t, Factions, members[t.Id], vehicles[t.Id], tracker)));
+        tracker.Changed += () =>
+        {
+            foreach (var vehicle in Items.SelectMany(t => t.Vehicles))
+                vehicle.RefreshKilometers();
+        };
         Selected = Items.FirstOrDefault();
         factions.Removed += OnFactionRemoved;
         foreach (var team in Items)
@@ -132,7 +140,7 @@ public partial class TeamsViewModel : ViewModelBase
                 RegisteredAt = DateTimeOffset.Now,
             };
             _file.Add(team);
-            var viewModel = new TeamViewModel(team, Factions, [], []);
+            var viewModel = new TeamViewModel(team, Factions, [], [], _tracker);
             Items.Add(viewModel);
             if (row.ContactName.Length > 0 || row.Phone.Length > 0 || row.Email.Length > 0)
             {
@@ -207,7 +215,7 @@ public partial class TeamsViewModel : ViewModelBase
     {
         var team = new Team { Name = $"Équipe {Items.Count + 1}", RegisteredAt = DateTimeOffset.Now };
         _file.Add(team);
-        var viewModel = new TeamViewModel(team, Factions, [], []);
+        var viewModel = new TeamViewModel(team, Factions, [], [], _tracker);
         Items.Add(viewModel);
         Selected = viewModel;
     }
@@ -263,7 +271,7 @@ public partial class TeamsViewModel : ViewModelBase
             SortOrder = team.Vehicles.Count == 0 ? 0 : team.Vehicles.Max(v => v.Model.SortOrder) + 1,
         };
         _file.Add(vehicle);
-        var viewModel = new VehicleViewModel(vehicle);
+        var viewModel = new VehicleViewModel(vehicle, _tracker);
         team.Vehicles.Add(viewModel);
         SelectedVehicle = viewModel;
     }

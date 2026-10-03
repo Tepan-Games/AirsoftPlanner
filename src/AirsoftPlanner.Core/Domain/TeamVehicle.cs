@@ -13,4 +13,16 @@ public class TeamVehicle : Entity
     public string Notes { get; set; } = "";
 
     public int SortOrder { get; set; }
+
+    /// <summary>Véhicule utilisé dans le jeu : son carburant est remboursé à l'équipe.</summary>
+    public bool InGame { get; set; }
+
+    /// <summary>Identifiant du traceur GPS du véhicule (Traccar Client sur un téléphone à bord, boîtier...).</summary>
+    public string GpsDeviceId { get; set; } = "";
+
+    /// <summary>Relevé du compteur au départ de l'OP (km).</summary>
+    public decimal? OdometerStartKm { get; set; }
+
+    /// <summary>Relevé du compteur à la fin de l'OP (km).</summary>
+    public decimal? OdometerEndKm { get; set; }
 }
