@@ -1,0 +1,67 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             x:Class="AirsoftPlanner.App.Views.DelayPanel"
+             x:DataType="vm:DelayViewModel">
+    <Border BorderThickness="0,2,0,0" BorderBrush="#EF6C00" Padding="10" MaxHeight="300"
+            Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
+        <DockPanel>
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CloseCommand}" ToolTip.Tip="Fermer sans appliquer" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding DelayMinutes}" Minimum="5" Maximum="600" Increment="5" FormatString="0" Width="120" />
+                    <TextBlock Text="min" VerticalAlignment="Center" />
+                </StackPanel>
+            </DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,6" />
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Content="Optimiser (désactiver les optionnelles utiles)" Command="{Binding OptimizeCommand}" />
+                <Button Content="Appliquer au planning" Command="{Binding ApplyCommand}" Classes="accent" />
+            </StackPanel>
+            <Grid ColumnDefinitions="*,12,*">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Text="Missions décalées" Classes="label" Margin="0,0,0,4" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Changes}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DelayChangeRow">
+                                    <TextBlock Margin="0,1" FontWeight="{Binding IsDelayedMission, Converter={x:Static conv:BoolToWeightConverter.Instance}}">
+                                        <Run Text="{Binding OldTime}" />
+                                        <Run Text="→" />
+                                        <Run Text="{Binding NewTime}" FontWeight="SemiBold" />
+                                        <Run Text="{Binding Shift}" Foreground="#EF6C00" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding Name}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+                <DockPanel Grid.Column="2">
+                    <TextBlock DockPanel.Dock="Top" Text="Missions optionnelles à désactiver pour rattraper" Classes="label" Margin="0,0,0,4" />
+                    <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !Cuts.Count}" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
+                               Text="Aucune mission optionnelle ne permet de réduire ce retard." />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Cuts}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CutChoiceViewModel">
+                                    <CheckBox IsChecked="{Binding IsSelected}">
+                                        <TextBlock>
+                                            <Run Text="{Binding Mission.StartText}" FontWeight="SemiBold" />
+                                            <Run Text="{Binding Mission.Name}" />
+                                            <Run Text="—" />
+                                            <Run Text="{Binding GainText}" Foreground="#2E7D32" />
+                                        </TextBlock>
+                                    </CheckBox>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Grid>
+        </DockPanel>
+    </Border>
+</UserControl>

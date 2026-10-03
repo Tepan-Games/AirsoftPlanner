@@ -3,6 +3,7 @@
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
              xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:views="using:AirsoftPlanner.App.Views"
              x:Class="AirsoftPlanner.App.Views.TrackingView"
              x:DataType="vm:TrackingViewModel">
     <DockPanel>
@@ -23,6 +24,8 @@
         </Border>
 
         <Grid ColumnDefinitions="*,6,*">
+            <DockPanel>
+            <views:DelayPanel DockPanel.Dock="Bottom" DataContext="{Binding Missions.Delay}" IsVisible="{Binding IsOpen}" />
             <controls:TimelineControl Columns="{Binding Missions.Columns}"
                                       Missions="{Binding Missions.Missions}"
                                       SelectedMission="{Binding Missions.Selected}"
@@ -31,6 +34,7 @@
                                       Day="{Binding Missions.Operation.Day}"
                                       NowMinutes="{Binding NowMinutes}"
                                       FollowNow="True" />
+            </DockPanel>
             <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
 
             <Grid Grid.Column="2" RowDefinitions="*,6,260">
@@ -52,6 +56,8 @@
                                           IsEnabled="{Binding HasSelection}" />
                             <TextBox Text="{Binding PositionInput}" Width="220" PlaceholderText="ou coordonnées reçues (UTM, degrés…)" />
                             <Button Content="Enregistrer la position" Command="{Binding SetPositionCommand}" />
+                            <Button Content="Gérer le retard…" Command="{Binding PlanDelayCommand}"
+                                    ToolTip.Tip="Répercuter le retard estimé de l'équipe sur la suite du planning" />
                         </StackPanel>
                     </Border>
                     <ListBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding Selected}">

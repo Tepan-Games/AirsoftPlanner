@@ -3,6 +3,7 @@
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
              xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:views="using:AirsoftPlanner.App.Views"
              x:Class="AirsoftPlanner.App.Views.MissionsView"
              x:DataType="vm:MissionsViewModel">
     <Grid ColumnDefinitions="*,360">
@@ -15,11 +16,16 @@
                         <Button Content="Dupliquer" Command="{Binding DuplicateCommand}" />
                         <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
                         <Button Content="Tout afficher" Click="OnFitClick" />
+                        <Button Content="Gérer un retard…" Command="{Binding OpenDelayCommand}"
+                                ToolTip.Tip="Répercuter le retard de la mission sélectionnée sur la suite du planning" />
+                        <Button Content="Annuler le dernier décalage" Command="{Binding Delay.UndoCommand}"
+                                ToolTip.Tip="{Binding Delay.LastApplied}" />
                     </StackPanel>
                     <TextBlock Text="{Binding IssueSummary}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                FontWeight="SemiBold" />
                 </DockPanel>
             </Border>
+            <views:DelayPanel DockPanel.Dock="Bottom" DataContext="{Binding Delay}" IsVisible="{Binding IsOpen}" />
             <TextBlock DockPanel.Dock="Bottom" Margin="10,4" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
                        Text="Double-clic : nouvelle mission · Glisser : déplacer (ou changer d'équipe) · Bord bas : durée · Molette : défiler · Ctrl+molette : zoom · Pointillés : mission optionnelle" />
             <controls:TimelineControl x:Name="Timeline"

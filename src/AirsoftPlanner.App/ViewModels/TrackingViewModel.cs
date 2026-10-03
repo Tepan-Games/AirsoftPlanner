@@ -25,6 +25,9 @@ public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 
     public TeamViewModel Team => team;
 
+    /// <summary>Dernière évaluation, utilisée pour proposer le retard à répercuter.</summary>
+    public TeamProgress? Progress { get; private set; }
+
     [ObservableProperty]
     private ProgressStatus _status;
 
@@ -69,6 +72,7 @@ public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 
     public void Update(TeamProgress progress, GeoPoint? position, Func<Mission, string> describeMission, Func<GeoPoint, string> formatPoint)
     {
+        Progress = progress;
         Status = progress.Status;
         Position = position;
 
@@ -175,7 +179,7 @@ public partial class TrackingViewModel : ViewModelBase
         + _operation.ToDateTime(NowMinutes).ToString("dddd d MMMM HH:mm", CultureInfo.GetCultureInfo("fr-FR"));
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SetPositionCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SetPositionCommand), nameof(PlanDelayCommand))]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private TeamStatusViewModel? _selected;
 
@@ -212,6 +216,26 @@ public partial class TrackingViewModel : ViewModelBase
 
         RecordPosition(Selected!.Team, point);
         PositionInput = "";
+    }
+
+    /// <summary>
+    /// Ouvre la gestion du retard pour la mission visée par l'équipe sélectionnée, avec le retard estimé :
+    /// temps de trajet restant si la mission a commencé, sinon le dépassement de la marge.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void PlanDelay()
+    {
+        if (Selected?.Progress is not { TargetMission: { } target } progress)
+            return;
+
+        var mission = Missions.Missions.FirstOrDefault(m => m.Model.Id == target.Id);
+        if (mission is null)
+            return;
+
+        var estimate = progress.CurrentMission is not null
+            ? progress.TravelMinutes ?? 0
+            : -(progress.SlackMinutes ?? 0);
+        Missions.Delay.Open(mission, (int)Math.Ceiling(Math.Max(5, estimate) / 5) * 5);
     }
 
     partial void OnIsSimulationChanged(bool value) => Refresh();

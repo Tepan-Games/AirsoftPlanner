@@ -50,9 +50,13 @@ public partial class MissionsViewModel : ViewModelBase
             zone.PropertyChanged += OnZonePropertyChanged;
         terrain.Zones.CollectionChanged += OnZonesChanged;
 
+        Delay = new DelayViewModel(this);
         RebuildColumns();
         Analyze();
     }
+
+    /// <summary>Gestion d'un retard (décalage en cascade, missions optionnelles à désactiver).</summary>
+    public DelayViewModel Delay { get; }
 
     public ObservableCollection<MissionViewModel> Missions { get; }
 
@@ -82,7 +86,7 @@ public partial class MissionsViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
-    [NotifyCanExecuteChangedFor(nameof(RemoveCommand), nameof(DuplicateCommand), nameof(ClearZoneCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveCommand), nameof(DuplicateCommand), nameof(ClearZoneCommand), nameof(OpenDelayCommand))]
     private MissionViewModel? _selected;
 
     public bool HasSelection => Selected is not null;
@@ -143,6 +147,9 @@ public partial class MissionsViewModel : ViewModelBase
 
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void ClearZone() => Selected!.Zone = null;
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void OpenDelay() => Delay.Open(Selected!, 15);
 
     [RelayCommand(CanExecute = nameof(CanAddItem))]
     private void AddItem()
