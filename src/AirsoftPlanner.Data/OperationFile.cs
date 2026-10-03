@@ -13,10 +13,11 @@ public sealed class OperationFile : IDisposable
     public const string Extension = ".aop";
 
     /// <summary>
-    /// Historique : 2 = factions, équipes, zones, fonds de carte ; 3 = missions.
+    /// Historique : 2 = factions, équipes, zones, fonds de carte ; 3 = missions ;
+    /// 4 = membres, véhicules, radio, matériel de jeu, positions des équipes.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 3;
+    public const int CurrentFormatVersion = 4;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -103,6 +104,21 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<Zone> LoadZones() => Context.Zones.OrderBy(z => z.Name).ToList();
 
     public IReadOnlyList<Mission> LoadMissions() => Context.Missions.OrderBy(m => m.StartMinutes).ThenBy(m => m.Name).ToList();
+
+    public IReadOnlyList<TeamMember> LoadMembers() => Context.TeamMembers.OrderBy(m => m.SortOrder).ToList();
+
+    public IReadOnlyList<TeamVehicle> LoadVehicles() => Context.TeamVehicles.OrderBy(v => v.SortOrder).ToList();
+
+    public IReadOnlyList<GameItem> LoadGameItems() => Context.GameItems.OrderBy(i => i.Name).ToList();
+
+    /// <summary>Toutes les positions reçues, par ordre chronologique.</summary>
+    public IReadOnlyList<TeamPosition> LoadPositions() => Context.TeamPositions.AsEnumerable().OrderBy(p => p.ReceivedAt).ToList();
+
+    /// <summary>Dernière position reçue de chaque équipe.</summary>
+    public IReadOnlyDictionary<Guid, TeamPosition> LoadLastPositions() => Context.TeamPositions
+        .AsEnumerable()
+        .GroupBy(p => p.TeamId)
+        .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ReceivedAt)!);
 
     public IReadOnlyList<MapLayer> LoadMapLayers() => Context.MapLayers.OrderBy(l => l.SortOrder).ToList();
 

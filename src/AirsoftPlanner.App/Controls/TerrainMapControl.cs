@@ -52,6 +52,13 @@ public class TerrainMapControl : Control
     public static readonly StyledProperty<ICommand?> MapClickCommandProperty =
         AvaloniaProperty.Register<TerrainMapControl, ICommand?>(nameof(MapClickCommand));
 
+    public static readonly StyledProperty<IEnumerable<TeamMarker>?> MarkersProperty =
+        AvaloniaProperty.Register<TerrainMapControl, IEnumerable<TeamMarker>?>(nameof(Markers));
+
+    /// <summary>Faux en suivi d'OP : les zones ne peuvent pas être sélectionnées ni modifiées.</summary>
+    public static readonly StyledProperty<bool> AllowEditingProperty =
+        AvaloniaProperty.Register<TerrainMapControl, bool>(nameof(AllowEditing), true);
+
     private const double ClickTolerance = 4;
     private const double HitTolerance = 10;
     private static readonly IBrush EmptyBackground = new SolidColorBrush(Color.FromRgb(0x2B, 0x2F, 0x33));
@@ -73,7 +80,8 @@ public class TerrainMapControl : Control
 
     static TerrainMapControl()
     {
-        AffectsRender<TerrainMapControl>(LayerProperty, AreaProperty, SelectedZoneProperty, IsDrawingProperty, ShowUtmGridProperty);
+        AffectsRender<TerrainMapControl>(LayerProperty, AreaProperty, SelectedZoneProperty, IsDrawingProperty, ShowUtmGridProperty,
+            MarkersProperty);
         FocusableProperty.OverrideDefaultValue<TerrainMapControl>(true);
     }
 
@@ -99,6 +107,10 @@ public class TerrainMapControl : Control
     public GeoPoint? PointerPosition { get => GetValue(PointerPositionProperty); set => SetValue(PointerPositionProperty, value); }
 
     public ICommand? MapClickCommand { get => GetValue(MapClickCommandProperty); set => SetValue(MapClickCommandProperty, value); }
+
+    public IEnumerable<TeamMarker>? Markers { get => GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
+
+    public bool AllowEditing { get => GetValue(AllowEditingProperty); set => SetValue(AllowEditingProperty, value); }
 
     private IEnumerable<ZoneViewModel> ZoneItems => Zones?.OfType<ZoneViewModel>() ?? [];
 
@@ -158,6 +170,9 @@ public class TerrainMapControl : Control
         foreach (var zone in ZoneItems.Where(z => z.Points.Count > 0))
             DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.Name);
 
+        foreach (var marker in (Markers ?? []).OrderBy(m => m.IsSelected))
+            DrawMarker(context, view, marker);
+
         if (Layer is { Attribution.Length: > 0 })
             DrawText(context, new Point(Bounds.Width - 6, Bounds.Height - 6), "© " + Layer.Attribution, 10, alignRight: true, alignBottom: true);
     }
@@ -192,7 +207,7 @@ public class TerrainMapControl : Control
         _pressPosition = position;
         _panAtPress = _pan;
         _isPanning = false;
-        _draggedVertex = IsDrawing ? null : FindVertex(view, position);
+        _draggedVertex = IsDrawing || !AllowEditing ? null : FindVertex(view, position);
         e.Pointer.Capture(this);
         e.Handled = true;
     }
@@ -244,7 +259,7 @@ public class TerrainMapControl : Control
             if (MapClickCommand?.CanExecute(point) == true)
                 MapClickCommand.Execute(point);
         }
-        else
+        else if (AllowEditing)
         {
             SelectedZone = HitTest(view, position);
         }
@@ -327,6 +342,23 @@ public class TerrainMapControl : Control
         var center = ToScreen(view, zone.Points[0]);
         var radius = zone == SelectedZone ? 9 : 7;
         context.DrawEllipse(new SolidColorBrush(ParseColor(zone.Color)), new Pen(Brushes.White, 2), center, radius, radius);
+    }
+
+    private void DrawMarker(DrawingContext context, GeoBounds view, TeamMarker marker)
+    {
+        var center = ToScreen(view, marker.Point);
+        var status = new SolidColorBrush(ParseColor(marker.StatusColor));
+        if (marker.Target is { } target)
+        {
+            // Trajet restant vers la zone de la mission, dans la couleur de l'état (juste / en retard).
+            var pen = new Pen(status, 2.5, new DashStyle([4, 3], 0));
+            context.DrawLine(pen, center, ToScreen(view, target));
+        }
+
+        var radius = marker.IsSelected ? 11 : 9;
+        context.DrawEllipse(new SolidColorBrush(ParseColor(marker.Color)), new Pen(status, 4), center, radius, radius);
+        context.DrawEllipse(null, new Pen(Brushes.White, 1.5), center, radius + 2.5, radius + 2.5);
+        DrawLabel(context, center + new Vector(0, radius + 12), marker.Label);
     }
 
     private void DrawUtmGrid(DrawingContext context, GeoBounds view)

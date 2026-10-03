@@ -9,6 +9,8 @@ namespace AirsoftPlanner.Data;
 /// Met à niveau un fichier d'OP créé par une version précédente : ajoute les tables et colonnes
 /// manquantes (les évolutions du format sont uniquement additives). Les colonnes ajoutées
 /// reçoivent la valeur par défaut de leur type (0, texte vide, liste vide...).
+/// Règle d'évolution du modèle : ne jamais supprimer ni renommer une propriété persistée,
+/// sinon les anciennes colonnes NOT NULL empêcheraient les insertions.
 /// </summary>
 internal static class SchemaUpgrader
 {
@@ -43,7 +45,10 @@ internal static class SchemaUpgrader
                     if (column is null || existingColumns.Contains(column))
                         continue;
 
+                    // Noms et types issus du modèle EF (pas d'une saisie) : pas de risque d'injection.
+#pragma warning disable EF1002
                     database.ExecuteSqlRaw($"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {ColumnDefinition(property, store)}");
+#pragma warning restore EF1002
                 }
             }
 
@@ -62,9 +67,12 @@ internal static class SchemaUpgrader
             return type;
 
         var mapping = property.GetRelationalTypeMapping();
-        var clrDefault = DefaultValue(property.ClrType);
-        var providerValue = mapping.Converter is { } converter ? converter.ConvertToProvider(clrDefault) : clrDefault;
-        return $"{type} NOT NULL DEFAULT {mapping.GenerateSqlLiteral(providerValue)}";
+        // Valeur par défaut configurée dans le modèle (HasDefaultValue), sinon celle du type.
+        var clrDefault = property.GetDefaultValue() is { } configured && property.ClrType.IsInstanceOfType(configured)
+            ? configured
+            : DefaultValue(property.ClrType);
+        // GenerateSqlLiteral applique lui-même le convertisseur de valeur (liste → JSON, enum → texte...).
+        return $"{type} NOT NULL DEFAULT {mapping.GenerateSqlLiteral(clrDefault)}";
     }
 
     private static object? DefaultValue(Type type)

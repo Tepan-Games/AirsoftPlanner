@@ -28,7 +28,11 @@ public class OperationViewModel(Operation operation) : ViewModelBase
         set => SetProperty(operation.Description, value, operation, (o, v) => o.Description = v);
     }
 
-    public DateTime? Date
+    /// <summary>
+    /// Date de début. La changer déplace toute l'OP (même durée) : les missions, exprimées par rapport
+    /// au premier jour, suivent.
+    /// </summary>
+    public DateTime? StartDate
     {
         get => Day;
         set
@@ -36,57 +40,103 @@ public class OperationViewModel(Operation operation) : ViewModelBase
             if (value is not { } date || date.Date == Day)
                 return;
 
-            SetSchedule(date.Date, StartMinutes, EndMinutes);
-            OnPropertyChanged();
+            var shift = date.Date - Day;
+            operation.StartsAt += shift;
+            operation.EndsAt += shift;
+            OnScheduleChanged();
         }
     }
 
-    /// <summary>Début de l'OP en minutes depuis minuit le jour de l'OP.</summary>
-    public int StartMinutes => (int)Math.Round((operation.StartsAt.LocalDateTime - Day).TotalMinutes);
-
-    /// <summary>Fin de l'OP en minutes depuis minuit le jour de l'OP (au-delà de 24 h pour une OP de nuit).</summary>
-    public int EndMinutes => (int)Math.Round((operation.EndsAt.LocalDateTime - Day).TotalMinutes);
-
-    public string StartText
+    public string StartTimeText
     {
-        get => MissionTime.Format(StartMinutes);
+        get => operation.StartsAt.LocalDateTime.ToString("HH:mm");
         set
         {
-            if (!MissionTime.TryParse(value, out var start) || start >= MissionTime.MinutesPerDay)
+            if (!MissionTime.TryParse(value, out var minutes) || minutes >= MissionTime.MinutesPerDay)
                 throw new FormatException("Heure non reconnue (ex. 09:00).");
 
-            var end = EndMinutes;
-            if (end <= start)
-                end += MissionTime.MinutesPerDay;
-            SetSchedule(Day, start, end);
+            var start = Day.AddMinutes(minutes);
+            if (start >= operation.EndsAt.LocalDateTime)
+                throw new FormatException("Le début doit précéder la fin.");
+            operation.StartsAt = new DateTimeOffset(start);
+            OnScheduleChanged();
         }
     }
 
-    /// <summary>Une heure de fin plus tôt que le début désigne le lendemain (OP de nuit).</summary>
-    public string EndText
+    public DateTime? EndDate
     {
-        get => MissionTime.Format(EndMinutes);
+        get => operation.EndsAt.LocalDateTime.Date;
         set
         {
-            if (!MissionTime.TryParse(value, out var end))
-                throw new FormatException("Heure non reconnue (ex. 18:00).");
+            if (value is not { } date || date.Date == EndDate)
+                return;
 
-            if (end <= StartMinutes)
-                end += MissionTime.MinutesPerDay;
-            SetSchedule(Day, StartMinutes, end);
+            var end = date.Date + operation.EndsAt.LocalDateTime.TimeOfDay;
+            if (end <= operation.StartsAt.LocalDateTime)
+                throw new FormatException("La fin doit suivre le début.");
+            operation.EndsAt = new DateTimeOffset(end);
+            OnScheduleChanged();
         }
     }
 
-    private DateTime Day => operation.StartsAt.LocalDateTime.Date;
-
-    private void SetSchedule(DateTime day, int startMinutes, int endMinutes)
+    public string EndTimeText
     {
-        operation.StartsAt = new DateTimeOffset(day.AddMinutes(startMinutes));
-        operation.EndsAt = new DateTimeOffset(day.AddMinutes(endMinutes));
+        get => operation.EndsAt.LocalDateTime.ToString("HH:mm");
+        set
+        {
+            if (!MissionTime.TryParse(value, out var minutes) || minutes >= MissionTime.MinutesPerDay)
+                throw new FormatException("Heure non reconnue (ex. 18:00).");
+
+            var end = operation.EndsAt.LocalDateTime.Date.AddMinutes(minutes);
+            if (end <= operation.StartsAt.LocalDateTime)
+                throw new FormatException("La fin doit suivre le début.");
+            operation.EndsAt = new DateTimeOffset(end);
+            OnScheduleChanged();
+        }
+    }
+
+    public string DurationText
+    {
+        get
+        {
+            var duration = operation.EndsAt - operation.StartsAt;
+            return duration.TotalHours < 24
+                ? $"Durée : {MissionTime.FormatDuration((int)duration.TotalMinutes)}"
+                : $"Durée : {(int)duration.TotalDays} j {duration.Hours} h · {Math.Ceiling((operation.EndsAt.LocalDateTime.Date - Day).TotalDays) + 1:0} jours de jeu";
+        }
+    }
+
+    /// <summary>Premier jour de l'OP : les heures des missions sont comptées depuis minuit ce jour-là.</summary>
+    public DateTime Day => operation.StartsAt.LocalDateTime.Date;
+
+    /// <summary>Début de l'OP en minutes depuis minuit le premier jour.</summary>
+    public int StartMinutes => (int)Math.Round((operation.StartsAt.LocalDateTime - Day).TotalMinutes);
+
+    /// <summary>Fin de l'OP en minutes depuis minuit le premier jour.</summary>
+    public int EndMinutes => (int)Math.Round((operation.EndsAt.LocalDateTime - Day).TotalMinutes);
+
+    public decimal? WalkingSpeedKmh
+    {
+        get => (decimal)operation.WalkingSpeedKmh;
+        set => SetProperty(operation.WalkingSpeedKmh, (double)Math.Clamp(value ?? 3, 0.5m, 20m), operation, (o, v) => o.WalkingSpeedKmh = v);
+    }
+
+    /// <summary>Convertit une heure de l'OP (minutes depuis minuit le premier jour) en date et heure.</summary>
+    public DateTime ToDateTime(double minutes) => Day.AddMinutes(minutes);
+
+    /// <summary>Convertit une date et heure en minutes depuis minuit le premier jour.</summary>
+    public double ToMinutes(DateTime time) => (time - Day).TotalMinutes;
+
+    private void OnScheduleChanged()
+    {
+        OnPropertyChanged(nameof(StartDate));
+        OnPropertyChanged(nameof(StartTimeText));
+        OnPropertyChanged(nameof(EndDate));
+        OnPropertyChanged(nameof(EndTimeText));
+        OnPropertyChanged(nameof(DurationText));
+        OnPropertyChanged(nameof(Day));
         OnPropertyChanged(nameof(StartMinutes));
         OnPropertyChanged(nameof(EndMinutes));
-        OnPropertyChanged(nameof(StartText));
-        OnPropertyChanged(nameof(EndText));
     }
 
     public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;

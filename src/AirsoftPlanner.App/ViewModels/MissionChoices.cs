@@ -38,3 +38,15 @@ public class PredecessorChoiceViewModel(MissionViewModel candidate, MissionViewM
 
 /// <summary>Case de la frise désignée par un double-clic : une équipe et une heure.</summary>
 public record TimelineSlot(TeamViewModel Team, int Minutes);
+
+/// <summary>Ligne « matériel utilisé » d'une mission, avec sa quantité modifiable.</summary>
+public class MissionItemUseViewModel(GameItemViewModel item, int quantity, MissionViewModel mission) : ViewModelBase
+{
+    public GameItemViewModel Item => item;
+
+    public decimal? Quantity
+    {
+        get => quantity;
+        set => mission.SetItemQuantity(item.Model.Id, System.Math.Max(1, (int)(value ?? 1)));
+    }
+}

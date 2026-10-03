@@ -22,15 +22,21 @@ public partial class MissionsViewModel : ViewModelBase
     private readonly TeamsViewModel _teams;
     private readonly FactionsViewModel _factions;
     private readonly TerrainViewModel _terrain;
+    private readonly GameItemsViewModel _items;
 
     public MissionsViewModel(OperationFile file, OperationViewModel operation, FactionsViewModel factions,
-        TeamsViewModel teams, TerrainViewModel terrain)
+        TeamsViewModel teams, TerrainViewModel terrain, GameItemsViewModel items)
     {
         _file = file;
         _operation = operation;
         _factions = factions;
         _teams = teams;
         _terrain = terrain;
+        _items = items;
+        foreach (var item in items.Items)
+            item.PropertyChanged += OnItemChanged;
+        items.Items.CollectionChanged += OnItemsChanged;
+        items.Removed += OnItemRemoved;
         Missions = new ObservableCollection<MissionViewModel>(file.LoadMissions().Select(m => new MissionViewModel(m, this)));
 
         operation.PropertyChanged += OnOperationChanged;
@@ -50,10 +56,25 @@ public partial class MissionsViewModel : ViewModelBase
 
     public ObservableCollection<MissionViewModel> Missions { get; }
 
+    /// <summary>Déclenché après chaque changement du planning (horaires, équipes, zones, activation...).</summary>
+    public event Action? ScheduleChanged;
+
     /// <summary>Colonnes de la frise : les équipes, regroupées par faction.</summary>
     public ObservableCollection<TeamViewModel> Columns { get; } = [];
 
     public ObservableCollection<ZoneViewModel> Zones => _terrain.Zones;
+
+    public ObservableCollection<GameItemViewModel> GameItems => _items.Items;
+
+    public OperationViewModel Operation => _operation;
+
+    /// <summary>Élément choisi pour être ajouté au matériel de la mission sélectionnée.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddItemCommand))]
+    private GameItemViewModel? _itemToAdd;
+
+    [ObservableProperty]
+    private decimal? _itemToAddQuantity = 1;
 
     public int OperationStartMinutes => _operation.StartMinutes;
 
@@ -123,10 +144,31 @@ public partial class MissionsViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasSelection))]
     private void ClearZone() => Selected!.Zone = null;
 
+    [RelayCommand(CanExecute = nameof(CanAddItem))]
+    private void AddItem()
+    {
+        var current = Selected!.Model.Items.FirstOrDefault(u => u.ItemId == ItemToAdd!.Model.Id)?.Quantity ?? 0;
+        Selected.SetItemQuantity(ItemToAdd!.Model.Id, current + Math.Max(1, (int)(ItemToAddQuantity ?? 1)));
+    }
+
+    [RelayCommand]
+    private void RemoveItem(MissionItemUseViewModel use) => Selected?.SetItemQuantity(use.Item.Model.Id, 0);
+
+    private bool CanAddItem => Selected is not null && ItemToAdd is not null;
+
+    public int AssignedPlayers(MissionViewModel mission) =>
+        _teams.Items.Where(t => mission.TeamIds.Contains(t.Model.Id)).Sum(t => t.Size);
+
+    public GameItemViewModel? FindItem(Guid id) => _items.Items.FirstOrDefault(i => i.Model.Id == id);
+
     /// <summary>Appelé par une mission dont l'horaire, les équipes ou les prérequis changent.</summary>
     public void OnScheduleChanged() => Analyze();
 
-    partial void OnSelectedChanged(MissionViewModel? value) => RebuildChoices();
+    partial void OnSelectedChanged(MissionViewModel? value)
+    {
+        RebuildChoices();
+        AddItemCommand.NotifyCanExecuteChanged();
+    }
 
     // ----- Interne -----
 
@@ -188,11 +230,27 @@ public partial class MissionsViewModel : ViewModelBase
     private void Analyze()
     {
         var models = Missions.Select(m => m.Model).ToList();
-        var issues = ScheduleAnalyzer.Analyze(models, OperationStartMinutes, OperationEndMinutes);
+        var resources = new ScheduleResources(
+            _teams.Items.ToDictionary(t => t.Model.Id, t => t.Size),
+            _items.Items.ToDictionary(i => i.Model.Id, i => i.Model));
+        var issues = ScheduleAnalyzer.Analyze(models, OperationStartMinutes, OperationEndMinutes, resources);
         var byMission = issues.ToLookup(i => i.MissionId);
         foreach (var mission in Missions)
             mission.Issues = byMission[mission.Model.Id].Select(Describe).Distinct().ToList();
 
+        // Inventaire : dans quelles missions chaque élément est utilisé, et s'il en manque.
+        var shortages = issues.Where(i => i.Kind == ScheduleIssueKind.ItemShortage).Select(i => i.ItemId).ToHashSet();
+        foreach (var item in _items.Items)
+        {
+            item.Usages = Missions
+                .Where(m => m.Model.Items.Any(u => u.ItemId == item.Model.Id))
+                .OrderBy(m => m.StartMinutes)
+                .Select(m => new GameItemUsage(m.Name, m.StartText, m.Model.Items.Where(u => u.ItemId == item.Model.Id).Sum(u => u.Quantity), m.IsEnabled))
+                .ToList();
+            item.SetShortage(shortages.Contains(item.Model.Id));
+        }
+
+        ScheduleChanged?.Invoke();
         var count = Missions.Count(m => m.HasIssues);
         IssueSummary = count switch
         {
@@ -215,6 +273,12 @@ public partial class MissionsViewModel : ViewModelBase
             ScheduleIssueKind.PredecessorDisabled => $"Le prérequis « {other} » est désactivé",
             ScheduleIssueKind.DependencyCycle => "Les prérequis forment une boucle",
             ScheduleIssueKind.OutsideOperation => "Déborde des horaires de l'OP",
+            ScheduleIssueKind.TooManyPlayers => "Effectif maximum dépassé",
+            ScheduleIssueKind.ItemShortage => FindItem(issue.ItemId ?? Guid.Empty) is { } item
+                ? item.IsConsumable
+                    ? $"Pas assez de « {item.Name} » pour toute l'OP (stock {item.Model.Quantity})"
+                    : $"Pas assez de « {item.Name} » pour les missions simultanées (stock {item.Model.Quantity})"
+                : "Matériel insuffisant",
             _ => issue.Kind.ToString(),
         };
     }
@@ -243,6 +307,12 @@ public partial class MissionsViewModel : ViewModelBase
     {
         if (e.PropertyName is nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name))
             RebuildColumns();
+        if (e.PropertyName == nameof(TeamViewModel.Size))
+        {
+            foreach (var mission in Missions)
+                mission.RefreshPlayers();
+            Analyze();
+        }
     }
 
     private void OnTeamRemoved(TeamViewModel team)
@@ -273,5 +343,28 @@ public partial class MissionsViewModel : ViewModelBase
     {
         foreach (var mission in Missions.Where(m => m.Model.ZoneId == zone.Model.Id))
             mission.Zone = null;
+    }
+
+    private void OnItemsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var item in e.NewItems?.OfType<GameItemViewModel>() ?? [])
+            item.PropertyChanged += OnItemChanged;
+        foreach (var item in e.OldItems?.OfType<GameItemViewModel>() ?? [])
+            item.PropertyChanged -= OnItemChanged;
+    }
+
+    private void OnItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(GameItemViewModel.Quantity) or nameof(GameItemViewModel.IsConsumable))
+            Analyze();
+        else if (e.PropertyName == nameof(GameItemViewModel.Name))
+            foreach (var mission in Missions)
+                mission.RefreshItems();
+    }
+
+    private void OnItemRemoved(GameItemViewModel item)
+    {
+        foreach (var mission in Missions.Where(m => m.Model.Items.Any(u => u.ItemId == item.Model.Id)))
+            mission.SetItemQuantity(item.Model.Id, 0);
     }
 }

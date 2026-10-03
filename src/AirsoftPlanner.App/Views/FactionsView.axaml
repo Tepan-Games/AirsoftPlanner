@@ -6,7 +6,13 @@
              xmlns:sys="using:System"
              x:Class="AirsoftPlanner.App.Views.FactionsView"
              x:DataType="vm:FactionsViewModel">
-    <Grid ColumnDefinitions="280,*">
+    <UserControl.Resources>
+        <DataTemplate x:Key="ColorSwatch" x:DataType="sys:String">
+            <Border Width="70" Height="18" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
+                    Background="{Binding Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+        </DataTemplate>
+    </UserControl.Resources>
+    <Grid ColumnDefinitions="300,*">
         <DockPanel Margin="12">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                 <Button Content="Ajouter" Command="{Binding AddCommand}" />
@@ -18,7 +24,11 @@
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <Border Width="16" Height="16" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
                                     Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock FontSize="11" Opacity="0.65" Text="{Binding StaffingText}" TextWrapping="Wrap" MaxWidth="230"
+                                           Classes.warning="{Binding HasStaffingIssue}" />
+                            </StackPanel>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -30,21 +40,63 @@
 
         <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
             <StackPanel DataContext="{Binding Selected}" x:DataType="vm:FactionViewModel"
-                        Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="12">
+                        Margin="24" MaxWidth="620" HorizontalAlignment="Left" Spacing="12">
                 <TextBlock Text="Faction" Classes="h1" />
                 <TextBlock Text="Nom" Classes="label" />
                 <TextBox Text="{Binding Name}" />
-                <TextBlock Text="Couleur (brassards, carte, frise)" Classes="label" />
-                <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding Color}" Width="120">
+                <TextBlock Text="Couleur (carte, frise)" Classes="label" />
+                <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding Color}" Width="120"
+                          ItemTemplate="{StaticResource ColorSwatch}" />
+
+                <TextBlock Text="Effectif" Classes="h2" Margin="0,8,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Minimum (0 = aucun)" Classes="label" />
+                        <NumericUpDown Value="{Binding MinPlayers}" Minimum="0" Maximum="5000" Increment="1" FormatString="0" Width="150" />
+                    </StackPanel>
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Maximum (0 = sans limite)" Classes="label" />
+                        <NumericUpDown Value="{Binding MaxPlayers}" Minimum="0" Maximum="5000" Increment="1" FormatString="0" Width="150" />
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Text="{Binding StaffingText}" TextWrapping="Wrap" Classes.warning="{Binding HasStaffingIssue}" />
+
+                <TextBlock Text="Identification" Classes="h2" Margin="0,8,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <CheckBox Content="Brassard" IsChecked="{Binding HasArmband}" />
+                    <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding ArmbandColor}" Width="120"
+                              IsEnabled="{Binding HasArmband}" ItemTemplate="{StaticResource ColorSwatch}" />
+                </StackPanel>
+                <TextBlock Text="Tenue / camouflage imposé (vide = libre)" Classes="label" />
+                <TextBox Text="{Binding Uniform}" PlaceholderText="ex. Multicam, CE, Flecktarn, tenue civile…" />
+
+                <TextBlock Text="Commandement et radio" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="Équipe chef de faction" Classes="label" />
+                <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding CommandTeam}" MinWidth="260"
+                          PlaceholderText="Aucune (rattachez d'abord des équipes)">
                     <ComboBox.ItemTemplate>
-                        <DataTemplate x:DataType="sys:String">
-                            <Border Width="70" Height="18" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
-                                    Background="{Binding Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <DataTemplate x:DataType="vm:TeamViewModel">
+                            <TextBlock Text="{Binding Name}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
+                <TextBlock Text="Fréquence radio de commandement (faction)" Classes="label" />
+                <TextBox Text="{Binding RadioFrequency}" PlaceholderText="ex. PMR 446 canal 1 / 446.00625 MHz" />
+                <TextBlock Text="Fréquences des équipes" Classes="label" />
+                <ItemsControl ItemsSource="{Binding Teams}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TeamViewModel">
+                            <TextBlock>
+                                <Run Text="{Binding Name}" FontWeight="SemiBold" />
+                                <Run Text=" : " />
+                                <Run Text="{Binding RadioFrequency}" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <TextBlock Text="Description, objectifs généraux, background" Classes="label" />
-                <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
+                <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

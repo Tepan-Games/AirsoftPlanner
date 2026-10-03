@@ -11,8 +11,11 @@ public class WorkspaceViewModel : ViewModelBase
         General = new OperationViewModel(file.Operation);
         Factions = new FactionsViewModel(file);
         Teams = new TeamsViewModel(file, Factions);
+        Factions.AttachTeams(Teams);
         Terrain = new TerrainViewModel(file, General, dialogs);
-        Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain);
+        GameItems = new GameItemsViewModel(file);
+        Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
+        Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions);
     }
 
     public OperationViewModel General { get; }
@@ -23,5 +26,9 @@ public class WorkspaceViewModel : ViewModelBase
 
     public TerrainViewModel Terrain { get; }
 
+    public GameItemsViewModel GameItems { get; }
+
     public MissionsViewModel Missions { get; }
+
+    public TrackingViewModel Tracking { get; }
 }

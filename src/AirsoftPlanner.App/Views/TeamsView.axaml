@@ -4,7 +4,7 @@
              xmlns:conv="using:AirsoftPlanner.App.Converters"
              x:Class="AirsoftPlanner.App.Views.TeamsView"
              x:DataType="vm:TeamsViewModel">
-    <Grid ColumnDefinitions="300,*">
+    <Grid ColumnDefinitions="280,*">
         <DockPanel Margin="12">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                 <Button Content="Ajouter" Command="{Binding AddCommand}" />
@@ -18,7 +18,11 @@
                                     Background="{Binding Faction.Color, FallbackValue={x:Null}, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
                             <StackPanel>
                                 <TextBlock Text="{Binding Name}" />
-                                <TextBlock Text="{Binding Faction.Name, FallbackValue='Sans faction'}" FontSize="11" Opacity="0.6" />
+                                <TextBlock FontSize="11" Opacity="0.6">
+                                    <Run Text="{Binding Faction.Name, FallbackValue='Sans faction'}" />
+                                    <Run Text="·" />
+                                    <Run Text="{Binding SizeText}" />
+                                </TextBlock>
                             </StackPanel>
                         </StackPanel>
                     </DataTemplate>
@@ -27,38 +31,90 @@
         </DockPanel>
 
         <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24"
-                   Text="Ajoutez les équipes participantes et rattachez-les à une faction." />
+                   Text="Ajoutez les équipes participantes, leurs membres et leurs véhicules." />
 
         <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
-            <StackPanel Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="12">
+            <StackPanel Margin="20" Spacing="10">
                 <TextBlock Text="Équipe" Classes="h1" />
-                <TextBlock Text="Nom" Classes="label" />
-                <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
-                <TextBlock Text="Faction" Classes="label" />
+                <WrapPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8" Width="260">
+                        <TextBlock Text="Nom" Classes="label" />
+                        <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
+                    </StackPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8">
+                        <TextBlock Text="Faction" Classes="label" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <ComboBox ItemsSource="{Binding Factions}" SelectedItem="{Binding Selected.Faction, FallbackValue={x:Null}}"
+                                      MinWidth="200" PlaceholderText="Sans faction">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:FactionViewModel">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <Border Width="14" Height="14" CornerRadius="3"
+                                                    Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                            <TextBlock Text="{Binding Name}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Content="Retirer" Command="{Binding ClearFactionCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8" Width="200">
+                        <TextBlock Text="Fréquence radio de l'équipe" Classes="label" />
+                        <TextBox Text="{Binding Selected.RadioFrequency, FallbackValue=''}" PlaceholderText="ex. PMR 446 canal 3" />
+                    </StackPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8" IsVisible="{Binding !Selected.HasMembers, FallbackValue=True}">
+                        <TextBlock Text="Effectif annoncé" Classes="label" />
+                        <NumericUpDown Value="{Binding Selected.PlayerCount, FallbackValue=0}" Minimum="0" Maximum="500"
+                                       Increment="1" FormatString="0" Width="140" />
+                    </StackPanel>
+                </WrapPanel>
+
+                <TextBlock Classes="h2" Margin="0,8,0,0">
+                    <Run Text="Membres" />
+                    <Run Text="{Binding Selected.SizeText, FallbackValue=''}" FontWeight="Normal" FontSize="13" />
+                </TextBlock>
+                <TextBlock Text="{Binding Selected.LeaderText, FallbackValue=''}" FontSize="12" Opacity="0.75" />
+                <DataGrid ItemsSource="{Binding Selected.Members, FallbackValue={x:Null}}" SelectedItem="{Binding SelectedMember}"
+                          AutoGenerateColumns="False" CanUserSortColumns="True" GridLinesVisibility="Horizontal"
+                          HeadersVisibility="Column" MinHeight="140" MaxHeight="360" BorderThickness="1"
+                          BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="Chef" Binding="{Binding IsLeader}" Width="72" />
+                        <DataGridTextColumn Header="Prénom" Binding="{Binding FirstName}" Width="*" />
+                        <DataGridTextColumn Header="Nom" Binding="{Binding LastName}" Width="*" />
+                        <DataGridTextColumn Header="Pseudo / indicatif" Binding="{Binding Callsign}" Width="*" />
+                        <DataGridTextColumn Header="Rôle" Binding="{Binding Role}" Width="*" />
+                        <DataGridTextColumn Header="Portable" Binding="{Binding Phone}" Width="*" />
+                        <DataGridTextColumn Header="E-mail" Binding="{Binding Email}" Width="1.4*" />
+                    </DataGrid.Columns>
+                </DataGrid>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <ComboBox ItemsSource="{Binding Factions}" SelectedItem="{Binding Selected.Faction, FallbackValue={x:Null}}"
-                              MinWidth="240" PlaceholderText="Sans faction">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FactionViewModel">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <Border Width="14" Height="14" CornerRadius="3"
-                                            Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                                    <TextBlock Text="{Binding Name}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                    <Button Content="Retirer" Command="{Binding ClearFactionCommand}" />
+                    <Button Content="+ Membre" Command="{Binding AddMemberCommand}" />
+                    <Button Content="Retirer le membre" Command="{Binding RemoveMemberCommand}" />
                 </StackPanel>
-                <TextBlock Text="Chef d'équipe" Classes="label" />
-                <TextBox Text="{Binding Selected.LeaderName, FallbackValue=''}" />
-                <TextBlock Text="Téléphone du chef d'équipe" Classes="label" />
-                <TextBox Text="{Binding Selected.LeaderPhone, FallbackValue=''}" />
-                <TextBlock Text="Nombre de joueurs" Classes="label" />
-                <NumericUpDown Value="{Binding Selected.PlayerCount, FallbackValue=0}" Minimum="0" Maximum="500"
-                               Increment="1" FormatString="0" Width="160" HorizontalAlignment="Left" />
+
+                <TextBlock Classes="h2" Margin="0,8,0,0">
+                    <Run Text="Véhicules" />
+                    <Run Text="{Binding Selected.VehicleSummary, FallbackValue=''}" FontWeight="Normal" FontSize="13" />
+                </TextBlock>
+                <DataGrid ItemsSource="{Binding Selected.Vehicles, FallbackValue={x:Null}}" SelectedItem="{Binding SelectedVehicle}"
+                          AutoGenerateColumns="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                          MinHeight="80" MaxHeight="220" BorderThickness="1"
+                          BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Type (4x4, quad, pick-up…)" Binding="{Binding Kind}" Width="*" />
+                        <DataGridTextColumn Header="Nombre" Binding="{Binding Quantity}" Width="90" />
+                        <DataGridTextColumn Header="Remarques (immatriculation, places…)" Binding="{Binding Notes}" Width="2*" />
+                    </DataGrid.Columns>
+                </DataGrid>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="+ Véhicule" Command="{Binding AddVehicleCommand}" />
+                    <Button Content="Retirer le véhicule" Command="{Binding RemoveVehicleCommand}" />
+                </StackPanel>
+
                 <TextBlock Text="Notes" Classes="label" />
-                <TextBox Text="{Binding Selected.Notes, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+                <TextBox Text="{Binding Selected.Notes, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
             </StackPanel>
         </ScrollViewer>
     </Grid>

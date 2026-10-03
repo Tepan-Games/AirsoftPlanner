@@ -28,6 +28,7 @@
                                       SelectedMission="{Binding Selected}"
                                       OperationStart="{Binding OperationStartMinutes}"
                                       OperationEnd="{Binding OperationEndMinutes}"
+                                      Day="{Binding Operation.Day}"
                                       CreateCommand="{Binding CreateAtCommand}" />
         </DockPanel>
 
@@ -96,6 +97,46 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <TextBlock Text="{Binding Selected.PlayersText, FallbackValue=''}" FontSize="12" Opacity="0.75" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <CheckBox Content="Effectif maximum" IsChecked="{Binding Selected.HasMaxPlayers, FallbackValue=False}" />
+                            <NumericUpDown Value="{Binding Selected.MaxPlayers, FallbackValue={x:Null}}" Minimum="1" Maximum="5000"
+                                           Increment="1" FormatString="0" Width="130"
+                                           IsEnabled="{Binding Selected.HasMaxPlayers, FallbackValue=False}" />
+                        </StackPanel>
+
+                        <TextBlock Text="Matériel de jeu utilisé" Classes="label" />
+                        <ItemsControl ItemsSource="{Binding Selected.ItemUses, FallbackValue={x:Null}}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MissionItemUseViewModel">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" Margin="0,2">
+                                        <TextBlock Text="{Binding Item.Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <NumericUpDown Grid.Column="1" Value="{Binding Quantity}" Minimum="1" Maximum="1000"
+                                                       Increment="1" FormatString="0" Width="110" Margin="6,0" />
+                                        <Button Grid.Column="2" Content="✕" ToolTip.Tip="Retirer de la mission"
+                                                Command="{Binding $parent[UserControl].((vm:MissionsViewModel)DataContext).RemoveItemCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Grid ColumnDefinitions="*,Auto,Auto">
+                            <ComboBox ItemsSource="{Binding GameItems}" SelectedItem="{Binding ItemToAdd}"
+                                      PlaceholderText="Choisir un élément…" HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:GameItemViewModel">
+                                        <TextBlock>
+                                            <Run Text="{Binding Name}" />
+                                            <Run Text="{Binding Quantity, StringFormat='(stock {0})'}" FontSize="11" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <NumericUpDown Grid.Column="1" Value="{Binding ItemToAddQuantity}" Minimum="1" Maximum="1000"
+                                           Increment="1" FormatString="0" Width="110" Margin="6,0" />
+                            <Button Grid.Column="2" Content="Ajouter" Command="{Binding AddItemCommand}" />
+                        </Grid>
 
                         <TextBlock Text="Prérequis (missions à terminer avant)" Classes="label" />
                         <TextBlock IsVisible="{Binding !PredecessorChoices.Count}" Text="Aucune autre mission." FontSize="12" Opacity="0.6" />

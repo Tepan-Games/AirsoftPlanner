@@ -26,4 +26,10 @@ public class Mission : Entity
 
     /// <summary>Missions qui doivent être terminées avant que celle-ci commence.</summary>
     public List<Guid> PredecessorIds { get; set; } = [];
+
+    /// <summary>Effectif maximum de joueurs sur la mission, ou null sans limite.</summary>
+    public int? MaxPlayers { get; set; }
+
+    /// <summary>Matériel de jeu utilisé par la mission.</summary>
+    public List<MissionItemUse> Items { get; set; } = [];
 }

@@ -1,56 +1,142 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 
 namespace AirsoftPlanner.App.ViewModels;
 
-public class TeamViewModel(Team team, IReadOnlyCollection<FactionViewModel> factions) : ViewModelBase
+public class TeamViewModel : ViewModelBase
 {
-    public Team Model => team;
+    private readonly Team _team;
+    private readonly IReadOnlyCollection<FactionViewModel> _factions;
+
+    public TeamViewModel(Team team, IReadOnlyCollection<FactionViewModel> factions,
+        IEnumerable<TeamMember> members, IEnumerable<TeamVehicle> vehicles)
+    {
+        _team = team;
+        _factions = factions;
+        Members = new ObservableCollection<MemberViewModel>(members.Select(m => new MemberViewModel(m, OnLeaderChanged)));
+        Vehicles = new ObservableCollection<VehicleViewModel>(vehicles.Select(v => new VehicleViewModel(v)));
+        Members.CollectionChanged += (_, e) =>
+        {
+            foreach (var member in e.NewItems?.OfType<MemberViewModel>() ?? [])
+                member.PropertyChanged += OnMemberChanged;
+            OnMembersChanged();
+        };
+        foreach (var member in Members)
+            member.PropertyChanged += OnMemberChanged;
+        Vehicles.CollectionChanged += (_, e) =>
+        {
+            foreach (var vehicle in e.NewItems?.OfType<VehicleViewModel>() ?? [])
+                vehicle.PropertyChanged += OnVehicleChanged;
+            OnPropertyChanged(nameof(VehicleSummary));
+        };
+        foreach (var vehicle in Vehicles)
+            vehicle.PropertyChanged += OnVehicleChanged;
+    }
+
+    public Team Model => _team;
+
+    public ObservableCollection<MemberViewModel> Members { get; }
+
+    public ObservableCollection<VehicleViewModel> Vehicles { get; }
 
     public string Name
     {
-        get => team.Name;
-        set => SetProperty(team.Name, value, team, (t, v) => t.Name = v);
+        get => _team.Name;
+        set => SetProperty(_team.Name, value, _team, (t, v) => t.Name = v);
     }
 
     public FactionViewModel? Faction
     {
-        get => factions.FirstOrDefault(f => f.Model.Id == team.FactionId);
+        get => _factions.FirstOrDefault(f => f.Model.Id == _team.FactionId);
         set
         {
-            if (value?.Model.Id == team.FactionId)
+            if (value?.Model.Id == _team.FactionId)
                 return;
 
-            team.FactionId = value?.Model.Id;
+            _team.FactionId = value?.Model.Id;
             OnPropertyChanged();
         }
     }
 
-    public string LeaderName
+    public string RadioFrequency
     {
-        get => team.LeaderName;
-        set => SetProperty(team.LeaderName, value, team, (t, v) => t.LeaderName = v);
+        get => _team.RadioFrequency;
+        set => SetProperty(_team.RadioFrequency, value, _team, (t, v) => t.RadioFrequency = v);
     }
 
-    public string LeaderPhone
-    {
-        get => team.LeaderPhone;
-        set => SetProperty(team.LeaderPhone, value, team, (t, v) => t.LeaderPhone = v);
-    }
-
+    /// <summary>Effectif annoncé, utilisé tant que les membres ne sont pas renseignés.</summary>
     public decimal? PlayerCount
     {
-        get => team.PlayerCount;
-        set => SetProperty(team.PlayerCount, (int)(value ?? 0), team, (t, v) => t.PlayerCount = v);
+        get => _team.PlayerCount;
+        set
+        {
+            if (!SetProperty(_team.PlayerCount, (int)(value ?? 0), _team, (t, v) => t.PlayerCount = v))
+                return;
+            OnPropertyChanged(nameof(Size));
+            OnPropertyChanged(nameof(SizeText));
+        }
     }
+
+    public bool HasMembers => Members.Count > 0;
+
+    /// <summary>Effectif réel : le nombre de membres renseignés, sinon l'effectif annoncé.</summary>
+    public int Size => HasMembers ? Members.Count : _team.PlayerCount;
+
+    public string SizeText => HasMembers ? $"{Members.Count} joueur(s)" : $"{_team.PlayerCount} joueur(s) annoncé(s)";
+
+    public MemberViewModel? Leader => Members.FirstOrDefault(m => m.IsLeader);
+
+    public string LeaderText => Leader is { } leader
+        ? $"{leader.DisplayName}{(leader.Phone.Length > 0 ? " · " + leader.Phone : "")}"
+        : "Pas de chef d'équipe désigné";
+
+    public string VehicleSummary => Vehicles.Count == 0
+        ? "Pas de véhicule"
+        : string.Join(", ", Vehicles.Select(v => $"{v.Quantity} × {(v.Kind.Length > 0 ? v.Kind : "véhicule")}"));
 
     public string Notes
     {
-        get => team.Notes;
-        set => SetProperty(team.Notes, value, team, (t, v) => t.Notes = v);
+        get => _team.Notes;
+        set => SetProperty(_team.Notes, value, _team, (t, v) => t.Notes = v);
     }
 
-    /// <summary>À appeler quand la liste des factions ou le nom/la couleur de la faction change.</summary>
-    public void RefreshFaction() => OnPropertyChanged(nameof(Faction));
+    /// <summary>Ajoute un membre en appliquant la règle « un seul chef par équipe ».</summary>
+    public MemberViewModel AddMember(TeamMember member)
+    {
+        var viewModel = new MemberViewModel(member, OnLeaderChanged);
+        Members.Add(viewModel);
+        return viewModel;
+    }
+
+    private void OnLeaderChanged(MemberViewModel leader)
+    {
+        foreach (var other in Members.Where(m => m != leader && m.IsLeader))
+            other.IsLeader = false;
+        OnPropertyChanged(nameof(Leader));
+        OnPropertyChanged(nameof(LeaderText));
+    }
+
+    private void OnMemberChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(MemberViewModel.IsLeader) or nameof(MemberViewModel.FirstName)
+            or nameof(MemberViewModel.LastName) or nameof(MemberViewModel.Callsign) or nameof(MemberViewModel.Phone))
+        {
+            OnPropertyChanged(nameof(Leader));
+            OnPropertyChanged(nameof(LeaderText));
+        }
+    }
+
+    private void OnVehicleChanged(object? sender, PropertyChangedEventArgs e) => OnPropertyChanged(nameof(VehicleSummary));
+
+    private void OnMembersChanged()
+    {
+        OnPropertyChanged(nameof(HasMembers));
+        OnPropertyChanged(nameof(Size));
+        OnPropertyChanged(nameof(SizeText));
+        OnPropertyChanged(nameof(Leader));
+        OnPropertyChanged(nameof(LeaderText));
+    }
 }

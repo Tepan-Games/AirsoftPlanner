@@ -1,0 +1,329 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Globalization;
+using System.Linq;
+using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Geo;
+using AirsoftPlanner.Core.Planning;
+using AirsoftPlanner.Data;
+using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AirsoftPlanner.App.ViewModels;
+
+/// <summary>Équipe affichée sur la carte de suivi.</summary>
+public record TeamMarker(GeoPoint Point, string Color, string Label, string StatusColor, GeoPoint? Target, bool IsSelected);
+
+/// <summary>État d'une équipe à l'instant suivi.</summary>
+public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
+{
+    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+
+    public TeamViewModel Team => team;
+
+    [ObservableProperty]
+    private ProgressStatus _status;
+
+    [ObservableProperty]
+    private GeoPoint? _position;
+
+    [ObservableProperty]
+    private GeoPoint? _target;
+
+    [ObservableProperty]
+    private string _missionText = "";
+
+    [ObservableProperty]
+    private string _distanceText = "";
+
+    [ObservableProperty]
+    private string _positionText = "";
+
+    public string StatusLabel => Status switch
+    {
+        ProgressStatus.OnTime => "À l'heure",
+        ProgressStatus.Tight => "Juste",
+        ProgressStatus.Late => "En retard",
+        ProgressStatus.Idle => "Sans mission",
+        _ => "Position inconnue",
+    };
+
+    public string StatusColor => Status switch
+    {
+        ProgressStatus.OnTime => "#2E7D32",
+        ProgressStatus.Tight => "#F9A825",
+        ProgressStatus.Late => "#D32F2F",
+        ProgressStatus.Idle => "#607D8B",
+        _ => "#9E9E9E",
+    };
+
+    partial void OnStatusChanged(ProgressStatus value)
+    {
+        OnPropertyChanged(nameof(StatusLabel));
+        OnPropertyChanged(nameof(StatusColor));
+    }
+
+    public void Update(TeamProgress progress, GeoPoint? position, Func<Mission, string> describeMission, Func<GeoPoint, string> formatPoint)
+    {
+        Status = progress.Status;
+        Position = position;
+
+        MissionText = (progress.CurrentMission, progress.TargetMission) switch
+        {
+            ({ } current, _) => $"En cours : {describeMission(current)}",
+            (null, { } next) => $"Prochaine : {describeMission(next)}",
+            _ => "Aucune mission à venir",
+        };
+
+        DistanceText = progress switch
+        {
+            { DistanceMeters: 0 } => "Sur la zone",
+            { DistanceMeters: { } distance, TravelMinutes: { } travel, SlackMinutes: { } slack } =>
+                string.Format(French, "{0} · {1} à pied · {2}", FormatDistance(distance), MissionTime.FormatDuration((int)Math.Ceiling(travel)),
+                    progress.CurrentMission is not null ? "mission commencée"
+                    : slack >= 0 ? $"marge {MissionTime.FormatDuration((int)slack)}"
+                    : $"retard estimé {MissionTime.FormatDuration((int)Math.Ceiling(-slack))}"),
+            _ => "",
+        };
+
+        PositionText = position is not { } point ? "Aucune position reçue"
+            : $"{formatPoint(point)} · {FormatAge(progress.PositionAgeMinutes ?? 0)}";
+    }
+
+    private static string FormatDistance(double meters) =>
+        meters < 1000 ? $"{meters:0} m" : string.Format(French, "{0:0.0} km", meters / 1000);
+
+    private static string FormatAge(double minutes) => minutes switch
+    {
+        < 1 => "à l'instant",
+        < 60 => $"il y a {minutes:0} min",
+        _ => $"il y a {MissionTime.FormatDuration((int)minutes)}",
+    };
+}
+
+/// <summary>
+/// Suivi de l'OP : heure réelle ou simulée, dernières positions des équipes, et alerte quand une équipe
+/// ne pourra pas rejoindre à temps la zone de sa prochaine mission.
+/// </summary>
+public partial class TrackingViewModel : ViewModelBase
+{
+    private readonly OperationFile _file;
+    private readonly OperationViewModel _operation;
+    private readonly TeamsViewModel _teams;
+    private readonly TerrainViewModel _terrain;
+    private readonly List<TeamPosition> _positions;
+    private readonly DispatcherTimer _clock;
+
+    public TrackingViewModel(OperationFile file, OperationViewModel operation, TeamsViewModel teams,
+        TerrainViewModel terrain, MissionsViewModel missions)
+    {
+        _file = file;
+        _operation = operation;
+        _teams = teams;
+        _terrain = terrain;
+        Missions = missions;
+        _positions = file.LoadPositions().ToList();
+
+        // Hors des horaires de l'OP, on démarre en simulation au début de l'OP.
+        var realNow = operation.ToMinutes(DateTime.Now);
+        _isSimulation = realNow < operation.StartMinutes || realNow > operation.EndMinutes;
+        _simulatedMinutes = operation.StartMinutes;
+
+        RebuildStatuses();
+        missions.Columns.CollectionChanged += (_, _) => RebuildStatuses();
+        missions.ScheduleChanged += Refresh;
+        operation.PropertyChanged += OnOperationChanged;
+        terrain.Zones.CollectionChanged += OnZonesChanged;
+        foreach (var zone in terrain.Zones)
+            zone.PropertyChanged += OnZoneChanged;
+
+        _clock = new DispatcherTimer(TimeSpan.FromSeconds(15), DispatcherPriority.Background, (_, _) =>
+        {
+            if (!IsSimulation)
+                Refresh();
+        });
+        _clock.Start();
+        Refresh();
+    }
+
+    public MissionsViewModel Missions { get; }
+
+    public TerrainViewModel Terrain => _terrain;
+
+    public ObservableCollection<TeamStatusViewModel> Statuses { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowMinutes), nameof(NowText))]
+    private bool _isSimulation;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NowMinutes), nameof(NowText))]
+    private double _simulatedMinutes;
+
+    public double SimulationStart => _operation.StartMinutes;
+
+    public double SimulationEnd => _operation.EndMinutes;
+
+    /// <summary>Instant suivi, en minutes depuis minuit le premier jour de l'OP.</summary>
+    public double NowMinutes => IsSimulation ? SimulatedMinutes : _operation.ToMinutes(DateTime.Now);
+
+    public string NowText => (IsSimulation ? "Simulation : " : "Maintenant : ")
+        + _operation.ToDateTime(NowMinutes).ToString("dddd d MMMM HH:mm", CultureInfo.GetCultureInfo("fr-FR"));
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(SetPositionCommand))]
+    [NotifyPropertyChangedFor(nameof(HasSelection))]
+    private TeamStatusViewModel? _selected;
+
+    public bool HasSelection => Selected is not null;
+
+    /// <summary>En mode placement, un clic sur la carte enregistre la position de l'équipe sélectionnée.</summary>
+    [ObservableProperty]
+    private bool _isPlacing;
+
+    [ObservableProperty]
+    private string _positionInput = "";
+
+    [ObservableProperty]
+    private IReadOnlyList<TeamMarker> _markers = [];
+
+    [ObservableProperty]
+    private string _summary = "";
+
+    [RelayCommand]
+    private void MapClicked(GeoPoint point)
+    {
+        if (!IsPlacing || Selected is null)
+            return;
+
+        RecordPosition(Selected.Team, point);
+        IsPlacing = false;
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void SetPosition()
+    {
+        if (!Coordinates.TryParse(PositionInput, out var point))
+            throw new FormatException("Coordonnées non reconnues.");
+
+        RecordPosition(Selected!.Team, point);
+        PositionInput = "";
+    }
+
+    partial void OnIsSimulationChanged(bool value) => Refresh();
+
+    partial void OnSimulatedMinutesChanged(double value) => Refresh();
+
+    partial void OnSelectedChanged(TeamStatusViewModel? value) => RefreshMarkers();
+
+    /// <summary>Enregistre une position reçue (saisie manuelle aujourd'hui, GPS plus tard).</summary>
+    public void RecordPosition(TeamViewModel team, GeoPoint point, string source = "Manuel")
+    {
+        var position = new TeamPosition
+        {
+            TeamId = team.Model.Id,
+            Point = point,
+            ReceivedAt = new DateTimeOffset(_operation.ToDateTime(NowMinutes)),
+            Source = source,
+        };
+        _file.Add(position);
+        _positions.Add(position);
+        Refresh();
+    }
+
+    public void Refresh()
+    {
+        OnPropertyChanged(nameof(NowMinutes));
+        OnPropertyChanged(nameof(NowText));
+        var now = NowMinutes;
+        var zones = _terrain.Zones.ToDictionary(z => z.Model.Id, z => z.Model);
+        var missions = Missions.Missions.Select(m => m.Model).ToList();
+        var speed = (double)(_operation.WalkingSpeedKmh ?? 3);
+
+        foreach (var status in Statuses)
+        {
+            // Dernière position reçue avant l'instant suivi (permet de rejouer l'OP en simulation).
+            var last = _positions.LastOrDefault(p => p.TeamId == status.Team.Model.Id
+                                                     && _operation.ToMinutes(p.ReceivedAt.LocalDateTime) <= now + 0.01);
+            (GeoPoint, double)? known = last is null ? null : (last.Point, _operation.ToMinutes(last.ReceivedAt.LocalDateTime));
+            var progress = ProgressTracker.Evaluate(status.Team.Model.Id, missions, zones, known, now, speed);
+            status.Update(progress, last?.Point, DescribeMission, p => Coordinates.Format(p, _operation.CoordinateFormat));
+            status.Target = progress.TargetMission?.ZoneId is { } zoneId && zones.TryGetValue(zoneId, out var zone) && zone.Points.Count > 0
+                ? GeoMath.Centroid(zone.Points)
+                : null;
+        }
+
+        var late = Statuses.Count(s => s.Status == ProgressStatus.Late);
+        var tight = Statuses.Count(s => s.Status == ProgressStatus.Tight);
+        var unknown = Statuses.Count(s => s.Status == ProgressStatus.Unknown);
+        Summary = string.Join(" · ", new[]
+        {
+            late > 0 ? $"{late} en retard" : null,
+            tight > 0 ? $"{tight} juste(s)" : null,
+            unknown > 0 ? $"{unknown} sans position" : null,
+        }.OfType<string>().DefaultIfEmpty("Toutes les équipes sont dans les temps"));
+        RefreshMarkers();
+    }
+
+    private void RefreshMarkers()
+    {
+        Markers = Statuses
+            .Where(s => s.Position is not null)
+            .Select(s => new TeamMarker(
+                s.Position!.Value,
+                s.Team.Faction?.Color ?? "#607D8B",
+                s.Team.Name,
+                s.StatusColor,
+                s.Status is ProgressStatus.Late or ProgressStatus.Tight ? s.Target : null,
+                s == Selected))
+            .ToList();
+    }
+
+    private string DescribeMission(Mission mission)
+    {
+        var zone = _terrain.Zones.FirstOrDefault(z => z.Model.Id == mission.ZoneId)?.Name;
+        return $"{mission.Name} à {MissionTime.Format(mission.StartMinutes)}{(zone is null ? "" : $" — {zone}")}";
+    }
+
+    private void RebuildStatuses()
+    {
+        var selectedTeam = Selected?.Team;
+        Statuses.Clear();
+        foreach (var team in Missions.Columns)
+            Statuses.Add(new TeamStatusViewModel(team));
+        Selected = Statuses.FirstOrDefault(s => s.Team == selectedTeam);
+        Refresh();
+    }
+
+    private void OnOperationChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(OperationViewModel.StartMinutes) or nameof(OperationViewModel.EndMinutes))
+        {
+            OnPropertyChanged(nameof(SimulationStart));
+            OnPropertyChanged(nameof(SimulationEnd));
+            SimulatedMinutes = Math.Clamp(SimulatedMinutes, SimulationStart, SimulationEnd);
+        }
+
+        if (e.PropertyName is nameof(OperationViewModel.WalkingSpeedKmh) or nameof(OperationViewModel.CoordinateFormat)
+            or nameof(OperationViewModel.StartMinutes))
+            Refresh();
+    }
+
+    private void OnZonesChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var zone in e.NewItems?.OfType<ZoneViewModel>() ?? [])
+            zone.PropertyChanged += OnZoneChanged;
+        foreach (var zone in e.OldItems?.OfType<ZoneViewModel>() ?? [])
+            zone.PropertyChanged -= OnZoneChanged;
+    }
+
+    private void OnZoneChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ZoneViewModel.Points) or nameof(ZoneViewModel.Name))
+            Refresh();
+    }
+}

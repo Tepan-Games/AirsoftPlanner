@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
@@ -11,6 +14,7 @@ namespace AirsoftPlanner.App.ViewModels;
 public partial class FactionsViewModel : ViewModelBase
 {
     private readonly OperationFile _file;
+    private TeamsViewModel? _teams;
 
     public FactionsViewModel(OperationFile file)
     {
@@ -38,8 +42,42 @@ public partial class FactionsViewModel : ViewModelBase
         var faction = new Faction { Name = $"Faction {Items.Count + 1}", Color = unusedColor };
         _file.Add(faction);
         var viewModel = new FactionViewModel(faction);
+        if (_teams is { } teams)
+            viewModel.AttachTeams(() => teams.Items);
         Items.Add(viewModel);
         Selected = viewModel;
+    }
+
+    /// <summary>Relie les factions aux équipes, pour calculer les effectifs et choisir l'équipe chef de faction.</summary>
+    public void AttachTeams(TeamsViewModel teams)
+    {
+        _teams = teams;
+        foreach (var faction in Items)
+            faction.AttachTeams(() => teams.Items);
+        foreach (var team in teams.Items)
+            team.PropertyChanged += OnTeamChanged;
+        teams.Items.CollectionChanged += OnTeamsChanged;
+    }
+
+    private void OnTeamsChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        foreach (var team in e.NewItems?.OfType<TeamViewModel>() ?? [])
+            team.PropertyChanged += OnTeamChanged;
+        foreach (var team in e.OldItems?.OfType<TeamViewModel>() ?? [])
+            team.PropertyChanged -= OnTeamChanged;
+        RefreshStaffing();
+    }
+
+    private void OnTeamChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name))
+            RefreshStaffing();
+    }
+
+    private void RefreshStaffing()
+    {
+        foreach (var faction in Items)
+            faction.RefreshStaffing();
     }
 
     [RelayCommand(CanExecute = nameof(HasSelection))]

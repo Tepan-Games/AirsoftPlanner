@@ -17,4 +17,7 @@ public class Operation : Entity
 
     /// <summary>Format des coordonnées affichées dans l'OP et ses documents.</summary>
     public CoordinateFormat CoordinateFormat { get; set; } = CoordinateFormat.Utm;
+
+    /// <summary>Vitesse de déplacement à pied retenue pour estimer les retards (terrain, équipement, prudence).</summary>
+    public double WalkingSpeedKmh { get; set; } = 3;
 }

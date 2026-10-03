@@ -42,6 +42,18 @@ public class TimelineControl : Control
     public static readonly StyledProperty<ICommand?> CreateCommandProperty =
         AvaloniaProperty.Register<TimelineControl, ICommand?>(nameof(CreateCommand));
 
+    /// <summary>Instant suivi (ligne « maintenant »), ou NaN pour ne pas l'afficher.</summary>
+    public static readonly StyledProperty<double> NowMinutesProperty =
+        AvaloniaProperty.Register<TimelineControl, double>(nameof(NowMinutes), double.NaN);
+
+    /// <summary>En suivi : la frise défile pour garder la ligne « maintenant » visible.</summary>
+    public static readonly StyledProperty<bool> FollowNowProperty =
+        AvaloniaProperty.Register<TimelineControl, bool>(nameof(FollowNow));
+
+    /// <summary>Premier jour de l'OP, pour afficher les dates aux changements de jour.</summary>
+    public static readonly StyledProperty<DateTime> DayProperty =
+        AvaloniaProperty.Register<TimelineControl, DateTime>(nameof(Day), DateTime.Today);
+
     private const double HeaderHeight = 46;
     private const double TopPadding = 10;
     private const double GutterWidth = 64;
@@ -68,6 +80,7 @@ public class TimelineControl : Control
     private bool _autoFit = true;
     private double _scrollY;
     private double _scrollX;
+    private bool _followPending;
 
     private DragMode _drag;
     private MissionViewModel? _dragMission;
@@ -81,7 +94,7 @@ public class TimelineControl : Control
 
     static TimelineControl()
     {
-        AffectsRender<TimelineControl>(SelectedMissionProperty, OperationStartProperty, OperationEndProperty);
+        AffectsRender<TimelineControl>(SelectedMissionProperty, OperationStartProperty, OperationEndProperty, NowMinutesProperty, DayProperty);
         FocusableProperty.OverrideDefaultValue<TimelineControl>(true);
     }
 
@@ -102,6 +115,12 @@ public class TimelineControl : Control
 
     public ICommand? CreateCommand { get => GetValue(CreateCommandProperty); set => SetValue(CreateCommandProperty, value); }
 
+    public double NowMinutes { get => GetValue(NowMinutesProperty); set => SetValue(NowMinutesProperty, value); }
+
+    public DateTime Day { get => GetValue(DayProperty); set => SetValue(DayProperty, value); }
+
+    public bool FollowNow { get => GetValue(FollowNowProperty); set => SetValue(FollowNowProperty, value); }
+
     private IReadOnlyList<TeamViewModel> ColumnItems => Columns?.OfType<TeamViewModel>().ToList() ?? [];
 
     private IEnumerable<MissionViewModel> MissionItems => Missions?.OfType<MissionViewModel>() ?? [];
@@ -120,6 +139,12 @@ public class TimelineControl : Control
         if (change.Property == ColumnsProperty || change.Property == MissionsProperty)
         {
             Observe();
+            InvalidateVisual();
+        }
+        else if (change.Property == NowMinutesProperty || change.Property == FollowNowProperty || change.Property == BoundsProperty)
+        {
+            // Le défilement est recalculé au prochain rendu, une fois l'échelle connue.
+            _followPending = FollowNow;
             InvalidateVisual();
         }
     }
@@ -215,8 +240,9 @@ public class TimelineControl : Control
     private void UpdateScale((int Start, int End) range)
     {
         var available = Math.Max(100, Bounds.Height - HeaderHeight - TopPadding - 10);
+        // Tout afficher si possible, sans descendre sous une échelle lisible (1 h = 60 px) : on défile au-delà.
         if (_autoFit)
-            _minutePixels = Math.Clamp(available / Math.Max(60, range.End - range.Start), 0.6, 6);
+            _minutePixels = Math.Clamp(available / Math.Max(60, range.End - range.Start), 1.0, 6);
 
         var contentHeight = (range.End - range.Start) * _minutePixels;
         _scrollY = Math.Clamp(_scrollY, 0, Math.Max(0, contentHeight - available));
@@ -232,6 +258,14 @@ public class TimelineControl : Control
         var columns = ColumnItems;
         var range = Range();
         UpdateScale(range);
+        if (_followPending && !double.IsNaN(NowMinutes) && Bounds.Height > HeaderHeight)
+        {
+            // Garde « maintenant » au premier tiers de la hauteur visible.
+            _scrollY = (NowMinutes - range.Start) * _minutePixels + TopPadding - (Bounds.Height - HeaderHeight) / 3;
+            _followPending = false;
+            UpdateScale(range);
+        }
+
         var width = ColumnWidth(columns.Count);
 
         context.FillRectangle(Background, new Rect(Bounds.Size));
@@ -252,6 +286,8 @@ public class TimelineControl : Control
             if (SelectedMission is { } selected)
                 DrawMission(context, selected, columns, width, range.Start, lanes);
             DrawDependencies(context, columns, width, range.Start, lanes);
+            DrawDayBreaks(context, range);
+            DrawNow(context, range.Start);
         }
 
         DrawGutter(context, range);
@@ -358,6 +394,39 @@ public class TimelineControl : Control
         var normal = new Vector(-unit.Y, unit.X);
         context.DrawLine(pen, to, to - unit * 8 + normal * 4);
         context.DrawLine(pen, to, to - unit * 8 - normal * 4);
+    }
+
+    private static readonly IBrush NowBrush = new SolidColorBrush(Color.FromRgb(0xD3, 0x2F, 0x2F));
+    private static readonly IPen DayBreakPen = new Pen(new SolidColorBrush(Color.FromRgb(0x37, 0x47, 0x4F)), 2);
+
+    private void DrawNow(DrawingContext context, int rangeStart)
+    {
+        if (double.IsNaN(NowMinutes))
+            return;
+
+        var y = HeaderHeight + TopPadding + (NowMinutes - rangeStart) * _minutePixels - _scrollY;
+        context.DrawLine(new Pen(NowBrush, 2), new Point(GutterWidth, y), new Point(Bounds.Width, y));
+        var label = Format(MissionTime.Format((int)NowMinutes), 11, Brushes.White, Bold, 80);
+        var box = new Rect(GutterWidth + 2, y - label.Height - 2, label.Width + 8, label.Height + 2);
+        context.DrawRectangle(NowBrush, null, box, 3, 3);
+        context.DrawText(label, new Point(box.X + 4, box.Y + 1));
+    }
+
+    /// <summary>Trait et date à chaque minuit, pour les OP sur plusieurs jours.</summary>
+    private void DrawDayBreaks(DrawingContext context, (int Start, int End) range)
+    {
+        var french = CultureInfo.GetCultureInfo("fr-FR");
+        for (var midnight = (int)Math.Ceiling(range.Start / 1440.0) * 1440; midnight <= range.End; midnight += 1440)
+        {
+            if (midnight == range.Start)
+                continue;
+            var y = YOf(midnight, range.Start);
+            context.DrawLine(DayBreakPen, new Point(GutterWidth, y), new Point(Bounds.Width, y));
+            var label = Format(Day.AddMinutes(midnight).ToString("dddd d MMMM", french), 11, Brushes.White, Bold, 200);
+            var box = new Rect(Bounds.Width - label.Width - 14, y + 2, label.Width + 8, label.Height + 2);
+            context.DrawRectangle(HeaderBackground, null, box, 3, 3);
+            context.DrawText(label, new Point(box.X + 4, box.Y + 1));
+        }
     }
 
     private void DrawGutter(DrawingContext context, (int Start, int End) range)

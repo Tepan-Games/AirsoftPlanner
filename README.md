@@ -44,6 +44,17 @@ parallèle par des orgas différents.
 - **Carte** : quadrillage UTM, zones (polygones) et points, molette pour zoomer, glisser pour se
   déplacer, double-clic pour la vue d'ensemble, sommets de la zone sélectionnée déplaçables.
 
+## Organisation
+
+- **OP sur plusieurs jours** : date et heure de début et de fin ; la frise marque chaque changement de jour.
+- **Factions** : couleur, effectif minimum et maximum (comparés à l'effectif réel des équipes),
+  brassard, tenue ou camouflage imposé, équipe chef de faction, fréquence radio de commandement.
+- **Équipes** : membres (nom, pseudo / indicatif, rôle, portable, e-mail, chef d'équipe), effectif
+  annoncé tant que les membres ne sont pas saisis, fréquence radio, véhicules (type, nombre, remarques).
+- **Matériel de jeu** : caisses, artifices, fumigènes, accessoires… avec leur stock ; chaque élément
+  indique dans quelles missions il est utilisé. Un manque de stock est signalé (au total pour un
+  consommable, en simultané pour un élément réutilisable).
+
 ## Scénario et frise
 
 - **Missions** : nom, briefing, zone, une ou plusieurs équipes, début et durée, essentielle ou
@@ -56,6 +67,14 @@ parallèle par des orgas différents.
   mission qui commence avant la fin d'un prérequis (ou dont le prérequis est désactivé), une
   mission hors des horaires de l'OP, une mission sans équipe, et les boucles de prérequis (qu'on
   ne peut d'ailleurs pas créer).
+
+## Suivi de l'OP
+
+Dans l'onglet Scénario, le mode **Suivi de l'OP** affiche la frise avec la ligne « maintenant », la
+carte avec la dernière position reçue de chaque équipe, et l'état de chaque équipe : à l'heure,
+juste, en retard (distance jusqu'à la zone de sa mission, temps de marche estimé et marge restante).
+L'heure suivie est l'heure réelle, ou une heure simulée pour préparer ou rejouer l'OP. Les positions
+se saisissent pour l'instant à la main (clic sur la carte ou coordonnées reçues par radio).
 
 ## Structure
 

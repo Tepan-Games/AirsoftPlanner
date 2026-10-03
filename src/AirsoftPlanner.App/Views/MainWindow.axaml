@@ -50,8 +50,18 @@
                     <TabItem Header="Terrain &amp; zones">
                         <views:TerrainView DataContext="{Binding Terrain}" />
                     </TabItem>
+                    <TabItem Header="Matériel de jeu">
+                        <views:GameItemsView DataContext="{Binding GameItems}" />
+                    </TabItem>
                     <TabItem Header="Scénario">
-                        <views:MissionsView DataContext="{Binding Missions}" />
+                        <TabControl Padding="0" TabStripPlacement="Top" Classes="modes">
+                            <TabItem Header="Organisation">
+                                <views:MissionsView DataContext="{Binding Missions}" />
+                            </TabItem>
+                            <TabItem Header="Suivi de l'OP">
+                                <views:TrackingView DataContext="{Binding Tracking}" />
+                            </TabItem>
+                        </TabControl>
                     </TabItem>
                 </TabControl>
             </Panel>

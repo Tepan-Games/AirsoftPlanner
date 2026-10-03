@@ -175,6 +175,63 @@ public sealed class OperationFileTests : IDisposable
     }
 
     [Fact]
+    public void Members_vehicles_items_and_positions_survive_reopening()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+        var team = new Team { Name = "Alpha", RadioFrequency = "PMR 3" };
+        var crate = new GameItem { Name = "Caisse de munitions", Category = GameItemCategory.Crate, Quantity = 4 };
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Add(team);
+            file.Add(new TeamMember { TeamId = team.Id, FirstName = "Jean", Callsign = "Faucon", Phone = "06 00 00 00 00", IsLeader = true });
+            file.Add(new TeamVehicle { TeamId = team.Id, Kind = "4x4", Quantity = 2 });
+            file.Add(crate);
+            file.Add(new Mission { Name = "Livraison", TeamIds = [team.Id], MaxPlayers = 6, Items = [new MissionItemUse(crate.Id, 2)] });
+            file.Add(new TeamPosition { TeamId = team.Id, Point = new GeoPoint(45, 5), ReceivedAt = DateTimeOffset.UtcNow.AddMinutes(-10) });
+            file.Add(new TeamPosition { TeamId = team.Id, Point = new GeoPoint(45.1, 5.1), ReceivedAt = DateTimeOffset.UtcNow });
+            file.Context.Factions.Add(new Faction { Name = "Rouges", MinPlayers = 10, MaxPlayers = 40, ArmbandColor = "#C62828", CommandTeamId = team.Id });
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        Assert.Equal("Faucon", Assert.Single(reopened.LoadMembers()).Callsign);
+        Assert.Equal(2, Assert.Single(reopened.LoadVehicles()).Quantity);
+        Assert.Equal(GameItemCategory.Crate, Assert.Single(reopened.LoadGameItems()).Category);
+        var mission = Assert.Single(reopened.LoadMissions());
+        Assert.Equal(6, mission.MaxPlayers);
+        Assert.Equal([new MissionItemUse(crate.Id, 2)], mission.Items);
+        Assert.Equal(new GeoPoint(45.1, 5.1), reopened.LoadLastPositions()[team.Id].Point);
+        var faction = Assert.Single(reopened.LoadFactions());
+        Assert.Equal((10, 40, team.Id), (faction.MinPlayers, faction.MaxPlayers, faction.CommandTeamId));
+        Assert.Equal(3, reopened.Operation.WalkingSpeedKmh);
+    }
+
+    [Fact]
+    public void Files_from_format_3_get_the_new_tables_and_columns_with_defaults()
+    {
+        var path = Path.Combine(_directory, "v3" + OperationFile.Extension);
+        using (var file = OperationFile.Create(path, "OP v3", "Orga"))
+        {
+            file.Add(new Mission { Name = "Ancienne" });
+            file.Save();
+            foreach (var table in new[] { "TeamMembers", "TeamVehicles", "GameItems", "TeamPositions" })
+                file.Context.Database.ExecuteSqlRaw($"DROP TABLE {table}");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Missions DROP COLUMN Items");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Missions DROP COLUMN MaxPlayers");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Operations DROP COLUMN WalkingSpeedKmh");
+            file.Context.Database.ExecuteSqlRaw("UPDATE DocumentInfo SET FormatVersion = 3");
+        }
+
+        using var upgraded = OperationFile.Open(path);
+        var mission = Assert.Single(upgraded.LoadMissions());
+        Assert.Empty(mission.Items);
+        Assert.Null(mission.MaxPlayers);
+        Assert.Equal(3, upgraded.Operation.WalkingSpeedKmh);
+        Assert.Empty(upgraded.LoadMembers());
+    }
+
+    [Fact]
     public void Open_rejects_a_file_that_is_not_an_operation()
     {
         var path = Path.Combine(_directory, "faux" + OperationFile.Extension);

@@ -10,18 +10,21 @@
             <TextBox Text="{Binding Name}" />
             <TextBlock Text="Terrain / lieu" Classes="label" />
             <TextBox Text="{Binding Location}" />
-            <TextBlock Text="Date" Classes="label" />
-            <CalendarDatePicker SelectedDate="{Binding Date}" />
-            <StackPanel Orientation="Horizontal" Spacing="12">
-                <StackPanel Spacing="10">
-                    <TextBlock Text="Début" Classes="label" />
-                    <TextBox Text="{Binding StartText}" Width="110" />
-                </StackPanel>
-                <StackPanel Spacing="10">
-                    <TextBlock Text="Fin (avant le début = lendemain)" Classes="label" />
-                    <TextBox Text="{Binding EndText}" Width="110" HorizontalAlignment="Left" />
-                </StackPanel>
-            </StackPanel>
+            <Grid ColumnDefinitions="Auto,12,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Text="Date de début" Classes="label" />
+                <TextBlock Grid.Column="2" Text="Heure de début" Classes="label" />
+                <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding StartDate}" Margin="0,10,0,0"
+                                    ToolTip.Tip="Changer la date de début déplace toute l'OP, missions comprises" />
+                <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding StartTimeText}" Width="100" Margin="0,10,0,0" />
+                <TextBlock Grid.Row="2" Text="Date de fin" Classes="label" Margin="0,14,0,-6" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="Heure de fin" Classes="label" Margin="0,14,0,-6" />
+                <CalendarDatePicker Grid.Row="3" SelectedDate="{Binding EndDate}" Margin="0,10,0,0" />
+                <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding EndTimeText}" Width="100" Margin="0,10,0,0" />
+            </Grid>
+            <TextBlock Text="{Binding DurationText}" Opacity="0.7" />
+            <TextBlock Text="Vitesse de déplacement à pied (km/h), pour estimer les retards" Classes="label" />
+            <NumericUpDown Value="{Binding WalkingSpeedKmh}" Minimum="0.5" Maximum="20" Increment="0.5"
+                           FormatString="0.0" Width="140" HorizontalAlignment="Left" />
             <TextBlock Text="Format des coordonnées (carte, ordres de mission)" Classes="label" />
             <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
                       MinWidth="320" />

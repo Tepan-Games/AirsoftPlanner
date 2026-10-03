@@ -97,6 +97,77 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
     public IReadOnlyList<Guid> TeamIds => mission.TeamIds;
 
+    public bool HasMaxPlayers
+    {
+        get => mission.MaxPlayers is not null;
+        set
+        {
+            if (value == HasMaxPlayers)
+                return;
+
+            mission.MaxPlayers = value ? Math.Max(1, owner.AssignedPlayers(this)) : null;
+            OnMaxPlayersChanged();
+        }
+    }
+
+    public decimal? MaxPlayers
+    {
+        get => mission.MaxPlayers;
+        set
+        {
+            if (!HasMaxPlayers || value is null || (int)value == mission.MaxPlayers)
+                return;
+
+            mission.MaxPlayers = Math.Max(1, (int)value);
+            OnMaxPlayersChanged();
+        }
+    }
+
+    public string PlayersText
+    {
+        get
+        {
+            var assigned = owner.AssignedPlayers(this);
+            return mission.MaxPlayers is { } max ? $"{assigned} joueur(s) affecté(s) sur {max} maximum" : $"{assigned} joueur(s) affecté(s)";
+        }
+    }
+
+    /// <summary>Matériel de jeu utilisé par la mission.</summary>
+    public IReadOnlyList<MissionItemUseViewModel> ItemUses => mission.Items
+        .Select(use => owner.FindItem(use.ItemId) is { } item ? new MissionItemUseViewModel(item, use.Quantity, this) : null)
+        .OfType<MissionItemUseViewModel>()
+        .ToList();
+
+    public string ItemsSummary => string.Join(", ", ItemUses.Select(u => $"{u.Quantity} × {u.Item.Name}"));
+
+    public void SetItemQuantity(Guid itemId, int quantity)
+    {
+        // Ordre conservé : modifier une quantité ne déplace pas la ligne.
+        var exists = mission.Items.Any(u => u.ItemId == itemId);
+        mission.Items = quantity <= 0 ? mission.Items.Where(u => u.ItemId != itemId).ToList()
+            : exists ? mission.Items.Select(u => u.ItemId == itemId ? u with { Quantity = quantity } : u).ToList()
+            : [.. mission.Items, new MissionItemUse(itemId, quantity)];
+        RefreshItems();
+        owner.OnScheduleChanged();
+    }
+
+    public void RefreshItems()
+    {
+        OnPropertyChanged(nameof(ItemUses));
+        OnPropertyChanged(nameof(ItemsSummary));
+    }
+
+    /// <summary>À appeler quand l'effectif des équipes affectées change.</summary>
+    public void RefreshPlayers() => OnPropertyChanged(nameof(PlayersText));
+
+    private void OnMaxPlayersChanged()
+    {
+        OnPropertyChanged(nameof(HasMaxPlayers));
+        OnPropertyChanged(nameof(MaxPlayers));
+        OnPropertyChanged(nameof(PlayersText));
+        owner.OnScheduleChanged();
+    }
+
     public IReadOnlyList<Guid> PredecessorIds => mission.PredecessorIds;
 
     public IReadOnlyList<string> Issues
@@ -125,6 +196,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
         mission.TeamIds = assigned ? [.. mission.TeamIds, teamId] : mission.TeamIds.Where(id => id != teamId).ToList();
         OnPropertyChanged(nameof(TeamIds));
+        OnPropertyChanged(nameof(PlayersText));
         owner.OnScheduleChanged();
     }
 
@@ -136,6 +208,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
         mission.TeamIds = mission.TeamIds.Select(id => id == oldTeamId ? newTeamId : id).ToList();
         OnPropertyChanged(nameof(TeamIds));
+        OnPropertyChanged(nameof(PlayersText));
         owner.OnScheduleChanged();
     }
 

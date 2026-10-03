@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             x:Class="AirsoftPlanner.App.Views.GameItemsView"
+             x:DataType="vm:GameItemsViewModel">
+    <Grid ColumnDefinitions="320,*">
+        <DockPanel Margin="12">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Content="Ajouter" Command="{Binding AddCommand}" />
+                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:GameItemViewModel">
+                        <StackPanel>
+                            <TextBlock>
+                                <Run Text="{Binding Quantity}" FontWeight="SemiBold" />
+                                <Run Text="×" />
+                                <Run Text="{Binding Name}" />
+                            </TextBlock>
+                            <TextBlock FontSize="11" Opacity="0.65" TextWrapping="Wrap" Classes.warning="{Binding HasShortage}">
+                                <Run Text="{Binding CategoryLabel}" />
+                                <Run Text="·" />
+                                <Run Text="{Binding UsageSummary}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24" TextWrapping="Wrap"
+                   Text="Listez le matériel de jeu disponible (caisses, artifices, fumigènes, accessoires…), puis affectez-le aux missions dans l'onglet Scénario." />
+
+        <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
+            <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left" Spacing="12">
+                <TextBlock Text="Élément de jeu" Classes="h1" />
+                <TextBlock Text="Nom" Classes="label" />
+                <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Catégorie" Classes="label" />
+                        <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding Selected.Category, FallbackValue={x:Null}}"
+                                  MinWidth="220" />
+                    </StackPanel>
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="Quantité disponible" Classes="label" />
+                        <NumericUpDown Value="{Binding Selected.Quantity, FallbackValue=0}" Minimum="0" Maximum="10000"
+                                       Increment="1" FormatString="0" Width="150" />
+                    </StackPanel>
+                </StackPanel>
+                <CheckBox Content="Consommable (détruit à l'usage : artifice, fumigène…)"
+                          IsChecked="{Binding Selected.IsConsumable, FallbackValue=False}" />
+                <TextBlock Text="Description (contenu, conditions d'utilisation, emplacement de stockage…)" Classes="label" />
+                <TextBox Text="{Binding Selected.Description, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" />
+
+                <TextBlock Text="Utilisation dans le scénario" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="{Binding Selected.UsageSummary, FallbackValue=''}" Classes.warning="{Binding Selected.HasShortage, FallbackValue=False}" />
+                <TextBlock IsVisible="{Binding Selected.HasShortage, FallbackValue=False}" Classes="warning" TextWrapping="Wrap"
+                           Text="⚠ Stock insuffisant : voir les missions signalées dans l'onglet Scénario." />
+                <ItemsControl ItemsSource="{Binding Selected.Usages, FallbackValue={x:Null}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GameItemUsage">
+                            <TextBlock Margin="0,2">
+                                <Run Text="{Binding TimeText}" FontWeight="SemiBold" />
+                                <Run Text="{Binding MissionName}" />
+                                <Run Text=" — " />
+                                <Run Text="{Binding Quantity}" />
+                                <Run Text="utilisé(s)" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

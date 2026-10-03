@@ -21,6 +21,14 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<Mission> Missions => Set<Mission>();
 
+    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+
+    public DbSet<TeamVehicle> TeamVehicles => Set<TeamVehicle>();
+
+    public DbSet<GameItem> GameItems => Set<GameItem>();
+
+    public DbSet<TeamPosition> TeamPositions => Set<TeamPosition>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -57,6 +65,16 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         mission.Ignore(m => m.EndMinutes);
         mission.Property(m => m.TeamIds).HasJsonListConversion();
         mission.Property(m => m.PredecessorIds).HasJsonListConversion();
+        mission.Property(m => m.Items).HasJsonListConversion();
+
+        modelBuilder.Entity<TeamMember>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<TeamVehicle>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<GameItem>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<GameItem>().Property(i => i.Category).HasConversion<string>();
+        modelBuilder.Entity<TeamPosition>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<TeamPosition>().Ignore(p => p.Point);
+        modelBuilder.Entity<TeamPosition>().HasIndex(p => new { p.TeamId, p.ReceivedAt });
+        modelBuilder.Entity<Operation>().Property(o => o.WalkingSpeedKmh).HasDefaultValue(3.0);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
