@@ -55,6 +55,12 @@ public class TerrainMapControl : Control
     public static readonly StyledProperty<IEnumerable<TeamMarker>?> MarkersProperty =
         AvaloniaProperty.Register<TerrainMapControl, IEnumerable<TeamMarker>?>(nameof(Markers));
 
+    public static readonly StyledProperty<IEnumerable<TeamTrail>?> TrailsProperty =
+        AvaloniaProperty.Register<TerrainMapControl, IEnumerable<TeamTrail>?>(nameof(Trails));
+
+    public static readonly StyledProperty<IEnumerable<ItemMarker>?> ItemMarkersProperty =
+        AvaloniaProperty.Register<TerrainMapControl, IEnumerable<ItemMarker>?>(nameof(ItemMarkers));
+
     /// <summary>Faux en suivi d'OP : les zones ne peuvent pas être sélectionnées ni modifiées.</summary>
     public static readonly StyledProperty<bool> AllowEditingProperty =
         AvaloniaProperty.Register<TerrainMapControl, bool>(nameof(AllowEditing), true);
@@ -81,7 +87,7 @@ public class TerrainMapControl : Control
     static TerrainMapControl()
     {
         AffectsRender<TerrainMapControl>(LayerProperty, AreaProperty, SelectedZoneProperty, IsDrawingProperty, ShowUtmGridProperty,
-            MarkersProperty);
+            MarkersProperty, TrailsProperty, ItemMarkersProperty);
         FocusableProperty.OverrideDefaultValue<TerrainMapControl>(true);
     }
 
@@ -111,6 +117,10 @@ public class TerrainMapControl : Control
     public IEnumerable<TeamMarker>? Markers { get => GetValue(MarkersProperty); set => SetValue(MarkersProperty, value); }
 
     public bool AllowEditing { get => GetValue(AllowEditingProperty); set => SetValue(AllowEditingProperty, value); }
+
+    public IEnumerable<TeamTrail>? Trails { get => GetValue(TrailsProperty); set => SetValue(TrailsProperty, value); }
+
+    public IEnumerable<ItemMarker>? ItemMarkers { get => GetValue(ItemMarkersProperty); set => SetValue(ItemMarkersProperty, value); }
 
     private IEnumerable<ZoneViewModel> ZoneItems => Zones?.OfType<ZoneViewModel>() ?? [];
 
@@ -170,6 +180,10 @@ public class TerrainMapControl : Control
         foreach (var zone in ZoneItems.Where(z => z.Points.Count > 0))
             DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.Name);
 
+        foreach (var trail in Trails ?? [])
+            DrawTrail(context, view, trail);
+        foreach (var item in ItemMarkers ?? [])
+            DrawItem(context, view, item);
         foreach (var marker in (Markers ?? []).OrderBy(m => m.IsSelected))
             DrawMarker(context, view, marker);
 
@@ -342,6 +356,48 @@ public class TerrainMapControl : Control
         var center = ToScreen(view, zone.Points[0]);
         var radius = zone == SelectedZone ? 9 : 7;
         context.DrawEllipse(new SolidColorBrush(ParseColor(zone.Color)), new Pen(Brushes.White, 2), center, radius, radius);
+    }
+
+    /// <summary>Parcours d'une équipe : ligne reliant ses positions successives, un point par position reçue.</summary>
+    private void DrawTrail(DrawingContext context, GeoBounds view, TeamTrail trail)
+    {
+        if (trail.Points.Count < 2)
+            return;
+
+        var brush = new SolidColorBrush(ParseColor(trail.Color), 0.85);
+        var points = trail.Points.Select(p => ToScreen(view, p)).ToList();
+        var geometry = new StreamGeometry();
+        using (var g = geometry.Open())
+        {
+            g.BeginFigure(points[0], false);
+            foreach (var point in points.Skip(1))
+                g.LineTo(point);
+            g.EndFigure(false);
+        }
+
+        context.DrawGeometry(null, new Pen(Brushes.White, 5, lineJoin: PenLineJoin.Round), geometry);
+        context.DrawGeometry(null, new Pen(brush, 3, lineJoin: PenLineJoin.Round), geometry);
+        foreach (var point in points.Take(points.Count - 1))
+            context.DrawEllipse(brush, new Pen(Brushes.White, 1), point, 3, 3);
+    }
+
+    /// <summary>Objet d'objectif : losange doré, avec son nom (et son détenteur).</summary>
+    private void DrawItem(DrawingContext context, GeoBounds view, ItemMarker item)
+    {
+        var c = ToScreen(view, item.Point);
+        var size = item.IsSelected ? 10 : 8;
+        var geometry = new StreamGeometry();
+        using (var g = geometry.Open())
+        {
+            g.BeginFigure(new Point(c.X, c.Y - size), true);
+            g.LineTo(new Point(c.X + size, c.Y));
+            g.LineTo(new Point(c.X, c.Y + size));
+            g.LineTo(new Point(c.X - size, c.Y));
+            g.EndFigure(true);
+        }
+
+        context.DrawGeometry(new SolidColorBrush(Color.FromRgb(0xFF, 0xC4, 0x00)), new Pen(Brushes.Black, item.IsSelected ? 2.5 : 1.5), geometry);
+        DrawLabel(context, c + new Vector(0, -size - 12), item.Label);
     }
 
     private void DrawMarker(DrawingContext context, GeoBounds view, TeamMarker marker)

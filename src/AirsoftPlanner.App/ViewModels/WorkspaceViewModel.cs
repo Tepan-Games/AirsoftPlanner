@@ -15,7 +15,7 @@ public class WorkspaceViewModel : ViewModelBase
         Terrain = new TerrainViewModel(file, General, dialogs);
         GameItems = new GameItemsViewModel(file);
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
-        Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions);
+        Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }
 

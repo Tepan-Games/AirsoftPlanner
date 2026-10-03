@@ -21,6 +21,51 @@ public record RadioTeam(string Name, string Frequency, bool IsCommand);
 /// <summary>Une faction dans le plan radio : sa fréquence de commandement et celles de ses équipes.</summary>
 public record RadioFaction(string Name, string Color, string Frequency, IReadOnlyList<RadioTeam> Teams);
 
+/// <summary>Parcours d'une équipe sur la carte.</summary>
+public record TeamTrail(string Color, IReadOnlyList<GeoPoint> Points);
+
+/// <summary>Objet d'objectif affiché sur la carte.</summary>
+public record ItemMarker(GeoPoint Point, string Label, bool IsSelected);
+
+/// <summary>Option d'événement pour un objet d'objectif.</summary>
+public record ItemEventOption(ItemEventKind Kind, string Label, bool NeedsTeam, bool NeedsLocation)
+{
+    public static IReadOnlyList<ItemEventOption> All { get; } =
+    [
+        new(ItemEventKind.Placed, "Placé sur le terrain", false, true),
+        new(ItemEventKind.PickedUp, "Récupéré par", true, false),
+        new(ItemEventKind.Transferred, "Passé à", true, false),
+        new(ItemEventKind.Dropped, "Déposé / abandonné", false, true),
+        new(ItemEventKind.Lost, "Perdu", false, false),
+        new(ItemEventKind.Returned, "Rendu à l'orga", false, false),
+    ];
+
+    public static ItemEventOption Of(ItemEventKind kind) => All.First(o => o.Kind == kind);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Un objet d'objectif suivi : où il est, qui l'a, depuis quand, et son historique.</summary>
+public partial class TrackedItemViewModel(GameItemViewModel item) : ViewModelBase
+{
+    public GameItemViewModel Item => item;
+
+    [ObservableProperty]
+    private string _stateText = "";
+
+    [ObservableProperty]
+    private string _locationText = "";
+
+    [ObservableProperty]
+    private string _stateColor = "#9E9E9E";
+
+    [ObservableProperty]
+    private GeoPoint? _location;
+
+    [ObservableProperty]
+    private IReadOnlyList<string> _history = [];
+}
+
 /// <summary>Équipe affichée sur la carte de suivi.</summary>
 public record TeamMarker(GeoPoint Point, string Color, string Label, string StatusColor, GeoPoint? Target, bool IsSelected);
 
@@ -128,9 +173,22 @@ public partial class TrackingViewModel : ViewModelBase
     private readonly List<TeamPosition> _positions;
     private readonly DispatcherTimer _clock;
 
+    private readonly GameItemsViewModel _items;
+    private readonly List<ItemEvent> _itemEvents;
+
     public TrackingViewModel(OperationFile file, OperationViewModel operation, TeamsViewModel teams,
-        TerrainViewModel terrain, MissionsViewModel missions)
+        TerrainViewModel terrain, MissionsViewModel missions, GameItemsViewModel items)
     {
+        _items = items;
+        _itemEvents = file.LoadItemEvents().ToList();
+        items.Items.CollectionChanged += (_, _) => RebuildTrackedItems();
+        foreach (var item in items.Items)
+            item.PropertyChanged += OnItemChanged;
+        items.Items.CollectionChanged += (_, e) =>
+        {
+            foreach (var item in e.NewItems?.OfType<GameItemViewModel>() ?? [])
+                item.PropertyChanged += OnItemChanged;
+        };
         _file = file;
         _operation = operation;
         _teams = teams;
@@ -143,6 +201,7 @@ public partial class TrackingViewModel : ViewModelBase
         _isSimulation = realNow < operation.StartMinutes || realNow > operation.EndMinutes;
         _simulatedMinutes = operation.StartMinutes;
 
+        RebuildTrackedItems();
         RebuildStatuses();
         missions.Columns.CollectionChanged += (_, _) => RebuildStatuses();
         missions.ScheduleChanged += Refresh;
@@ -204,6 +263,170 @@ public partial class TrackingViewModel : ViewModelBase
     [ObservableProperty]
     private string _summary = "";
 
+    // ----- Trajets -----
+
+    /// <summary>Affiche le parcours de chaque équipe depuis le début de l'OP jusqu'à l'instant suivi.</summary>
+    [ObservableProperty]
+    private bool _showTrails;
+
+    [ObservableProperty]
+    private IReadOnlyList<TeamTrail> _trails = [];
+
+    partial void OnShowTrailsChanged(bool value) => RefreshMarkers();
+
+    // ----- Objets d'objectif -----
+
+    public ObservableCollection<TrackedItemViewModel> TrackedItems { get; } = [];
+
+    public IReadOnlyList<ItemEventOption> ItemEventOptions => ItemEventOption.All;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RecordItemEventCommand))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedItem))]
+    private TrackedItemViewModel? _selectedItem;
+
+    public bool HasSelectedItem => SelectedItem is not null;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ItemEventNeedsTeam), nameof(ItemEventNeedsLocation))]
+    private ItemEventOption _selectedItemEvent = ItemEventOption.Of(ItemEventKind.PickedUp);
+
+    public bool ItemEventNeedsTeam => SelectedItemEvent.NeedsTeam;
+
+    public bool ItemEventNeedsLocation => SelectedItemEvent.NeedsLocation;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RecordItemEventCommand))]
+    private TeamStatusViewModel? _itemEventTeam;
+
+    /// <summary>En attente d'un clic sur la carte pour placer l'objet sélectionné.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMapPlacing))]
+    private bool _isPlacingItem;
+
+    [ObservableProperty]
+    private IReadOnlyList<ItemMarker> _itemMarkers = [];
+
+    /// <summary>La carte attend un clic (position d'équipe ou d'objet).</summary>
+    public bool IsMapPlacing
+    {
+        get => IsPlacing || IsPlacingItem;
+        set
+        {
+            if (!value)
+            {
+                IsPlacing = false;
+                IsPlacingItem = false;
+            }
+        }
+    }
+
+    partial void OnIsPlacingChanged(bool value) => OnPropertyChanged(nameof(IsMapPlacing));
+
+    partial void OnSelectedItemChanged(TrackedItemViewModel? value) => RefreshMarkers();
+
+    /// <summary>
+    /// Enregistre ce qui arrive à l'objet sélectionné. Un objet récupéré ou passé suit ensuite l'équipe ;
+    /// un objet placé ou déposé demande un clic sur la carte.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanRecordItemEvent))]
+    private void RecordItemEvent()
+    {
+        if (SelectedItemEvent.NeedsLocation)
+        {
+            IsPlacing = false;
+            IsPlacingItem = true;
+            return;
+        }
+
+        var team = SelectedItemEvent.NeedsTeam ? ItemEventTeam?.Team : null;
+        AddItemEvent(SelectedItem!, SelectedItemEvent.Kind, team, location: team is null ? CurrentItemLocation(SelectedItem!) : LastPosition(team.Model.Id));
+    }
+
+    private bool CanRecordItemEvent => SelectedItem is not null && (!SelectedItemEvent.NeedsTeam || ItemEventTeam is not null);
+
+    partial void OnSelectedItemEventChanged(ItemEventOption value) => RecordItemEventCommand.NotifyCanExecuteChanged();
+
+    private void AddItemEvent(TrackedItemViewModel item, ItemEventKind kind, TeamViewModel? team, GeoPoint? location)
+    {
+        var itemEvent = new ItemEvent
+        {
+            ItemId = item.Item.Model.Id,
+            Kind = kind,
+            TeamId = team?.Model.Id,
+            Location = location,
+            At = new DateTimeOffset(_operation.ToDateTime(NowMinutes)),
+        };
+        _file.Add(itemEvent);
+        _itemEvents.Add(itemEvent);
+        Refresh();
+    }
+
+    private GeoPoint? CurrentItemLocation(TrackedItemViewModel item) => item.Location;
+
+    private GeoPoint? LastPosition(Guid teamId)
+    {
+        var now = NowMinutes;
+        return _positions.LastOrDefault(p => p.TeamId == teamId && _operation.ToMinutes(p.ReceivedAt.LocalDateTime) <= now + 0.01)?.Point;
+    }
+
+    private void RebuildTrackedItems()
+    {
+        var selected = SelectedItem?.Item;
+        TrackedItems.Clear();
+        foreach (var item in _items.Items.Where(i => i.IsTracked))
+            TrackedItems.Add(new TrackedItemViewModel(item));
+        SelectedItem = TrackedItems.FirstOrDefault(t => t.Item == selected) ?? TrackedItems.FirstOrDefault();
+    }
+
+    private void OnItemChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(GameItemViewModel.IsTracked))
+        {
+            RebuildTrackedItems();
+            Refresh();
+        }
+    }
+
+    private void RefreshItems()
+    {
+        var now = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
+        var teams = _teams.Items.ToDictionary(t => t.Model.Id);
+        string TeamName(Guid? id) => id is { } t && teams.TryGetValue(t, out var team) ? team.Name : "équipe inconnue";
+        string Time(DateTimeOffset at) => MissionTime.Format((int)Math.Round(_operation.ToMinutes(at.LocalDateTime)));
+
+        foreach (var tracked in TrackedItems)
+        {
+            var events = _itemEvents.Where(e => e.ItemId == tracked.Item.Model.Id).ToList();
+            var state = ItemTracker.StateAt(events, now, (team, at) => LastPosition(team));
+            tracked.Location = state.Location;
+            tracked.StateText = state.Kind switch
+            {
+                null => "Pas encore suivi",
+                ItemEventKind.Placed => $"Sur le terrain depuis {Time(state.Since!.Value)}",
+                ItemEventKind.PickedUp or ItemEventKind.Transferred => $"Détenu par {TeamName(state.HolderTeamId)} depuis {Time(state.Since!.Value)}",
+                ItemEventKind.Dropped => $"Déposé à {Time(state.Since!.Value)}",
+                ItemEventKind.Lost => $"Perdu (signalé à {Time(state.Since!.Value)})",
+                _ => $"Rendu à l'orga à {Time(state.Since!.Value)}",
+            };
+            tracked.StateColor = state.Kind switch
+            {
+                ItemEventKind.PickedUp or ItemEventKind.Transferred => "#1565C0",
+                ItemEventKind.Placed or ItemEventKind.Dropped => "#EF6C00",
+                ItemEventKind.Lost => "#C62828",
+                ItemEventKind.Returned => "#2E7D32",
+                _ => "#9E9E9E",
+            };
+            tracked.LocationText = state.Location is { } point && state.OnField
+                ? $"À récupérer : {Coordinates.Format(point, _operation.CoordinateFormat)}"
+                : state.OnField ? "Position inconnue" : "";
+            tracked.History = events.Where(e => e.At <= now).OrderByDescending(e => e.At)
+                .Select(e => $"{Time(e.At)} — {ItemEventOption.Of(e.Kind).Label}{(e.TeamId is null ? "" : " " + TeamName(e.TeamId))}"
+                             + (e.Location is { } l ? $" ({Coordinates.Format(l, _operation.CoordinateFormat)})" : ""))
+                .ToList();
+        }
+    }
+
     /// <summary>Plan radio affiché en permanence sur l'écran de suivi.</summary>
     [ObservableProperty]
     private IReadOnlyList<RadioFaction> _radioPlan = [];
@@ -211,6 +434,13 @@ public partial class TrackingViewModel : ViewModelBase
     [RelayCommand]
     private void MapClicked(GeoPoint point)
     {
+        if (IsPlacingItem && SelectedItem is { } item)
+        {
+            AddItemEvent(item, SelectedItemEvent.Kind, null, point);
+            IsPlacingItem = false;
+            return;
+        }
+
         if (!IsPlacing || Selected is null)
             return;
 
@@ -300,6 +530,7 @@ public partial class TrackingViewModel : ViewModelBase
             tight > 0 ? $"{tight} juste(s)" : null,
             unknown > 0 ? $"{unknown} sans position" : null,
         }.OfType<string>().DefaultIfEmpty("Toutes les équipes sont dans les temps"));
+        RefreshItems();
         RefreshMarkers();
         RefreshRadioPlan();
     }
@@ -328,6 +559,20 @@ public partial class TrackingViewModel : ViewModelBase
                 s.StatusColor,
                 s.Status is ProgressStatus.Late or ProgressStatus.Tight ? s.Target : null,
                 s == Selected))
+            .ToList();
+
+        ItemMarkers = TrackedItems
+            .Where(t => t.Location is not null && t.StateColor != "#2E7D32")
+            .Select(t => new ItemMarker(t.Location!.Value, $"📦 {t.Item.Name}", t == SelectedItem))
+            .ToList();
+
+        var now = NowMinutes;
+        Trails = !ShowTrails ? [] : Statuses
+            .Select(s => new TeamTrail(
+                s.Team.Faction?.Color ?? "#607D8B",
+                _positions.Where(p => p.TeamId == s.Team.Model.Id && _operation.ToMinutes(p.ReceivedAt.LocalDateTime) <= now + 0.01)
+                    .Select(p => p.Point).ToList()))
+            .Where(t => t.Points.Count >= 2)
             .ToList();
     }
 

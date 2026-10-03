@@ -189,6 +189,7 @@ public sealed class OperationFileTests : IDisposable
             file.Add(new TeamMember { TeamId = team.Id, FirstName = "Jean", Callsign = "Faucon", Phone = "06 00 00 00 00", IsLeader = true });
             file.Add(new TeamVehicle { TeamId = team.Id, Kind = "4x4", Quantity = 2 });
             file.Add(crate);
+            file.Add(new ItemEvent { ItemId = crate.Id, Kind = ItemEventKind.PickedUp, TeamId = team.Id, Location = new GeoPoint(45, 5), At = DateTimeOffset.UtcNow });
             file.Add(new Mission { Name = "Livraison", TeamIds = [team.Id], MaxPlayers = 6, Items = [new MissionItemUse(crate.Id, 2)] });
             file.Add(new TeamPosition { TeamId = team.Id, Point = new GeoPoint(45, 5), ReceivedAt = DateTimeOffset.UtcNow.AddMinutes(-10) });
             file.Add(new TeamPosition { TeamId = team.Id, Point = new GeoPoint(45.1, 5.1), ReceivedAt = DateTimeOffset.UtcNow });
@@ -200,6 +201,8 @@ public sealed class OperationFileTests : IDisposable
         Assert.Equal("Faucon", Assert.Single(reopened.LoadMembers()).Callsign);
         Assert.Equal(2, Assert.Single(reopened.LoadVehicles()).Quantity);
         Assert.Equal(GameItemCategory.Crate, Assert.Single(reopened.LoadGameItems()).Category);
+        var itemEvent = Assert.Single(reopened.LoadItemEvents());
+        Assert.Equal((ItemEventKind.PickedUp, team.Id, new GeoPoint(45, 5)), (itemEvent.Kind, itemEvent.TeamId!.Value, itemEvent.Location!.Value));
         var mission = Assert.Single(reopened.LoadMissions());
         Assert.Equal(6, mission.MaxPlayers);
         Assert.Equal([new MissionItemUse(crate.Id, 2)], mission.Items);

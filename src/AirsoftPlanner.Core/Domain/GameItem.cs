@@ -25,6 +25,9 @@ public class GameItem : Entity
     public bool IsConsumable { get; set; }
 
     public string Description { get; set; } = "";
+
+    /// <summary>Objet d'objectif suivi pendant l'OP (qui le détient, où), pour le récupérer ensuite sur le terrain.</summary>
+    public bool IsTracked { get; set; }
 }
 
 /// <summary>Quantité d'un élément de jeu utilisée par une mission.</summary>

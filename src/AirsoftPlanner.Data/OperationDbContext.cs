@@ -33,6 +33,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<TeamPackage> TeamPackages => Set<TeamPackage>();
 
+    public DbSet<ItemEvent> ItemEvents => Set<ItemEvent>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -83,6 +85,9 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<RuleDocument>().Ignore(r => r.IsImported);
         modelBuilder.Entity<TeamPackage>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Team>().Property(t => t.Status).HasConversion<string>();
+        modelBuilder.Entity<ItemEvent>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<ItemEvent>().Property(e => e.Kind).HasConversion<string>();
+        modelBuilder.Entity<ItemEvent>().Ignore(e => e.Location);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -85,6 +85,13 @@ public class GameItemViewModel(GameItem item) : ViewModelBase
         set => SetProperty(item.Description, value, item, (i, v) => i.Description = v);
     }
 
+    /// <summary>Objet d'objectif suivi pendant l'OP (détenteur, position), pour le récupérer sur le terrain.</summary>
+    public bool IsTracked
+    {
+        get => item.IsTracked;
+        set => SetProperty(item.IsTracked, value, item, (i, v) => i.IsTracked = v);
+    }
+
     public IReadOnlyList<GameItemUsage> Usages
     {
         get => _usages;

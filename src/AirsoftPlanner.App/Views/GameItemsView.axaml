@@ -51,6 +51,9 @@
                 </StackPanel>
                 <CheckBox Content="Consommable (détruit à l'usage : artifice, fumigène…)"
                           IsChecked="{Binding Selected.IsConsumable, FallbackValue=False}" />
+                <CheckBox Content="Objet d'objectif à suivre pendant l'OP (qui l'a, où, depuis quand)"
+                          IsChecked="{Binding Selected.IsTracked, FallbackValue=False}"
+                          ToolTip.Tip="Apparaît dans le suivi de l'OP et sur la carte, pour savoir où le récupérer après la partie" />
                 <TextBlock Text="Description (contenu, conditions d'utilisation, emplacement de stockage…)" Classes="label" />
                 <TextBox Text="{Binding Selected.Description, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" />
 

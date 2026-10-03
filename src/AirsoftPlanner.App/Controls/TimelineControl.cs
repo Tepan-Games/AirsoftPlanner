@@ -366,6 +366,8 @@ public class TimelineControl : Control
             };
             if (mission.ZoneName.Length > 0)
                 lines.Add(("📍 " + mission.ZoneName, 11, Typeface.Default));
+            if (mission.ItemsSummary.Length > 0)
+                lines.Add(("📦 " + mission.ItemsSummary, 11, Typeface.Default));
 
             using (context.PushClip(rect.Deflate(3)))
             {
