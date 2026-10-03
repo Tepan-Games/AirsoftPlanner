@@ -1,0 +1,51 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="650"
+        x:Class="AirsoftPlanner.App.Views.MainWindow"
+        x:DataType="vm:MainViewModel"
+        Icon="/Assets/avalonia-logo.ico"
+        Width="1000" Height="650"
+        WindowStartupLocation="CenterScreen"
+        Title="{Binding WindowTitle}">
+
+    <Window.KeyBindings>
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewOperationCommand}" />
+        <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenOperationCommand}" />
+        <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+    </Window.KeyBindings>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="12,8" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Nouvelle OP" Command="{Binding NewOperationCommand}" ToolTip.Tip="Ctrl+N" />
+                <Button Content="Ouvrir…" Command="{Binding OpenOperationCommand}" ToolTip.Tip="Ctrl+O" />
+                <Button Content="Enregistrer" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
+            </StackPanel>
+        </Border>
+
+        <Panel>
+            <StackPanel IsVisible="{Binding !HasOperation}" HorizontalAlignment="Center"
+                        VerticalAlignment="Center" Spacing="8">
+                <TextBlock Text="Airsoft Planner" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="Créez une nouvelle OP ou ouvrez un fichier d'OP (.aop) reçu d'un autre orga."
+                           Opacity="0.7" HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <ScrollViewer IsVisible="{Binding HasOperation}">
+                <StackPanel DataContext="{Binding Operation}" x:DataType="vm:OperationViewModel"
+                            Margin="24" MaxWidth="640" HorizontalAlignment="Left" Spacing="12">
+                    <TextBlock Text="Informations générales" FontSize="20" FontWeight="SemiBold" />
+                    <TextBox Text="{Binding Name}" PlaceholderText="Nom de l'OP" />
+                    <TextBox Text="{Binding Location}" PlaceholderText="Terrain / lieu" />
+                    <CalendarDatePicker SelectedDate="{Binding Date}" />
+                    <TextBox Text="{Binding Description}" PlaceholderText="Description / contexte"
+                             AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
+                </StackPanel>
+            </ScrollViewer>
+        </Panel>
+    </DockPanel>
+</Window>
