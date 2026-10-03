@@ -12,8 +12,11 @@ public sealed class OperationFile : IDisposable
 {
     public const string Extension = ".aop";
 
-    /// <summary>Version 2 : factions, équipes, zones et fond de carte.</summary>
-    public const int CurrentFormatVersion = 2;
+    /// <summary>
+    /// Historique : 2 = factions, équipes, zones, fonds de carte ; 3 = missions.
+    /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
+    /// </summary>
+    public const int CurrentFormatVersion = 3;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -69,6 +72,11 @@ public sealed class OperationFile : IDisposable
             if (info.FormatVersion < MinimumFormatVersion)
                 throw new InvalidDataException(
                     "Ce fichier a été créé avec une préversion d'Airsoft Planner et ne peut plus être ouvert.");
+            if (info.FormatVersion < CurrentFormatVersion)
+            {
+                SchemaUpgrader.Upgrade(context);
+                context.Database.ExecuteSql($"UPDATE DocumentInfo SET FormatVersion = {CurrentFormatVersion}");
+            }
         }
         catch (SqliteException ex)
         {
@@ -93,6 +101,8 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<Team> LoadTeams() => Context.Teams.OrderBy(t => t.Name).ToList();
 
     public IReadOnlyList<Zone> LoadZones() => Context.Zones.OrderBy(z => z.Name).ToList();
+
+    public IReadOnlyList<Mission> LoadMissions() => Context.Missions.OrderBy(m => m.StartMinutes).ThenBy(m => m.Name).ToList();
 
     public IReadOnlyList<MapLayer> LoadMapLayers() => Context.MapLayers.OrderBy(l => l.SortOrder).ToList();
 

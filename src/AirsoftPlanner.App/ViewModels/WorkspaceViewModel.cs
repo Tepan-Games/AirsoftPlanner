@@ -12,6 +12,7 @@ public class WorkspaceViewModel : ViewModelBase
         Factions = new FactionsViewModel(file);
         Teams = new TeamsViewModel(file, Factions);
         Terrain = new TerrainViewModel(file, General, dialogs);
+        Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain);
     }
 
     public OperationViewModel General { get; }
@@ -21,4 +22,6 @@ public class WorkspaceViewModel : ViewModelBase
     public TeamsViewModel Teams { get; }
 
     public TerrainViewModel Terrain { get; }
+
+    public MissionsViewModel Missions { get; }
 }

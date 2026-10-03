@@ -12,6 +12,16 @@
             <TextBox Text="{Binding Location}" />
             <TextBlock Text="Date" Classes="label" />
             <CalendarDatePicker SelectedDate="{Binding Date}" />
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Début" Classes="label" />
+                    <TextBox Text="{Binding StartText}" Width="110" />
+                </StackPanel>
+                <StackPanel Spacing="10">
+                    <TextBlock Text="Fin (avant le début = lendemain)" Classes="label" />
+                    <TextBox Text="{Binding EndText}" Width="110" HorizontalAlignment="Left" />
+                </StackPanel>
+            </StackPanel>
             <TextBlock Text="Format des coordonnées (carte, ordres de mission)" Classes="label" />
             <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
                       MinWidth="320" />

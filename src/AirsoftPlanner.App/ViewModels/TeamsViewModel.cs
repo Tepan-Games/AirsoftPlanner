@@ -21,6 +21,9 @@ public partial class TeamsViewModel : ViewModelBase
         factions.Removed += OnFactionRemoved;
     }
 
+    /// <summary>Déclenché quand une équipe est supprimée, pour la retirer des missions.</summary>
+    public event Action<TeamViewModel>? Removed;
+
     public ObservableCollection<FactionViewModel> Factions { get; }
 
     public ObservableCollection<TeamViewModel> Items { get; }
@@ -49,6 +52,7 @@ public partial class TeamsViewModel : ViewModelBase
         var index = Items.IndexOf(team);
         _file.Remove(team.Model);
         Items.Remove(team);
+        Removed?.Invoke(team);
         Selected = Items.Count == 0 ? null : Items[Math.Min(index, Items.Count - 1)];
     }
 

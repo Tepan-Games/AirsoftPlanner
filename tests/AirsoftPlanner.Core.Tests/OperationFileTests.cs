@@ -123,6 +123,58 @@ public sealed class OperationFileTests : IDisposable
     }
 
     [Fact]
+    public void Missions_survive_reopening()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+        var alpha = Guid.NewGuid();
+        var first = new Mission { Name = "Reconnaissance", TeamIds = [alpha], StartMinutes = 600, DurationMinutes = 45 };
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Add(first);
+            file.Add(new Mission { Name = "Assaut", TeamIds = [alpha], StartMinutes = 660, IsEssential = false, PredecessorIds = [first.Id] });
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        var missions = reopened.LoadMissions();
+        Assert.Equal(["Reconnaissance", "Assaut"], missions.Select(m => m.Name));
+        Assert.Equal([alpha], missions[0].TeamIds);
+        Assert.Equal(645, missions[0].EndMinutes);
+        Assert.False(missions[1].IsEssential);
+        Assert.Equal([first.Id], missions[1].PredecessorIds);
+    }
+
+    [Fact]
+    public void Files_from_the_previous_format_are_upgraded_on_open()
+    {
+        var path = Path.Combine(_directory, "ancien" + OperationFile.Extension);
+        using (var file = OperationFile.Create(path, "OP v2", "Orga"))
+        {
+            file.Add(new Team { Name = "Alpha", Notes = "à garder" });
+            file.Save();
+            // Simule un fichier de la version 2 : pas de table des missions ni de colonne Notes.
+            file.Context.Database.ExecuteSqlRaw("DROP TABLE Missions");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Teams DROP COLUMN Notes");
+            file.Context.Database.ExecuteSqlRaw("UPDATE DocumentInfo SET FormatVersion = 2");
+        }
+
+        using (var upgraded = OperationFile.Open(path))
+        {
+            var team = Assert.Single(upgraded.LoadTeams());
+            Assert.Equal("Alpha", team.Name);
+            Assert.Equal("", team.Notes);
+            Assert.Empty(upgraded.LoadMissions());
+            upgraded.Add(new Mission { Name = "Nouvelle", TeamIds = [team.Id] });
+            upgraded.Save();
+            Assert.Equal(OperationFile.CurrentFormatVersion, upgraded.Context.DocumentInfo.Single().FormatVersion);
+        }
+
+        using var reopened = OperationFile.Open(path);
+        Assert.Equal("Nouvelle", Assert.Single(reopened.LoadMissions()).Name);
+    }
+
+    [Fact]
     public void Open_rejects_a_file_that_is_not_an_operation()
     {
         var path = Path.Combine(_directory, "faux" + OperationFile.Extension);

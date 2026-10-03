@@ -1,7 +1,5 @@
-using System.Text.Json;
 using AirsoftPlanner.Core.Domain;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace AirsoftPlanner.Data;
 
@@ -20,6 +18,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
     public DbSet<TerrainMap> TerrainMaps => Set<TerrainMap>();
 
     public DbSet<MapLayer> MapLayers => Set<MapLayer>();
+
+    public DbSet<Mission> Missions => Set<Mission>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -50,13 +50,13 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         var zone = modelBuilder.Entity<Zone>();
         zone.HasQueryFilter(e => !e.IsDeleted);
         zone.Property(z => z.Kind).HasConversion<string>();
-        zone.Property(z => z.Points).HasConversion(
-            points => JsonSerializer.Serialize(points, JsonSerializerOptions.Default),
-            json => JsonSerializer.Deserialize<List<GeoPoint>>(json, JsonSerializerOptions.Default) ?? new List<GeoPoint>(),
-            new ValueComparer<List<GeoPoint>>(
-                (a, b) => a!.SequenceEqual(b!),
-                points => points.Aggregate(0, (hash, point) => HashCode.Combine(hash, point)),
-                points => points.ToList()));
+        zone.Property(z => z.Points).HasJsonListConversion();
+
+        var mission = modelBuilder.Entity<Mission>();
+        mission.HasQueryFilter(e => !e.IsDeleted);
+        mission.Ignore(m => m.EndMinutes);
+        mission.Property(m => m.TeamIds).HasJsonListConversion();
+        mission.Property(m => m.PredecessorIds).HasJsonListConversion();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

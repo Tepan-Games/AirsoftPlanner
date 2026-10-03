@@ -115,6 +115,9 @@ public partial class TerrainViewModel : ViewModelBase
 
     public ObservableCollection<ZoneViewModel> Zones { get; }
 
+    /// <summary>Déclenché quand une zone est supprimée, pour la détacher des missions.</summary>
+    public event Action<ZoneViewModel>? ZoneRemoved;
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelectedZone))]
     [NotifyCanExecuteChangedFor(nameof(RemoveZoneCommand), nameof(UndoPointCommand), nameof(ClearPointsCommand))]
@@ -251,6 +254,7 @@ public partial class TerrainViewModel : ViewModelBase
         var zone = SelectedZone!;
         _file.Remove(zone.Model);
         Zones.Remove(zone);
+        ZoneRemoved?.Invoke(zone);
         SelectedZone = Zones.FirstOrDefault();
         IsDrawing = false;
     }

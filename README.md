@@ -11,6 +11,10 @@ Application de bureau **hors ligne d'abord**, en C# / .NET 10 avec [Avalonia](ht
 Une OP = un fichier `.aop`. Il contient toute l'opération (base SQLite autonome) et peut être
 transmis tel quel entre orgas (mail, clé USB, Drive…) pour travailler sur la même OP.
 
+Les fichiers créés par une version précédente sont **mis à niveau automatiquement** à l'ouverture
+(ajout des nouvelles tables et colonnes) ; un fichier créé par une version plus récente est refusé
+avec un message invitant à mettre le logiciel à jour.
+
 Chaque donnée porte un identifiant global (Guid), une date de modification et un marqueur de
 suppression : c'est ce qui permettra de **fusionner** deux copies d'une même OP modifiées en
 parallèle par des orgas différents.
@@ -21,7 +25,7 @@ parallèle par des orgas différents.
 |---|---|---|
 | 0 | Socle : solution, fichier `.aop`, fenêtre principale | ✅ |
 | 1 | OP, factions, équipes, terrain et zones sur carte hors ligne (fonds IGN, coordonnées UTM / degrés) | ✅ |
-| 2 | Missions et frise temporelle verticale par équipe | |
+| 2 | Missions et frise temporelle verticale par équipe, détection des conflits | ✅ |
 | 3 | Gestion des retards : décalage en cascade, désactivation des missions non essentielles | |
 | 4 | Inscriptions des équipes et suivi financier (paiements, dépenses, bilan) | |
 | 5 | Génération PDF : ordres de mission, règles du jeu | |
@@ -39,6 +43,19 @@ parallèle par des orgas différents.
   la saisie accepte tous les formats (y compris un copier-coller depuis Google Maps).
 - **Carte** : quadrillage UTM, zones (polygones) et points, molette pour zoomer, glisser pour se
   déplacer, double-clic pour la vue d'ensemble, sommets de la zone sélectionnée déplaçables.
+
+## Scénario et frise
+
+- **Missions** : nom, briefing, zone, une ou plusieurs équipes, début et durée, essentielle ou
+  optionnelle, activée ou non, prérequis (missions à terminer avant).
+- **Frise verticale** : une colonne par équipe (regroupées par faction), le temps qui descend.
+  Glisser une mission pour la déplacer ou la confier à une autre équipe, étirer son bord bas pour
+  changer sa durée, double-cliquer dans une colonne pour créer une mission. Les missions qui se
+  chevauchent s'affichent côte à côte.
+- **Contrôle du planning** : sont signalés en rouge une équipe sur deux missions à la fois, une
+  mission qui commence avant la fin d'un prérequis (ou dont le prérequis est désactivé), une
+  mission hors des horaires de l'OP, une mission sans équipe, et les boucles de prérequis (qu'on
+  ne peut d'ailleurs pas créer).
 
 ## Structure
 

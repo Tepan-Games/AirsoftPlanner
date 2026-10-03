@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
+using AirsoftPlanner.Core.Planning;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -29,17 +30,63 @@ public class OperationViewModel(Operation operation) : ViewModelBase
 
     public DateTime? Date
     {
-        get => operation.StartsAt.LocalDateTime.Date;
+        get => Day;
         set
         {
-            if (value is not { } date || date.Date == Date)
+            if (value is not { } date || date.Date == Day)
                 return;
 
-            var duration = operation.EndsAt - operation.StartsAt;
-            operation.StartsAt = new DateTimeOffset(date.Date + operation.StartsAt.LocalDateTime.TimeOfDay);
-            operation.EndsAt = operation.StartsAt + duration;
+            SetSchedule(date.Date, StartMinutes, EndMinutes);
             OnPropertyChanged();
         }
+    }
+
+    /// <summary>Début de l'OP en minutes depuis minuit le jour de l'OP.</summary>
+    public int StartMinutes => (int)Math.Round((operation.StartsAt.LocalDateTime - Day).TotalMinutes);
+
+    /// <summary>Fin de l'OP en minutes depuis minuit le jour de l'OP (au-delà de 24 h pour une OP de nuit).</summary>
+    public int EndMinutes => (int)Math.Round((operation.EndsAt.LocalDateTime - Day).TotalMinutes);
+
+    public string StartText
+    {
+        get => MissionTime.Format(StartMinutes);
+        set
+        {
+            if (!MissionTime.TryParse(value, out var start) || start >= MissionTime.MinutesPerDay)
+                throw new FormatException("Heure non reconnue (ex. 09:00).");
+
+            var end = EndMinutes;
+            if (end <= start)
+                end += MissionTime.MinutesPerDay;
+            SetSchedule(Day, start, end);
+        }
+    }
+
+    /// <summary>Une heure de fin plus tôt que le début désigne le lendemain (OP de nuit).</summary>
+    public string EndText
+    {
+        get => MissionTime.Format(EndMinutes);
+        set
+        {
+            if (!MissionTime.TryParse(value, out var end))
+                throw new FormatException("Heure non reconnue (ex. 18:00).");
+
+            if (end <= StartMinutes)
+                end += MissionTime.MinutesPerDay;
+            SetSchedule(Day, StartMinutes, end);
+        }
+    }
+
+    private DateTime Day => operation.StartsAt.LocalDateTime.Date;
+
+    private void SetSchedule(DateTime day, int startMinutes, int endMinutes)
+    {
+        operation.StartsAt = new DateTimeOffset(day.AddMinutes(startMinutes));
+        operation.EndsAt = new DateTimeOffset(day.AddMinutes(endMinutes));
+        OnPropertyChanged(nameof(StartMinutes));
+        OnPropertyChanged(nameof(EndMinutes));
+        OnPropertyChanged(nameof(StartText));
+        OnPropertyChanged(nameof(EndText));
     }
 
     public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;

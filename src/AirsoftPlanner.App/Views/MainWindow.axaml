@@ -50,6 +50,9 @@
                     <TabItem Header="Terrain &amp; zones">
                         <views:TerrainView DataContext="{Binding Terrain}" />
                     </TabItem>
+                    <TabItem Header="Scénario">
+                        <views:MissionsView DataContext="{Binding Missions}" />
+                    </TabItem>
                 </TabControl>
             </Panel>
         </Panel>
