@@ -15,6 +15,12 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace AirsoftPlanner.App.ViewModels;
 
+/// <summary>Une équipe dans le plan radio.</summary>
+public record RadioTeam(string Name, string Frequency, bool IsCommand);
+
+/// <summary>Une faction dans le plan radio : sa fréquence de commandement et celles de ses équipes.</summary>
+public record RadioFaction(string Name, string Color, string Frequency, IReadOnlyList<RadioTeam> Teams);
+
 /// <summary>Équipe affichée sur la carte de suivi.</summary>
 public record TeamMarker(GeoPoint Point, string Color, string Label, string StatusColor, GeoPoint? Target, bool IsSelected);
 
@@ -198,6 +204,10 @@ public partial class TrackingViewModel : ViewModelBase
     [ObservableProperty]
     private string _summary = "";
 
+    /// <summary>Plan radio affiché en permanence sur l'écran de suivi.</summary>
+    [ObservableProperty]
+    private IReadOnlyList<RadioFaction> _radioPlan = [];
+
     [RelayCommand]
     private void MapClicked(GeoPoint point)
     {
@@ -291,6 +301,20 @@ public partial class TrackingViewModel : ViewModelBase
             unknown > 0 ? $"{unknown} sans position" : null,
         }.OfType<string>().DefaultIfEmpty("Toutes les équipes sont dans les temps"));
         RefreshMarkers();
+        RefreshRadioPlan();
+    }
+
+    public void RefreshRadioPlan()
+    {
+        static string Frequency(string value) => value.Length > 0 ? value : "—";
+        RadioPlan = Missions.Columns
+            .GroupBy(t => t.Faction)
+            .Select(g => new RadioFaction(
+                g.Key?.Name ?? "Sans faction",
+                g.Key?.Color ?? "#607D8B",
+                g.Key is null ? "" : Frequency(g.Key.RadioFrequency),
+                g.Select(t => new RadioTeam(t.Name, Frequency(t.RadioFrequency), g.Key?.CommandTeam == t)).ToList()))
+            .ToList();
     }
 
     private void RefreshMarkers()

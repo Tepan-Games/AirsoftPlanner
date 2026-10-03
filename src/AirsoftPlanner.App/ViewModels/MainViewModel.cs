@@ -21,6 +21,22 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
 
     public bool IsNightMode => AppSettings.Current.Theme == AppTheme.Night;
 
+    public System.Collections.Generic.IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;
+
+    /// <summary>Format d'affichage des coordonnées (paramètre de l'application, mémorisé).</summary>
+    public CoordinateFormatOption DisplayCoordinateFormat
+    {
+        get => CoordinateFormatOption.Of(AppSettings.Current.CoordinateFormat);
+        set
+        {
+            if (value is null)
+                return;
+
+            AppSettings.SetCoordinateFormat(value.Value);
+            OnPropertyChanged();
+        }
+    }
+
     public string ThemeButtonText => IsNightMode ? "☀ Mode jour" : "🌙 Mode nuit";
 
     /// <summary>Bascule jour / nuit, mémorisée pour les prochains lancements.</summary>

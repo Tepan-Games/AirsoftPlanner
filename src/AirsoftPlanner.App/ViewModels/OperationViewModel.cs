@@ -8,8 +8,16 @@ using AirsoftPlanner.Core.Planning;
 namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>Édition des informations générales d'une OP.</summary>
-public class OperationViewModel(Operation operation) : ViewModelBase
+public class OperationViewModel : ViewModelBase
 {
+    private readonly Operation operation;
+
+    public OperationViewModel(Operation operation)
+    {
+        this.operation = operation;
+        AppSettings.CoordinateFormatChanged += () => OnPropertyChanged(nameof(CoordinateFormat));
+    }
+
     public string Name
     {
         get => operation.Name;
@@ -141,8 +149,10 @@ public class OperationViewModel(Operation operation) : ViewModelBase
 
     public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;
 
-    public CoordinateFormat CoordinateFormat => operation.CoordinateFormat;
+    /// <summary>Format d'affichage à l'écran : paramètre de l'application (barre du haut), commun à toutes les OP.</summary>
+    public CoordinateFormat CoordinateFormat => AppSettings.Current.CoordinateFormat;
 
+    /// <summary>Format des coordonnées dans les documents imprimés de cette OP (ordres de mission...).</summary>
     public CoordinateFormatOption SelectedCoordinateFormat
     {
         get => CoordinateFormats.First(f => f.Value == operation.CoordinateFormat);
@@ -153,7 +163,6 @@ public class OperationViewModel(Operation operation) : ViewModelBase
 
             operation.CoordinateFormat = value.Value;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(CoordinateFormat));
         }
     }
 }

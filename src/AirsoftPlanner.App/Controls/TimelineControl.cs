@@ -483,8 +483,8 @@ public class TimelineControl : Control
                 var factionColor = team.Faction is { } faction && Color.TryParse(faction.Color, out var c) ? c : Colors.Gray;
                 context.FillRectangle(new SolidColorBrush(factionColor), new Rect(x + 1, 0, width - 2, 5));
                 context.DrawText(Format(team.Name, 13, Brushes.White, Bold, width - 12), new Point(x + 8, 9));
-                context.DrawText(Format(team.Faction?.Name ?? "Sans faction", 10, Brushes.LightGray, Typeface.Default, width - 12),
-                    new Point(x + 8, 27));
+                var subtitle = (team.Faction?.Name ?? "Sans faction") + (team.RadioFrequency.Length > 0 ? $"  ·  📻 {team.RadioFrequency}" : "");
+                context.DrawText(Format(subtitle, 10, Brushes.LightGray, Typeface.Default, width - 12), new Point(x + 8, 27));
             }
         }
 

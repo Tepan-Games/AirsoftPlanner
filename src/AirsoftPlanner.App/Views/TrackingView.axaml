@@ -23,6 +23,51 @@
             </DockPanel>
         </Border>
 
+        <!-- Plan radio, toujours visible -->
+        <Border DockPanel.Dock="Top" Padding="10,4" BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Left" Text="📻 Plan radio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <ItemsControl ItemsSource="{Binding RadioPlan}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RadioFaction">
+                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,20,2">
+                                <Border Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center"
+                                        Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                <TextBlock VerticalAlignment="Center">
+                                    <Run Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding Frequency}" FontWeight="SemiBold"
+                                         Foreground="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                </TextBlock>
+                                <ItemsControl ItemsSource="{Binding Teams}" VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="10" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RadioTeam">
+                                            <TextBlock>
+                                                <Run Text="{Binding Name}" />
+                                                <Run Text="{Binding IsCommand, Converter={x:Static conv:BoolToTextConverter.CommandStar}}" />
+                                                <Run Text="{Binding Frequency}" FontFamily="Consolas,monospace" />
+                                            </TextBlock>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </DockPanel>
+        </Border>
+
         <Grid ColumnDefinitions="*,6,*">
             <DockPanel>
             <views:DelayPanel DockPanel.Dock="Bottom" DataContext="{Binding Missions.Delay}" IsVisible="{Binding IsOpen}" />
@@ -68,6 +113,7 @@
                                             Background="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
                                     <StackPanel Grid.Column="1">
                                         <TextBlock Text="{Binding Team.Name}" FontWeight="SemiBold" />
+                                        <TextBlock FontSize="11" FontFamily="Consolas,monospace" Text="{Binding Team.RadioFrequencyLabel}" />
                                         <TextBlock Text="{Binding StatusLabel}" FontSize="11"
                                                    Foreground="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
                                     </StackPanel>

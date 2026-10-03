@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using AirsoftPlanner.Core.Geo;
 using Avalonia;
 using Avalonia.Styling;
 
@@ -30,6 +31,22 @@ public class AppSettings
     public static AppSettings Current { get; } = Load();
 
     public AppTheme Theme { get; set; } = AppTheme.System;
+
+    /// <summary>Format d'affichage des coordonnées dans tout le logiciel (les documents imprimés suivent le réglage de l'OP).</summary>
+    public CoordinateFormat CoordinateFormat { get; set; } = CoordinateFormat.Utm;
+
+    /// <summary>Déclenché quand le format d'affichage des coordonnées change.</summary>
+    public static event Action? CoordinateFormatChanged;
+
+    public static void SetCoordinateFormat(CoordinateFormat format)
+    {
+        if (Current.CoordinateFormat == format)
+            return;
+
+        Current.CoordinateFormat = format;
+        Current.Save();
+        CoordinateFormatChanged?.Invoke();
+    }
 
     public static void ApplyTheme()
     {

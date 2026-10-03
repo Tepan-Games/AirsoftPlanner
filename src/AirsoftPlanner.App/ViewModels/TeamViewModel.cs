@@ -64,8 +64,14 @@ public class TeamViewModel : ViewModelBase
     public string RadioFrequency
     {
         get => _team.RadioFrequency;
-        set => SetProperty(_team.RadioFrequency, value, _team, (t, v) => t.RadioFrequency = v);
+        set
+        {
+            if (SetProperty(_team.RadioFrequency, value, _team, (t, v) => t.RadioFrequency = v))
+                OnPropertyChanged(nameof(RadioFrequencyLabel));
+        }
     }
+
+    public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : "📻 fréquence non définie";
 
     /// <summary>Effectif annoncé, utilisé tant que les membres ne sont pas renseignés.</summary>
     public decimal? PlayerCount
