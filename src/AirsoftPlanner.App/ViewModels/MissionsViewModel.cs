@@ -177,6 +177,21 @@ public partial class MissionsViewModel : ViewModelBase
         AddItemCommand.NotifyCanExecuteChanged();
     }
 
+    /// <summary>Mission créée à la volée pendant l'OP (urgence) pour une équipe, à partir d'une heure donnée.</summary>
+    public MissionViewModel CreateUrgentMission(TeamViewModel team, int start)
+    {
+        AddMission(new Mission
+        {
+            Name = $"URGENCE {MissionTime.Format(start)}",
+            StartMinutes = start,
+            DurationMinutes = DefaultDuration,
+            TeamIds = [team.Model.Id],
+            IsEssential = true,
+            Description = "Mission créée pendant l'OP.",
+        });
+        return Selected!;
+    }
+
     // ----- Interne -----
 
     private void CreateMission(int start, List<Guid> teamIds)

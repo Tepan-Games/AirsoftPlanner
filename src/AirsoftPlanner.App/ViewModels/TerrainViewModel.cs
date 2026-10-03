@@ -287,6 +287,16 @@ public partial class TerrainViewModel : ViewModelBase
 
     private bool CanStartDownload => !IsDownloading;
 
+    /// <summary>Ajoute un point déjà placé (ex. lieu d'une urgence signalée pendant l'OP).</summary>
+    public ZoneViewModel AddPointZone(string name, GeoPoint point, string color)
+    {
+        var zone = new Zone { Name = name, Kind = ZoneKind.Point, Color = color, Points = [point] };
+        _file.Add(zone);
+        var viewModel = new ZoneViewModel(zone, () => _operation.CoordinateFormat);
+        Zones.Add(viewModel);
+        return viewModel;
+    }
+
     private void AddZone(ZoneKind kind, string prefix)
     {
         var zone = new Zone

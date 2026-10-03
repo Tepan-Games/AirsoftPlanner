@@ -35,6 +35,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<ItemEvent> ItemEvents => Set<ItemEvent>();
 
+    public DbSet<PlayerStatusEvent> PlayerStatusEvents => Set<PlayerStatusEvent>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -88,6 +90,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<ItemEvent>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<ItemEvent>().Property(e => e.Kind).HasConversion<string>();
         modelBuilder.Entity<ItemEvent>().Ignore(e => e.Location);
+        modelBuilder.Entity<PlayerStatusEvent>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<PlayerStatusEvent>().Property(e => e.Reason).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

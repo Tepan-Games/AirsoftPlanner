@@ -21,6 +21,26 @@ public record RadioTeam(string Name, string Frequency, bool IsCommand);
 /// <summary>Une faction dans le plan radio : sa fréquence de commandement et celles de ses équipes.</summary>
 public record RadioFaction(string Name, string Color, string Frequency, IReadOnlyList<RadioTeam> Teams);
 
+public record OutReasonOption(OutReason Value, string Label)
+{
+    public static IReadOnlyList<OutReasonOption> All { get; } =
+    [
+        new(OutReason.RealInjury, "Blessure réelle"),
+        new(OutReason.Rest, "Pause / fatigue"),
+        new(OutReason.Equipment, "Problème de matériel"),
+        new(OutReason.Sanction, "Sanction"),
+        new(OutReason.Abandon, "Abandon / départ"),
+        new(OutReason.Other, "Autre"),
+    ];
+
+    public static OutReasonOption Of(OutReason reason) => All.First(o => o.Value == reason);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Un joueur de l'équipe sélectionnée, en jeu ou hors jeu.</summary>
+public record PlayerRow(MemberViewModel? Member, string Name, bool IsOut, string StateText);
+
 /// <summary>Parcours d'une équipe sur la carte.</summary>
 public record TeamTrail(string Color, IReadOnlyList<GeoPoint> Points);
 
@@ -96,6 +116,13 @@ public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 
     [ObservableProperty]
     private string _positionText = "";
+
+    [ObservableProperty]
+    private string _strengthText = "";
+
+    /// <summary>Au moins un joueur de l'équipe est hors jeu pour une blessure réelle.</summary>
+    [ObservableProperty]
+    private bool _hasRealInjury;
 
     public string StatusLabel => Status switch
     {
@@ -175,12 +202,14 @@ public partial class TrackingViewModel : ViewModelBase
 
     private readonly GameItemsViewModel _items;
     private readonly List<ItemEvent> _itemEvents;
+    private readonly List<PlayerStatusEvent> _playerEvents;
 
     public TrackingViewModel(OperationFile file, OperationViewModel operation, TeamsViewModel teams,
         TerrainViewModel terrain, MissionsViewModel missions, GameItemsViewModel items)
     {
         _items = items;
         _itemEvents = file.LoadItemEvents().ToList();
+        _playerEvents = file.LoadPlayerStatusEvents().ToList();
         items.Items.CollectionChanged += (_, _) => RebuildTrackedItems();
         foreach (var item in items.Items)
             item.PropertyChanged += OnItemChanged;
@@ -244,7 +273,7 @@ public partial class TrackingViewModel : ViewModelBase
         + _operation.ToDateTime(NowMinutes).ToString("dddd d MMMM HH:mm", CultureInfo.GetCultureInfo("fr-FR"));
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(SetPositionCommand), nameof(PlanDelayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SetPositionCommand), nameof(PlanDelayCommand), nameof(PlayerOutCommand), nameof(PlayerBackCommand))]
     [NotifyPropertyChangedFor(nameof(HasSelection))]
     private TeamStatusViewModel? _selected;
 
@@ -262,6 +291,122 @@ public partial class TrackingViewModel : ViewModelBase
 
     [ObservableProperty]
     private string _summary = "";
+
+    // ----- Effectif en jeu -----
+
+    public IReadOnlyList<OutReasonOption> OutReasons => OutReasonOption.All;
+
+    [ObservableProperty]
+    private OutReasonOption _selectedOutReason = OutReasonOption.Of(OutReason.Rest);
+
+    [ObservableProperty]
+    private string _outNotes = "";
+
+    /// <summary>Nombre de joueurs non nommés à sortir ou faire revenir (équipes sans membres saisis).</summary>
+    [ObservableProperty]
+    private decimal? _anonymousCount = 1;
+
+    [ObservableProperty]
+    private IReadOnlyList<PlayerRow> _players = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(PlayerOutCommand), nameof(PlayerBackCommand))]
+    private PlayerRow? _selectedPlayer;
+
+    [ObservableProperty]
+    private string _strengthHistory = "";
+
+    public bool SelectedTeamHasMembers => Selected?.Team.HasMembers == true;
+
+    [RelayCommand(CanExecute = nameof(CanChangePlayer))]
+    private void PlayerOut() => AddPlayerEvent(isOut: true);
+
+    [RelayCommand(CanExecute = nameof(CanChangePlayer))]
+    private void PlayerBack() => AddPlayerEvent(isOut: false);
+
+    private bool CanChangePlayer => Selected is not null && (!SelectedTeamHasMembers || SelectedPlayer?.Member is not null);
+
+    private void AddPlayerEvent(bool isOut)
+    {
+        var team = Selected!.Team;
+        var playerEvent = new PlayerStatusEvent
+        {
+            TeamId = team.Model.Id,
+            MemberId = SelectedTeamHasMembers ? SelectedPlayer?.Member?.Model.Id : null,
+            IsOut = isOut,
+            Reason = SelectedOutReason.Value,
+            Players = SelectedTeamHasMembers ? 1 : Math.Max(1, (int)(AnonymousCount ?? 1)),
+            At = new DateTimeOffset(_operation.ToDateTime(NowMinutes)),
+            Notes = isOut ? OutNotes.Trim() : "",
+        };
+        _file.Add(playerEvent);
+        _playerEvents.Add(playerEvent);
+        OutNotes = "";
+        Refresh();
+    }
+
+    private TeamStrength StrengthOf(TeamViewModel team, DateTimeOffset at) =>
+        StrengthTracker.StrengthAt(team.Size, _playerEvents.Where(e => e.TeamId == team.Model.Id), at);
+
+    /// <summary>« Blessure réelle depuis 10:12 (cheville) ».</summary>
+    private string OutDescription(OutPlayer player)
+    {
+        var since = MissionTime.Format((int)Math.Round(_operation.ToMinutes(player.Since.LocalDateTime)));
+        return $"Hors jeu — {OutReasonOption.Of(player.Reason).Label.ToLowerInvariant()} depuis {since}{(player.Notes.Length > 0 ? $" ({player.Notes})" : "")}";
+    }
+
+    private void RefreshPlayers()
+    {
+        OnPropertyChanged(nameof(SelectedTeamHasMembers));
+        if (Selected?.Team is not { } team)
+        {
+            Players = [];
+            StrengthHistory = "";
+            return;
+        }
+
+        var now = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
+        var strength = StrengthOf(team, now);
+        var selectedMember = SelectedPlayer?.Member;
+        Players = team.Members
+            .Select(m => strength.Out.FirstOrDefault(o => o.MemberId == m.Model.Id) is { } o
+                ? new PlayerRow(m, m.DisplayName, true, OutDescription(o))
+                : new PlayerRow(m, m.DisplayName, false, "En jeu"))
+            .Concat(strength.Out.Where(o => o.MemberId is null)
+                .Select(o => new PlayerRow(null, $"{o.Players} joueur(s) non nommé(s)", true, OutDescription(o))))
+            .ToList();
+        SelectedPlayer = Players.FirstOrDefault(p => p.Member is not null && p.Member == selectedMember);
+
+        var events = _playerEvents.Where(e => e.TeamId == team.Model.Id && e.At <= now).ToList();
+        var timeline = StrengthTracker.Timeline(team.Size, events);
+        StrengthHistory = timeline.Count == 0
+            ? $"Effectif complet ({team.Size}) depuis le début de l'OP"
+            : $"Début : {team.Size} → " + string.Join(" → ", timeline.Select(t =>
+                $"{MissionTime.Format((int)Math.Round(_operation.ToMinutes(t.At.LocalDateTime)))} : {t.Present}"));
+    }
+
+    // ----- Mission urgente -----
+
+    /// <summary>En attente d'un clic sur la carte pour situer l'urgence.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMapPlacing))]
+    private bool _isPlacingUrgent;
+
+    private MissionViewModel? _urgentMission;
+
+    /// <summary>
+    /// Crée immédiatement une mission pour l'équipe sélectionnée, à l'heure suivie (arrondie aux 5 minutes),
+    /// puis attend un clic sur la carte pour situer l'intervention (Échap ou nouveau clic sur le bouton pour s'en passer).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasSelection))]
+    private void CreateUrgentMission()
+    {
+        var start = (int)Math.Ceiling(NowMinutes / 5) * 5;
+        _urgentMission = Missions.CreateUrgentMission(Selected!.Team, start);
+        IsPlacing = false;
+        IsPlacingItem = false;
+        IsPlacingUrgent = true;
+    }
 
     // ----- Trajets -----
 
@@ -310,13 +455,14 @@ public partial class TrackingViewModel : ViewModelBase
     /// <summary>La carte attend un clic (position d'équipe ou d'objet).</summary>
     public bool IsMapPlacing
     {
-        get => IsPlacing || IsPlacingItem;
+        get => IsPlacing || IsPlacingItem || IsPlacingUrgent;
         set
         {
             if (!value)
             {
                 IsPlacing = false;
                 IsPlacingItem = false;
+                IsPlacingUrgent = false;
             }
         }
     }
@@ -434,6 +580,15 @@ public partial class TrackingViewModel : ViewModelBase
     [RelayCommand]
     private void MapClicked(GeoPoint point)
     {
+        if (IsPlacingUrgent && _urgentMission is { } urgent)
+        {
+            urgent.Zone = Terrain.AddPointZone($"Urgence {MissionTime.Format(urgent.StartMinutes)}", point, "#C62828");
+            IsPlacingUrgent = false;
+            _urgentMission = null;
+            Refresh();
+            return;
+        }
+
         if (IsPlacingItem && SelectedItem is { } item)
         {
             AddItemEvent(item, SelectedItemEvent.Kind, null, point);
@@ -482,7 +637,12 @@ public partial class TrackingViewModel : ViewModelBase
 
     partial void OnSimulatedMinutesChanged(double value) => Refresh();
 
-    partial void OnSelectedChanged(TeamStatusViewModel? value) => RefreshMarkers();
+    partial void OnSelectedChanged(TeamStatusViewModel? value)
+    {
+        RefreshMarkers();
+        RefreshPlayers();
+        CreateUrgentMissionCommand.NotifyCanExecuteChanged();
+    }
 
     /// <summary>Enregistre une position reçue (saisie manuelle aujourd'hui, GPS plus tard).</summary>
     public void RecordPosition(TeamViewModel team, GeoPoint point, string source = "Manuel")
@@ -516,6 +676,11 @@ public partial class TrackingViewModel : ViewModelBase
             (GeoPoint, double)? known = last is null ? null : (last.Point, _operation.ToMinutes(last.ReceivedAt.LocalDateTime));
             var progress = ProgressTracker.Evaluate(status.Team.Model.Id, missions, zones, known, now, speed);
             status.Update(progress, last?.Point, DescribeMission, p => Coordinates.Format(p, _operation.CoordinateFormat));
+            var strength = StrengthOf(status.Team, new DateTimeOffset(_operation.ToDateTime(now)));
+            status.StrengthText = strength.OutCount == 0
+                ? $"Effectif : {strength.Present}/{status.Team.Size}"
+                : $"Effectif : {strength.Present}/{status.Team.Size} · {strength.OutCount} hors jeu";
+            status.HasRealInjury = strength.Out.Any(o => o.Reason == OutReason.RealInjury);
             status.Target = progress.TargetMission?.ZoneId is { } zoneId && zones.TryGetValue(zoneId, out var zone) && zone.Points.Count > 0
                 ? GeoMath.Centroid(zone.Points)
                 : null;
@@ -533,6 +698,7 @@ public partial class TrackingViewModel : ViewModelBase
         RefreshItems();
         RefreshMarkers();
         RefreshRadioPlan();
+        RefreshPlayers();
     }
 
     public void RefreshRadioPlan()
