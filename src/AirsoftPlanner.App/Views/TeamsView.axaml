@@ -77,6 +77,11 @@
                                                 ToolTip.Tip="Date d'inscription (ordre de la liste d'attente)" />
                         </StackPanel>
                     </StackPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8" Width="230">
+                        <TextBlock Text="Identifiants GPS (appareils)" Classes="label" />
+                        <TextBox Text="{Binding Selected.GpsDeviceIds, FallbackValue=''}" PlaceholderText="ex. alpha-tel, !a1b2c3d4"
+                                 ToolTip.Tip="Identifiant saisi dans Traccar Client, ou identifiant du nœud Meshtastic ; plusieurs possibles, séparés par des virgules" />
+                    </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8" Width="200">
                         <TextBlock Text="Fréquence radio de l'équipe" Classes="label" />
                         <TextBox Text="{Binding Selected.RadioFrequency, FallbackValue=''}" PlaceholderText="ex. PMR 446 canal 3" />

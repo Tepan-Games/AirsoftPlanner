@@ -16,10 +16,11 @@ public sealed class OperationFile : IDisposable
     /// Historique : 2 = factions, équipes, zones, fonds de carte ; 3 = missions ;
     /// 4 = membres, véhicules, radio, matériel de jeu, positions des équipes ; 5 = règles et packages ;
     /// 6 = statut d'inscription des équipes ; 7 = suivi des objets d'objectif ;
-    /// 8 = joueurs hors jeu ; 9 = finances (tarif, paiements, dépenses).
+    /// 8 = joueurs hors jeu ; 9 = finances (tarif, paiements, dépenses) ;
+    /// 10 = identifiants GPS des équipes.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 9;
+    public const int CurrentFormatVersion = 10;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;

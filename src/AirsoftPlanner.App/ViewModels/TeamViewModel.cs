@@ -72,6 +72,13 @@ public class TeamViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Identifiants des appareils GPS de l'équipe (Traccar Client, nœud Meshtastic...), séparés par des virgules.</summary>
+    public string GpsDeviceIds
+    {
+        get => _team.GpsDeviceIds;
+        set => SetProperty(_team.GpsDeviceIds, value, _team, (t, v) => t.GpsDeviceIds = v);
+    }
+
     public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : "📻 fréquence non définie";
 
     /// <summary>Effectif annoncé à l'inscription (les membres peuvent n'être saisis qu'en partie).</summary>

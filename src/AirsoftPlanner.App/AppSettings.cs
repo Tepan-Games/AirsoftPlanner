@@ -35,6 +35,27 @@ public class AppSettings
     /// <summary>Format d'affichage des coordonnées dans tout le logiciel (les documents imprimés suivent le réglage de l'OP).</summary>
     public CoordinateFormat CoordinateFormat { get; set; } = CoordinateFormat.Utm;
 
+    // ----- Réception GPS (réglages du poste) -----
+
+    public int GpsServerPort { get; set; } = 5055;
+
+    public string MqttHost { get; set; } = "localhost";
+
+    public int MqttPort { get; set; } = 1883;
+
+    public string MqttTopic { get; set; } = "msh/#";
+
+    public string MqttUser { get; set; } = "";
+
+    /// <summary>Mot de passe chiffré pour l'utilisateur Windows (voir <see cref="Services.Secret"/>).</summary>
+    public string MqttPasswordProtected { get; set; } = "";
+
+    public string TraccarUrl { get; set; } = "";
+
+    public string TraccarUser { get; set; } = "";
+
+    public string TraccarPasswordProtected { get; set; } = "";
+
     /// <summary>Déclenché quand le format d'affichage des coordonnées change.</summary>
     public static event Action? CoordinateFormatChanged;
 

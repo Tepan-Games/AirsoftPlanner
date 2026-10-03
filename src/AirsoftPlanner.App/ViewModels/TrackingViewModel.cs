@@ -637,25 +637,32 @@ public partial class TrackingViewModel : ViewModelBase
 
     partial void OnSimulatedMinutesChanged(double value) => Refresh();
 
+    /// <summary>Réception automatique des positions (smartphones, Meshtastic, Traccar, fichiers).</summary>
+    public GpsViewModel? Gps { get; set; }
+
     partial void OnSelectedChanged(TeamStatusViewModel? value)
     {
+        Gps?.NotifyTeamSelectionChanged();
         RefreshMarkers();
         RefreshPlayers();
         CreateUrgentMissionCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>Enregistre une position reçue (saisie manuelle aujourd'hui, GPS plus tard).</summary>
-    public void RecordPosition(TeamViewModel team, GeoPoint point, string source = "Manuel")
+    public void RecordPosition(TeamViewModel team, GeoPoint point, string source = "Manuel", DateTimeOffset? at = null)
     {
+        // Saisie manuelle : heure suivie (réelle ou simulée). GPS : heure de la mesure.
         var position = new TeamPosition
         {
             TeamId = team.Model.Id,
             Point = point,
-            ReceivedAt = new DateTimeOffset(_operation.ToDateTime(NowMinutes)),
+            ReceivedAt = at ?? new DateTimeOffset(_operation.ToDateTime(NowMinutes)),
             Source = source,
         };
         _file.Add(position);
-        _positions.Add(position);
+        // Les positions arrivent dans le désordre (fichiers, retard réseau) : la liste reste chronologique.
+        var index = _positions.FindLastIndex(p => p.ReceivedAt <= position.ReceivedAt);
+        _positions.Insert(index + 1, position);
         Refresh();
     }
 

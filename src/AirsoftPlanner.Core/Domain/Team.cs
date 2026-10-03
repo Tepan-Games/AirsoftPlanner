@@ -30,4 +30,7 @@ public class Team : Entity
 
     /// <summary>Somme due fixée à la main (remise, forfait), ou null pour effectif × tarif de l'OP.</summary>
     public decimal? AmountDueOverride { get; set; }
+
+    /// <summary>Identifiants des appareils GPS de l'équipe (Traccar Client, nœud Meshtastic...), séparés par des virgules.</summary>
+    public string GpsDeviceIds { get; set; } = "";
 }

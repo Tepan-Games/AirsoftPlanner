@@ -112,10 +112,22 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
         }
     }
 
-    public void Dispose() => _file?.Dispose();
+    public void Dispose()
+    {
+        StopGps();
+        _file?.Dispose();
+    }
+
+    private void StopGps()
+    {
+        // Exécuté hors du fil de l'interface pour éviter tout blocage pendant l'arrêt du serveur.
+        if (Workspace?.Tracking.Gps is { } gps)
+            Task.Run(() => gps.DisposeAsync().AsTask()).Wait(TimeSpan.FromSeconds(5));
+    }
 
     private void Load(OperationFile file)
     {
+        StopGps();
         _file?.Dispose();
         _file = file;
         Workspace = new WorkspaceViewModel(file, dialogs);
