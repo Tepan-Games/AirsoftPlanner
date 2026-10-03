@@ -99,6 +99,45 @@
                                   ToolTip.Tip="Récupère toutes les 10 s les positions collectées par le PC de l'OP (son serveur doit être actif)" />
                 </WrapPanel>
 
+                <TextBlock Text="Application Android (enrôlement par code d'équipe)" FontWeight="SemiBold" Margin="0,6,0,0" />
+                <WrapPanel>
+                    <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding EnrollmentTeam}" MinWidth="160" PlaceholderText="Équipe…" Margin="0,0,6,4">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TeamViewModel">
+                                <TextBlock>
+                                    <Run Text="{Binding Name}" />
+                                    <Run Text="{Binding EnrollmentCodeText}" FontFamily="Consolas,monospace" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Nouveau code" Command="{Binding GenerateCodeCommand}" Margin="0,0,6,4" />
+                    <Button Content="QR code…" Command="{Binding ShowQrCodeCommand}" Margin="0,0,6,4" />
+                    <TextBlock Text="Envoi toutes les" VerticalAlignment="Center" Margin="8,0,6,4" />
+                    <NumericUpDown Value="{Binding IntervalSeconds}" Minimum="5" Maximum="3600" Increment="5" FormatString="0" Width="110" Margin="0,0,6,4" />
+                    <TextBlock Text="s" VerticalAlignment="Center" Margin="0,0,6,4" />
+                </WrapPanel>
+                <WrapPanel>
+                    <TextBlock Text="Les téléphones voient :" VerticalAlignment="Center" Margin="0,0,6,4" />
+                    <ComboBox ItemsSource="{Binding ShareModes}" SelectedItem="{Binding ShareMode}" MinWidth="280" Margin="0,0,6,4"
+                              ToolTip.Tip="Positions des équipes alliées (même faction) renvoyées à l'application, avec le récap de leur mission" />
+                </WrapPanel>
+                <WrapPanel IsVisible="{Binding Devices.Count}">
+                    <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" MinWidth="320" Margin="0,0,6,4" PlaceholderText="Téléphones enrôlés…">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:EnrolledDeviceRow">
+                                <TextBlock>
+                                    <Run Text="{Binding Team}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding Device}" />
+                                    <Run Text="{Binding LastSeen}" Foreground="Gray" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Révoquer" Command="{Binding RevokeDeviceCommand}" Margin="0,0,6,4"
+                            ToolTip.Tip="Le téléphone ne pourra plus envoyer de positions (perdu, prêté...)" />
+                </WrapPanel>
+
                 <TextBlock Text="Meshtastic (passerelle MQTT, messages JSON)" FontWeight="SemiBold" Margin="0,6,0,0" />
                 <WrapPanel>
                     <TextBox Text="{Binding MqttHost}" Width="150" PlaceholderText="Broker (ex. localhost)" Margin="0,0,6,4" />

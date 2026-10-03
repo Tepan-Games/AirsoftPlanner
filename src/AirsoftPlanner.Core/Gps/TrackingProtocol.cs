@@ -1,0 +1,85 @@
+namespace AirsoftPlanner.Core.Gps;
+
+// Messages JSON échangés entre l'application Android et le serveur du PC de l'OP.
+// Partagés par les deux programmes : une modification ici s'applique des deux côtés.
+
+/// <summary>Enrôlement : <c>POST /api/enroll</c> avec le code de l'équipe.</summary>
+public record EnrollRequest(string Code, string DeviceName);
+
+/// <summary>Réponse à l'enrôlement : jeton à conserver et rappel de l'équipe, de l'OP et de la radio.</summary>
+public record EnrollResponse(string Token, string Team, string Operation, string Faction, string RadioFrequency, int IntervalSeconds,
+    AllyShareMode ShareMode = AllyShareMode.Coordinates, Comms? Comms = null);
+
+/// <summary>Fréquence d'une équipe de la faction.</summary>
+public record TeamFrequency(string Team, string Frequency, bool IsCommand);
+
+/// <summary>
+/// Plan de communication de l'équipe : fréquences de sa faction et des équipes alliées, fréquence de l'orga
+/// et numéro d'urgence (toujours envoyés, quel que soit le partage des positions).
+/// </summary>
+public record Comms(string Faction, string FactionFrequency, IReadOnlyList<TeamFrequency> Teams, string OrgaFrequency, string EmergencyPhone);
+
+/// <summary>Ce que les téléphones voient des équipes alliées (réglage de l'OP).</summary>
+/// <remarks>Coordinates vient en premier : c'est le réglage des OP créées avant cette option. Échangé en texte (JSON).</remarks>
+public enum AllyShareMode
+{
+    /// <summary>Positions des alliés en coordonnées seulement (version difficile).</summary>
+    Coordinates,
+
+    /// <summary>Rien : seule la position de sa propre équipe est envoyée.</summary>
+    None,
+
+    /// <summary>Positions des alliés et de sa propre équipe sur la carte du terrain.</summary>
+    Map,
+}
+
+/// <summary>Position d'une équipe alliée (même faction), avec ses coordonnées déjà formatées selon l'OP.</summary>
+public record AllyPosition(string Team, double Latitude, double Longitude, string Coordinates, DateTimeOffset Time, string RadioFrequency);
+
+/// <summary>Récapitulatif d'une mission pour le chef d'équipe.</summary>
+/// <param name="IsCurrent">Vrai si elle est en cours, faux si c'est la prochaine.</param>
+public record MissionBrief(string Name, bool IsCurrent, DateTimeOffset Start, DateTimeOffset End, string Zone, string ZoneCoordinates,
+    double? ZoneLatitude, double? ZoneLongitude, string Briefing, string Equipment);
+
+/// <summary>Fond de carte partagé avec les téléphones (mode carte) : l'image s'obtient par <c>GET /api/map/image</c>.</summary>
+public record MapInfo(string Name, string Attribution, double North, double South, double West, double East);
+
+/// <summary>Une position mesurée par le téléphone.</summary>
+public record TrackPoint(double Latitude, double Longitude, double? Accuracy, DateTimeOffset Time);
+
+/// <summary>
+/// Envoi de positions : <c>POST /api/track</c>. Plusieurs positions possibles (celles accumulées pendant
+/// une coupure du Wi-Fi sont envoyées d'un coup au retour du réseau).
+/// </summary>
+public record TrackRequest(string Token, IReadOnlyList<TrackPoint> Positions);
+
+/// <summary>
+/// Réponse à un envoi : intervalle à respecter (réglable depuis le PC pendant l'OP), mission en cours ou à venir,
+/// et positions des alliés selon le réglage de l'OP.
+/// </summary>
+public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode ShareMode = AllyShareMode.Coordinates,
+    IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null);
+
+/// <summary>Contenu du QR code d'enrôlement : <c>airsoftplanner://enroll?server=...&amp;code=...</c>.</summary>
+public static class EnrollmentLink
+{
+    public const string Scheme = "airsoftplanner";
+
+    public static string Create(string serverUrl, string code) =>
+        $"{Scheme}://enroll?server={Uri.EscapeDataString(serverUrl)}&code={Uri.EscapeDataString(code)}";
+
+    public static bool TryParse(string link, out string serverUrl, out string code)
+    {
+        serverUrl = code = "";
+        if (!Uri.TryCreate(link, UriKind.Absolute, out var uri) || uri.Scheme != Scheme)
+            return false;
+
+        var query = uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2))
+            .Where(p => p.Length == 2)
+            .ToDictionary(p => p[0], p => Uri.UnescapeDataString(p[1]));
+        serverUrl = query.GetValueOrDefault("server", "");
+        code = query.GetValueOrDefault("code", "");
+        return serverUrl.Length > 0 && code.Length > 0;
+    }
+}

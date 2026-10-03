@@ -193,6 +193,8 @@ public sealed class OperationFileTests : IDisposable
             file.Add(new TeamAdjustment { TeamId = team.Id, Kind = AdjustmentKind.Discount, Label = "Aide au montage", Amount = 20m });
             file.Add(crate);
             file.Operation.PricePerPlayer = 25.5m;
+            team.EnrollmentCode = "K7P4QZ";
+            file.Add(new AirsoftPlanner.Core.Gps.EnrolledDevice { TeamId = team.Id, Token = "ABC", DeviceName = "Pixel", EnrolledAt = DateTimeOffset.UtcNow });
             team.AmountDueOverride = 120m;
             file.Add(new Payment { TeamId = team.Id, Amount = 60.25m, Method = PaymentMethod.HelloAsso, Date = DateTimeOffset.UtcNow });
             file.Add(new Expense { Label = "Fumigènes", Category = ExpenseCategory.Pyrotechnics, Amount = 89.9m, IsPaid = true, Date = DateTimeOffset.UtcNow });
@@ -213,6 +215,9 @@ public sealed class OperationFileTests : IDisposable
         Assert.Equal((AdjustmentKind.Discount, 20m), (Assert.Single(reopened.LoadAdjustments()).Kind, reopened.LoadAdjustments()[0].Amount));
         Assert.Equal(GameItemCategory.Crate, Assert.Single(reopened.LoadGameItems()).Category);
         Assert.Equal(25.5m, reopened.Operation.PricePerPlayer);
+        Assert.Equal(30, reopened.Operation.TrackingIntervalSeconds);
+        Assert.Equal("K7P4QZ", reopened.LoadTeams().Single().EnrollmentCode);
+        Assert.Equal("Pixel", Assert.Single(reopened.LoadEnrolledDevices()).DeviceName);
         Assert.Equal(120m, reopened.LoadTeams().Single().AmountDueOverride);
         var payment = Assert.Single(reopened.LoadPayments());
         Assert.Equal((60.25m, PaymentMethod.HelloAsso), (payment.Amount, payment.Method));

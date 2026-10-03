@@ -17,6 +17,7 @@ using AirsoftPlanner.Core.Gps;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
 
@@ -37,6 +38,15 @@ public sealed class LocalGpsServer : IAsyncDisposable
 
     /// <summary>Équipes proposées sur la page de saisie (lue depuis le fil du serveur).</summary>
     public Func<IReadOnlyList<string>> TeamNames { get; set; } = () => [];
+
+    /// <summary>Enrôlement d'un téléphone : null si le code n'existe pas.</summary>
+    public Func<EnrollRequest, EnrollResponse?> Enroll { get; set; } = _ => null;
+
+    /// <summary>Équipe et intervalle associés à un jeton d'appareil : null si le jeton est inconnu ou révoqué.</summary>
+    public Func<string, TrackResponse?> Authorize { get; set; } = _ => null;
+
+    /// <summary>Image du fond de carte pour un jeton autorisé en mode carte, sinon null.</summary>
+    public Func<string, byte[]?> MapImage { get; set; } = _ => null;
 
     public bool IsRunning => _app is not null;
 
@@ -59,11 +69,38 @@ public sealed class LocalGpsServer : IAsyncDisposable
 
         var builder = WebApplication.CreateSlimBuilder();
         builder.Logging.ClearProviders();
+        // Réglages échangés en texte (« Coordinates », « Map »...) : lisibles et indépendants de l'ordre des valeurs.
+        builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
         builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
         var app = builder.Build();
 
         app.MapGet("/", (HttpContext context) => HandleQuery(context));
         app.MapPost("/", async (HttpContext context) => await HandlePostAsync(context));
+        // Application Android : enrôlement avec le code de l'équipe, puis envoi périodique des positions.
+        app.MapPost("/api/enroll", async (HttpContext context) =>
+        {
+            var request = await context.Request.ReadFromJsonAsync<EnrollRequest>();
+            return request is not null && Enroll(request) is { } response ? Results.Json(response) : Results.NotFound();
+        });
+        app.MapPost("/api/track", async (HttpContext context) =>
+        {
+            var request = await context.Request.ReadFromJsonAsync<TrackRequest>();
+            if (request is null || Authorize(request.Token) is not { } authorization)
+                return Results.Unauthorized();
+
+            foreach (var point in request.Positions.OrderBy(p => p.Time))
+            {
+                var position = new GeoPoint(point.Latitude, point.Longitude);
+                if (position.IsValid)
+                    FixReceived?.Invoke(new GpsFix(authorization.Team, position, point.Time, "Appli Android"));
+            }
+
+            return Results.Json(authorization);
+        });
+
+        app.MapGet("/api/map/image", (string token) =>
+            MapImage(token) is { } image ? Results.File(image, "image/jpeg") : Results.NotFound());
+
         // Lecture des positions par un autre poste Airsoft Planner (suivi en direct sur plusieurs PC).
         app.MapGet("/api/positions", () => Results.Json(Positions()));
 

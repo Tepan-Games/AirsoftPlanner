@@ -34,6 +34,8 @@
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
             <DockPanel>
                 <TextBlock DockPanel.Dock="Left" Text="📻 Plan radio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
+                <TextBlock DockPanel.Dock="Right" Text="{Binding OrgaContact}" FontWeight="SemiBold" Foreground="#C62828"
+                           VerticalAlignment="Center" Margin="12,0,0,0" />
                 <ItemsControl ItemsSource="{Binding RadioPlan}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

@@ -50,6 +50,32 @@ public class FileDialogService(Window owner) : IFileDialogService
         await dialog.ShowDialog(owner);
     }
 
+    public async Task ShowImageAsync(string title, string message, byte[] png)
+    {
+        var close = new Button { Content = "Fermer", HorizontalAlignment = HorizontalAlignment.Right };
+        var dialog = new Window
+        {
+            Title = title,
+            Width = 460,
+            SizeToContent = SizeToContent.Height,
+            CanResize = false,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Content = new StackPanel
+            {
+                Margin = new Thickness(20),
+                Spacing = 12,
+                Children =
+                {
+                    new Image { Source = new Avalonia.Media.Imaging.Bitmap(new System.IO.MemoryStream(png)), Width = 320, Height = 320 },
+                    new SelectableTextBlock { Text = message, TextWrapping = TextWrapping.Wrap },
+                    close,
+                },
+            },
+        };
+        close.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(owner);
+    }
+
     public Task<string?> PickDocumentFileAsync() => PickFileAsync("Importer un document de règles", DocumentFileType);
 
     public async Task<string?> PickFolderAsync(string title, string? startFolder)

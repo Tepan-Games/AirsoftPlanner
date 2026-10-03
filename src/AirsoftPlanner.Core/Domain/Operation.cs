@@ -24,6 +24,18 @@ public class Operation : Entity
     /// <summary>Participation aux frais demandée par joueur.</summary>
     public decimal PricePerPlayer { get; set; }
 
+    /// <summary>Fréquence radio de l'orga (PC de l'OP, arbitres).</summary>
+    public string OrgaRadioFrequency { get; set; } = "";
+
+    /// <summary>Numéro de téléphone d'urgence de l'orga (blessure, incident).</summary>
+    public string EmergencyPhone { get; set; } = "";
+
     /// <summary>Carburant remboursé par kilomètre aux véhicules mis en jeu.</summary>
     public decimal FuelRatePerKm { get; set; }
+
+    /// <summary>Intervalle d'envoi des positions par l'application Android (secondes).</summary>
+    public int TrackingIntervalSeconds { get; set; } = 30;
+
+    /// <summary>Ce que l'application Android montre des équipes alliées.</summary>
+    public AirsoftPlanner.Core.Gps.AllyShareMode AllyShareMode { get; set; } = AirsoftPlanner.Core.Gps.AllyShareMode.Coordinates;
 }

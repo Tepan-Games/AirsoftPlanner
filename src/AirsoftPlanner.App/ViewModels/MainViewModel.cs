@@ -321,7 +321,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             workspace.Tracking.ShowTrails = old.Tracking.ShowTrails;
             if (old.Tracking.Gps is { } gps)
             {
-                gps.Rebind(workspace.Tracking, workspace.Teams, workspace.Vehicles);
+                gps.Rebind(_file, workspace.Tracking, workspace.Teams, workspace.Vehicles);
                 workspace.Tracking.Gps = gps;
             }
         }

@@ -33,4 +33,7 @@ public class Team : Entity
 
     /// <summary>Identifiants des appareils GPS de l'équipe (Traccar Client, nœud Meshtastic...), séparés par des virgules.</summary>
     public string GpsDeviceIds { get; set; } = "";
+
+    /// <summary>Code d'enrôlement de l'application Android pour cette équipe (vide tant qu'il n'est pas généré).</summary>
+    public string EnrollmentCode { get; set; } = "";
 }

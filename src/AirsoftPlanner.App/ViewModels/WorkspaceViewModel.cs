@@ -18,7 +18,7 @@ public class WorkspaceViewModel : ViewModelBase
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Tracking.Vehicles = Vehicles;
-        Tracking.Gps = new GpsViewModel(Tracking, Teams, dialogs, Vehicles);
+        Tracking.Gps = new GpsViewModel(file, Tracking, Teams, dialogs, Vehicles);
         Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }

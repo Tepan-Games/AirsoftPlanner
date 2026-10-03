@@ -127,6 +127,10 @@ public static class PackageGenerator
                                 : input.CommandTeam.Id == input.Team.Id ? "votre équipe"
                                 : $"{input.CommandTeam.Name}{(input.CommandLeader is { } cl ? $" — {MemberName(cl)} {cl.Phone}" : "")}";
                             b.Item().Text(t => { t.Span("Chef de faction : ").SemiBold(); t.Span(command); });
+                            if (op.OrgaRadioFrequency.Length > 0)
+                                b.Item().Text(t => { t.Span("Fréquence orga : ").SemiBold(); t.Span(op.OrgaRadioFrequency); });
+                            if (op.EmergencyPhone.Length > 0)
+                                b.Item().Text(t => { t.Span("Urgence orga : ").SemiBold().FontColor(Colors.Red.Darken2); t.Span(op.EmergencyPhone).Bold(); });
                         }));
                     });
 

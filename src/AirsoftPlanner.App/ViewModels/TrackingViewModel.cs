@@ -579,6 +579,36 @@ public partial class TrackingViewModel : ViewModelBase
     /// </summary>
     public IReadOnlyList<Services.Gps.PublishedPosition> PublishedPositions { get; private set; } = [];
 
+    /// <summary>Dernière position reçue de chaque équipe en jeu.</summary>
+    public IReadOnlyList<(TeamViewModel Team, GeoPoint Point, DateTimeOffset Time)> LatestPositions() => Statuses
+        .Select(s => (s.Team, Position: _positions.LastOrDefault(p => p.TeamId == s.Team.Model.Id)))
+        .Where(x => x.Position is not null)
+        .Select(x => (x.Team, x.Position!.Point, x.Position.ReceivedAt))
+        .ToList();
+
+    /// <summary>Mission en cours (ou prochaine) d'une équipe, pour l'application Android.</summary>
+    public Core.Gps.MissionBrief? MissionBriefFor(TeamViewModel team, Core.Geo.CoordinateFormat format)
+    {
+        var progress = Statuses.FirstOrDefault(s => s.Team == team)?.Progress;
+        if (progress?.TargetMission is not { } mission)
+            return null;
+
+        var zone = _terrain.Zones.FirstOrDefault(z => z.Model.Id == mission.ZoneId);
+        var center = zone is { Points.Count: > 0 } ? GeoMath.Centroid(zone.Points) : (GeoPoint?)null;
+        var items = string.Join(", ", mission.Items.Select(u => _items.Items.FirstOrDefault(i => i.Model.Id == u.ItemId) is { } item ? $"{u.Quantity} × {item.Name}" : null).OfType<string>());
+        return new Core.Gps.MissionBrief(
+            mission.Name,
+            progress.CurrentMission is not null,
+            new DateTimeOffset(_operation.ToDateTime(mission.StartMinutes)),
+            new DateTimeOffset(_operation.ToDateTime(mission.EndMinutes)),
+            zone?.Name ?? "",
+            center is { } c ? Coordinates.Format(c, format) : "",
+            center?.Latitude,
+            center?.Longitude,
+            mission.Description,
+            items);
+    }
+
     /// <summary>Équipes en jeu, pour la page de saisie du serveur local.</summary>
     public IReadOnlyList<string> PublishedTeamNames { get; private set; } = [];
 
@@ -726,9 +756,19 @@ public partial class TrackingViewModel : ViewModelBase
             .ToList();
     }
 
+    /// <summary>« Orga : PMR 8 · Urgence : 06 ... » affiché en tête du plan radio.</summary>
+    [ObservableProperty]
+    private string _orgaContact = "";
+
     public void RefreshRadioPlan()
     {
         static string Frequency(string value) => value.Length > 0 ? value : "—";
+        var operation = _file.Operation;
+        OrgaContact = string.Join(" · ", new[]
+        {
+            operation.OrgaRadioFrequency.Length > 0 ? $"Orga {operation.OrgaRadioFrequency}" : null,
+            operation.EmergencyPhone.Length > 0 ? $"☎ Urgence {operation.EmergencyPhone}" : null,
+        }.OfType<string>());
         RadioPlan = Missions.Columns
             .GroupBy(t => t.Faction)
             .Select(g => new RadioFaction(

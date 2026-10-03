@@ -147,6 +147,18 @@ public class OperationViewModel : ViewModelBase
         OnPropertyChanged(nameof(EndMinutes));
     }
 
+    public string OrgaRadioFrequency
+    {
+        get => operation.OrgaRadioFrequency;
+        set => SetProperty(operation.OrgaRadioFrequency, value, operation, (o, v) => o.OrgaRadioFrequency = v);
+    }
+
+    public string EmergencyPhone
+    {
+        get => operation.EmergencyPhone;
+        set => SetProperty(operation.EmergencyPhone, value, operation, (o, v) => o.EmergencyPhone = v);
+    }
+
     public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;
 
     /// <summary>Format d'affichage à l'écran : paramètre de l'application (barre du haut), commun à toutes les OP.</summary>

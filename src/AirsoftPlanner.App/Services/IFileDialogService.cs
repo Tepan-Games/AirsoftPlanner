@@ -29,6 +29,9 @@ public interface IFileDialogService
 
     Task ShowInfoAsync(string title, string message);
 
+    /// <summary>Affiche une image (QR code...) avec un texte d'explication.</summary>
+    Task ShowImageAsync(string title, string message, byte[] png);
+
     Task<SaveChoice> AskSaveChangesAsync(string fileName);
 
     Task ShowErrorAsync(string message);

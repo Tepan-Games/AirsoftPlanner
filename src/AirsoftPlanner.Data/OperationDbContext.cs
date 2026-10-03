@@ -45,6 +45,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<VehiclePosition> VehiclePositions => Set<VehiclePosition>();
 
+    public DbSet<AirsoftPlanner.Core.Gps.EnrolledDevice> EnrolledDevices => Set<AirsoftPlanner.Core.Gps.EnrolledDevice>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -108,6 +110,10 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<TeamAdjustment>().Property(a => a.Kind).HasConversion<string>();
         modelBuilder.Entity<VehiclePosition>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<VehiclePosition>().Ignore(p => p.Point);
+        modelBuilder.Entity<AirsoftPlanner.Core.Gps.EnrolledDevice>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<AirsoftPlanner.Core.Gps.EnrolledDevice>().HasIndex(d => d.Token);
+        modelBuilder.Entity<Operation>().Property(o => o.TrackingIntervalSeconds).HasDefaultValue(30);
+        modelBuilder.Entity<Operation>().Property(o => o.AllyShareMode).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

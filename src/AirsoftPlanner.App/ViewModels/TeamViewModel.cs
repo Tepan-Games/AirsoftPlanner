@@ -82,6 +82,18 @@ public class TeamViewModel : ViewModelBase
         set => SetProperty(_team.GpsDeviceIds, value, _team, (t, v) => t.GpsDeviceIds = v);
     }
 
+    public string EnrollmentCode
+    {
+        get => _team.EnrollmentCode;
+        set
+        {
+            if (SetProperty(_team.EnrollmentCode, value, _team, (t, v) => t.EnrollmentCode = v))
+                OnPropertyChanged(nameof(EnrollmentCodeText));
+        }
+    }
+
+    public string EnrollmentCodeText => _team.EnrollmentCode.Length == 0 ? "—" : Core.Gps.EnrollmentCodes.Format(_team.EnrollmentCode);
+
     public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : "📻 fréquence non définie";
 
     /// <summary>Effectif annoncé à l'inscription (les membres peuvent n'être saisis qu'en partie).</summary>

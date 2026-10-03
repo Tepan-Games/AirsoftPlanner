@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -11,6 +12,23 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 namespace AirsoftPlanner.App.ViewModels;
+
+public record AllyShareModeOption(AllyShareMode Value, string Label)
+{
+    public static IReadOnlyList<AllyShareModeOption> All { get; } =
+    [
+        new(AllyShareMode.None, "Rien (sa propre position seulement)"),
+        new(AllyShareMode.Coordinates, "Alliés en coordonnées (version difficile)"),
+        new(AllyShareMode.Map, "Alliés sur la carte"),
+    ];
+
+    public static AllyShareModeOption Of(AllyShareMode mode) => All.First(o => o.Value == mode);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Téléphone enrôlé, tel qu'affiché.</summary>
+public record EnrolledDeviceRow(EnrolledDevice Model, string Team, string Device, string LastSeen, bool IsRevoked);
 
 /// <summary>Appareil qui envoie des positions sans être associé à une équipe.</summary>
 public record UnknownDevice(string DeviceId, string Source, string LastSeen);
@@ -31,8 +49,14 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 
     private VehicleTracker _vehicles;
 
-    public GpsViewModel(TrackingViewModel tracking, TeamsViewModel teams, IFileDialogService dialogs, VehicleTracker vehicles)
+    private Data.OperationFile _file;
+    private readonly List<EnrolledDevice> _devices;
+
+    public GpsViewModel(Data.OperationFile file, TrackingViewModel tracking, TeamsViewModel teams, IFileDialogService dialogs, VehicleTracker vehicles)
     {
+        _file = file;
+        _devices = file.LoadEnrolledDevices().ToList();
+        _intervalSeconds = file.Operation.TrackingIntervalSeconds;
         _vehicles = vehicles;
         _tracking = tracking;
         _teams = teams;
@@ -51,6 +75,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _server.FixReceived += OnFix;
         _server.Positions = () => _tracking.PublishedPositions;
         _server.TeamNames = () => _tracking.PublishedTeamNames;
+        // Appelés depuis le fil du serveur : le travail se fait sur le fil de l'interface (données de l'OP).
+        _server.Enroll = request => Dispatcher.UIThread.InvokeAsync(() => EnrollDevice(request)).GetAwaiter().GetResult();
+        _server.Authorize = token => Dispatcher.UIThread.InvokeAsync(() => AuthorizeDevice(token)).GetAwaiter().GetResult();
+        _server.MapImage = token => Dispatcher.UIThread.InvokeAsync(() => MapImageFor(token)).GetAwaiter().GetResult();
+        _shareMode = AllyShareModeOption.Of(file.Operation.AllyShareMode);
+        RefreshDevices();
         _upstream.FixReceived += OnFix;
         _upstream.Error += message => Dispatcher.UIThread.Post(() => Log($"PC de l'OP : {message}"));
         _upstreamUrl = settings.UpstreamUrl;
@@ -105,6 +135,165 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         }
 
         IsServerRunning = _server.IsRunning;
+    }
+
+    // ----- Application Android : enrôlement par code d'équipe -----
+
+    public ObservableCollection<EnrolledDeviceRow> Devices { get; } = [];
+
+    public ObservableCollection<TeamViewModel> Teams => _teams.Items;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(GenerateCodeCommand), nameof(ShowQrCodeCommand))]
+    private TeamViewModel? _enrollmentTeam;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RevokeDeviceCommand))]
+    private EnrolledDeviceRow? _selectedDevice;
+
+    /// <summary>Intervalle d'envoi des positions par les téléphones (renvoyé à chaque envoi : modifiable pendant l'OP).</summary>
+    [ObservableProperty]
+    private decimal? _intervalSeconds;
+
+    public IReadOnlyList<AllyShareModeOption> ShareModes => AllyShareModeOption.All;
+
+    /// <summary>Ce que les téléphones voient des alliés : rien, coordonnées (version difficile) ou carte.</summary>
+    [ObservableProperty]
+    private AllyShareModeOption _shareMode;
+
+    partial void OnShareModeChanged(AllyShareModeOption value) => _file.Operation.AllyShareMode = value.Value;
+
+    partial void OnIntervalSecondsChanged(decimal? value) =>
+        _file.Operation.TrackingIntervalSeconds = Math.Clamp((int)(value ?? 30), 5, 3600);
+
+    /// <summary>Code de l'équipe choisie (nouveau code : les téléphones déjà enrôlés restent valides).</summary>
+    [RelayCommand(CanExecute = nameof(HasEnrollmentTeam))]
+    private void GenerateCode()
+    {
+        var existing = _teams.Items.Select(t => t.EnrollmentCode).Where(c => c.Length > 0).ToList();
+        EnrollmentTeam!.EnrollmentCode = EnrollmentCodes.Generate(existing);
+        Log($"Code d'enrôlement de {EnrollmentTeam.Name} : {EnrollmentTeam.EnrollmentCodeText}");
+    }
+
+    /// <summary>QR code à scanner avec l'application : adresse du serveur et code de l'équipe.</summary>
+    [RelayCommand(CanExecute = nameof(HasEnrollmentTeam))]
+    private async Task ShowQrCodeAsync()
+    {
+        var team = EnrollmentTeam!;
+        if (team.EnrollmentCode.Length == 0)
+            GenerateCode();
+
+        var address = LocalGpsServer.LocalAddresses((int)(ServerPort ?? 5055)).FirstOrDefault();
+        if (address is null)
+        {
+            await _dialogs.ShowErrorAsync("Aucune connexion réseau active : reliez ce PC au Wi-Fi du terrain.");
+            return;
+        }
+
+        var link = EnrollmentLink.Create(address, team.EnrollmentCode);
+        using var generator = new QRCoder.QRCodeGenerator();
+        using var data = generator.CreateQrCode(link, QRCoder.QRCodeGenerator.ECCLevel.M);
+        var png = new QRCoder.PngByteQRCode(data).GetGraphic(10);
+        await _dialogs.ShowImageAsync($"Enrôlement — {team.Name}",
+            $"Dans l'application Airsoft Planner du chef d'équipe : « Scanner le QR code », ou saisir :\n" +
+            $"Serveur : {address}\nCode : {team.EnrollmentCodeText}" +
+            (IsServerRunning ? "" : "\n\n⚠ Pensez à activer le serveur local avant l'enrôlement."), png);
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedDevice))]
+    private void RevokeDevice()
+    {
+        SelectedDevice!.Model.IsRevoked = true;
+        Log($"Téléphone « {SelectedDevice.Device} » révoqué.");
+        RefreshDevices();
+    }
+
+    private bool HasEnrollmentTeam => EnrollmentTeam is not null;
+
+    private bool HasSelectedDevice => SelectedDevice is { IsRevoked: false };
+
+    private EnrollResponse? EnrollDevice(EnrollRequest request)
+    {
+        var code = EnrollmentCodes.Normalize(request.Code);
+        var team = _teams.Items.FirstOrDefault(t => t.EnrollmentCode.Length > 0 && t.EnrollmentCode == code);
+        if (team is null)
+        {
+            Log($"Enrôlement refusé : code « {request.Code} » inconnu ({request.DeviceName}).");
+            return null;
+        }
+
+        var device = new EnrolledDevice
+        {
+            TeamId = team.Model.Id,
+            Token = EnrollmentCodes.NewToken(),
+            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : "Téléphone",
+            EnrolledAt = DateTimeOffset.Now,
+        };
+        _file.Add(device);
+        _devices.Add(device);
+        RefreshDevices();
+        Log($"Téléphone « {device.DeviceName} » enrôlé pour {team.Name}.");
+        return new EnrollResponse(device.Token, team.Name, _file.Operation.Name, team.Faction?.Name ?? "",
+            team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team));
+    }
+
+    private TrackResponse? AuthorizeDevice(string token)
+    {
+        var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
+        var team = device is null ? null : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId);
+        if (device is null || team is null)
+            return null;
+
+        device.LastSeenAt = DateTimeOffset.Now;
+        RefreshDevices();
+        var mode = _file.Operation.AllyShareMode;
+        var format = _file.Operation.CoordinateFormat;
+        var allies = mode == AllyShareMode.None ? [] : _tracking.LatestPositions()
+            .Where(p => p.Team != team && p.Team.Faction is not null && p.Team.Faction == team.Faction)
+            .Select(p => new AllyPosition(p.Team.Name, p.Point.Latitude, p.Point.Longitude,
+                Core.Geo.Coordinates.Format(p.Point, format), p.Time, p.Team.RadioFrequency))
+            .ToList();
+        var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
+        var map = mode == AllyShareMode.Map && layer is not null
+            ? new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East)
+            : null;
+        return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, _tracking.MissionBriefFor(team, format), map,
+            CommsFor(team));
+    }
+
+    /// <summary>Fréquences de la faction, des équipes alliées et de l'orga, numéro d'urgence.</summary>
+    private Comms CommsFor(TeamViewModel team)
+    {
+        var faction = team.Faction;
+        var teams = faction is null
+            ? [new TeamFrequency(team.Name, team.RadioFrequency, false)]
+            : faction.PlayingTeams.Select(t => new TeamFrequency(t.Name, t.RadioFrequency, faction.CommandTeam == t)).ToList();
+        return new Comms(faction?.Name ?? "", faction?.RadioFrequency ?? "", teams,
+            _file.Operation.OrgaRadioFrequency, _file.Operation.EmergencyPhone);
+    }
+
+    /// <summary>Fond de carte (redimensionné pour un téléphone), uniquement si l'OP autorise le mode carte.</summary>
+    private byte[]? MapImageFor(string token)
+    {
+        if (_file.Operation.AllyShareMode != AllyShareMode.Map || !_devices.Any(d => d.Token == token && !d.IsRevoked))
+            return null;
+        var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
+        return layer is null ? null : MapSnapshot.Render(layer.Model, [], maxSide: 2048);
+    }
+
+    private void RefreshDevices()
+    {
+        var selected = SelectedDevice?.Model;
+        Devices.Clear();
+        foreach (var device in _devices.OrderBy(d => d.IsRevoked).ThenByDescending(d => d.LastSeenAt ?? d.EnrolledAt))
+        {
+            var team = _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name ?? "équipe supprimée";
+            var seen = device.IsRevoked ? "révoqué"
+                : device.LastSeenAt is { } at ? $"dernier envoi {at.LocalDateTime:HH:mm:ss}" : "enrôlé, aucun envoi";
+            Devices.Add(new EnrolledDeviceRow(device, team, device.DeviceName, seen, device.IsRevoked));
+        }
+
+        SelectedDevice = Devices.FirstOrDefault(d => d.Model == selected);
     }
 
     // ----- Second poste : connexion au PC de l'OP -----
@@ -282,8 +471,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private bool CanAssignDevice => SelectedUnknownDevice is not null && _tracking.Selected is not null;
 
     /// <summary>Après un rechargement de l'OP : les sources restent connectées, seules les cibles changent.</summary>
-    public void Rebind(TrackingViewModel tracking, TeamsViewModel teams, VehicleTracker vehicles)
+    public void Rebind(Data.OperationFile file, TrackingViewModel tracking, TeamsViewModel teams, VehicleTracker vehicles)
     {
+        _file = file;
+        _devices.Clear();
+        _devices.AddRange(file.LoadEnrolledDevices());
+        RefreshDevices();
         _tracking = tracking;
         _teams = teams;
         _vehicles = vehicles;
