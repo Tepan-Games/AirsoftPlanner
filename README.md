@@ -24,13 +24,16 @@ parallèle par des orgas différents.
 | Phase | Contenu | État |
 |---|---|---|
 | 0 | Socle : solution, fichier `.aop`, fenêtre principale | ✅ |
-| 1 | OP, factions, équipes, terrain et zones sur carte hors ligne (fonds IGN, coordonnées UTM / degrés) | ✅ |
-| 2 | Missions et frise temporelle verticale par équipe, détection des conflits | ✅ |
-| 3 | Gestion des retards : décalage en cascade, désactivation des missions non essentielles | |
-| 4 | Inscriptions des équipes et suivi financier (paiements, dépenses, bilan) | |
-| 5 | Génération PDF : ordres de mission, règles du jeu | |
-| 6 | GPS en direct : saisie manuelle/import, smartphone sur réseau local, Meshtastic, webservice | |
-| — | Fusion de deux copies d'un fichier `.aop` | |
+| 1 | OP, factions, équipes, terrain et zones (fonds IGN, coordonnées UTM / degrés) | ✅ |
+| 2 | Missions et frise temporelle verticale, détection des conflits | ✅ |
+| 3 | Retards : décalage en cascade, missions optionnelles à désactiver | ✅ |
+| 4 | Inscriptions (statuts, liste d'attente, CSV) et finances (paiements, remises, carburant, dépenses, bilan) | ✅ |
+| 5 | Règles et packages d'équipe (ordre de mission PDF avec carte, suivi de réception) | ✅ |
+| 6 | GPS : serveur local (Traccar Client, saisie web), Meshtastic, Traccar, fichiers ; second poste | ✅ |
+| — | Suivi de l'OP : effectifs, hors-jeu, objets d'objectif, trajets, mission urgente, mode éclaté | ✅ |
+| — | Fusion de copies et travail partagé (OneDrive, Google Drive, Dropbox, dossier réseau) | ✅ |
+| — | Version autonome Windows, association des fichiers `.aop` | ✅ |
+| 7 | Application Android (enrôlement par code, envoi des positions, alliés, mission, plan radio) | Serveur prêt, application à construire |
 
 ## Cartes et coordonnées
 
@@ -75,6 +78,38 @@ carte avec la dernière position reçue de chaque équipe, et l'état de chaque 
 juste, en retard (distance jusqu'à la zone de sa mission, temps de marche estimé et marge restante).
 L'heure suivie est l'heure réelle, ou une heure simulée pour préparer ou rejouer l'OP. Les positions
 se saisissent pour l'instant à la main (clic sur la carte ou coordonnées reçues par radio).
+
+## Travail à plusieurs
+
+- **Fusionner une copie** : intègre les modifications d'une autre copie de la même OP (la version la
+  plus récente de chaque élément l'emporte, suppressions comprises).
+- **Travail partagé** : chaque orga garde sa copie de travail ; le logiciel la synchronise toutes les
+  2 minutes (et à chaque enregistrement) avec un fichier placé dans un dossier synchronisé (OneDrive…).
+  Le fichier partagé n'est jamais ouvert directement ; les copies en conflit créées par le service de
+  synchronisation sont fusionnées puis supprimées.
+
+## Réception GPS et application Android
+
+Le PC qui mène l'OP active son **serveur local** (onglet Suivi → Réception GPS), sur le Wi-Fi du terrain :
+
+| Adresse | Usage |
+|---|---|
+| `/` (protocole OsmAnd) | Traccar Client, OsmAnd, GPSLogger |
+| `/saisie` | Page pour taper ses coordonnées depuis un téléphone, sans application |
+| `/api/positions` | Dernières positions, pour un second poste Airsoft Planner |
+| `/api/enroll`, `/api/track`, `/api/map/image` | Application Android : enrôlement par code d'équipe (QR code), envoi des positions ; en retour, mission en cours, plan radio, numéro d'urgence et positions des alliés (rien, coordonnées ou carte, selon l'OP) |
+
+Construire l'application Android nécessite le module .NET pour Android, à installer une fois dans un
+terminal administrateur : `dotnet workload install android`.
+
+## Distribution
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts/publish.ps1
+```
+
+produit `artifacts/AirsoftPlanner-<version>-win-x64.zip` : un `AirsoftPlanner.exe` autonome (sans
+installation de .NET). Menu « ⋯ » → « Associer les fichiers .aop » pour les ouvrir par double-clic.
 
 ## Structure
 
