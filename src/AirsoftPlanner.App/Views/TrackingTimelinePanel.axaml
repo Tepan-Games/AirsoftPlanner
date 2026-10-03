@@ -1,0 +1,20 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:views="using:AirsoftPlanner.App.Views"
+             x:Class="AirsoftPlanner.App.Views.TrackingTimelinePanel"
+             x:DataType="vm:TrackingViewModel">
+    <DockPanel>
+    <views:DelayPanel DockPanel.Dock="Bottom" DataContext="{Binding Missions.Delay}" IsVisible="{Binding IsOpen}" />
+    <controls:TimelineControl Columns="{Binding Missions.Columns}"
+                              Missions="{Binding Missions.Missions}"
+                              SelectedMission="{Binding Missions.Selected}"
+                              OperationStart="{Binding Missions.OperationStartMinutes}"
+                              OperationEnd="{Binding Missions.OperationEndMinutes}"
+                              Day="{Binding Missions.Operation.Day}"
+                              NowMinutes="{Binding NowMinutes}"
+                              FollowNow="True" />
+    </DockPanel>
+</UserControl>

@@ -1,0 +1,28 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:views="using:AirsoftPlanner.App.Views"
+             x:Class="AirsoftPlanner.App.Views.TrackingMapPanel"
+             x:DataType="vm:TrackingViewModel">
+    <DockPanel>
+    <Border DockPanel.Dock="Top" Padding="8,3">
+        <StackPanel Orientation="Horizontal" Spacing="14">
+            <CheckBox Content="Trajets des équipes" IsChecked="{Binding ShowTrails}" />
+            <CheckBox Content="Quadrillage UTM" IsChecked="{Binding Terrain.ShowUtmGrid}" />
+        </StackPanel>
+    </Border>
+    <controls:TerrainMapControl Layer="{Binding Terrain.SelectedLayer}"
+                                ViewBounds="{Binding Terrain.ViewBounds}"
+                                Area="{Binding Terrain.Area}"
+                                Zones="{Binding Terrain.Zones}"
+                                ShowUtmGrid="{Binding Terrain.ShowUtmGrid}"
+                                Markers="{Binding Markers}"
+                                AllowEditing="False"
+                                Trails="{Binding Trails}"
+                                ItemMarkers="{Binding ItemMarkers}"
+                                IsDrawing="{Binding IsMapPlacing}"
+                                MapClickCommand="{Binding MapClickedCommand}" />
+    </DockPanel>
+</UserControl>

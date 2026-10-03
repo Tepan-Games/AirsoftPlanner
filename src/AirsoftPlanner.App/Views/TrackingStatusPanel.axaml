@@ -1,0 +1,130 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:views="using:AirsoftPlanner.App.Views"
+             x:Class="AirsoftPlanner.App.Views.TrackingStatusPanel"
+             x:DataType="vm:TrackingViewModel">
+    <TabControl Grid.Row="2" Padding="0">
+    <TabItem Header="Équipes">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="8,4">
+            <WrapPanel>
+                <ToggleButton Margin="0,0,8,4" Content="Placer l'équipe sur la carte" IsChecked="{Binding IsPlacing}"
+                              IsEnabled="{Binding HasSelection}" />
+                <TextBox Margin="0,0,8,4" Text="{Binding PositionInput}" Width="220" PlaceholderText="ou coordonnées reçues (UTM, degrés…)" />
+                <Button Margin="0,0,8,4" Content="Enregistrer la position" Command="{Binding SetPositionCommand}" />
+                <Button Margin="0,0,8,4" Content="Gérer le retard…" Command="{Binding PlanDelayCommand}"
+                        ToolTip.Tip="Répercuter le retard estimé de l'équipe sur la suite du planning" />
+                <Button Margin="0,0,8,4" Content="⚠ Mission urgente" Command="{Binding CreateUrgentMissionCommand}" Foreground="#C62828"
+                        ToolTip.Tip="Crée tout de suite une mission pour l'équipe sélectionnée, puis cliquez sur la carte pour situer l'intervention" />
+                <TextBlock Margin="0,0,8,4" Text="→ cliquez sur la carte" IsVisible="{Binding IsPlacingUrgent}" Foreground="#C62828"
+                           VerticalAlignment="Center" FontWeight="SemiBold" />
+            </WrapPanel>
+        </Border>
+        <ListBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding Selected}">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:TeamStatusViewModel">
+                    <Grid ColumnDefinitions="Auto,150,*">
+                        <Border Width="12" Height="12" CornerRadius="6" Margin="0,4,10,0" VerticalAlignment="Top"
+                                Background="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="{Binding Team.Name}" FontWeight="SemiBold" />
+                            <TextBlock FontSize="11" FontFamily="Consolas,monospace" Text="{Binding Team.RadioFrequencyLabel}" />
+                            <TextBlock Text="{Binding StatusLabel}" FontSize="11"
+                                       Foreground="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            <TextBlock Text="{Binding StrengthText}" FontSize="11" FontWeight="SemiBold"
+                                       Classes.warning="{Binding HasRealInjury}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Text="{Binding MissionText}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding DistanceText}" FontSize="11" Opacity="0.8" />
+                            <TextBlock Text="{Binding PositionText}" FontSize="11" Opacity="0.6" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+    </TabItem>
+    <TabItem Header="Joueurs">
+        <DockPanel Margin="8,4">
+            <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasSelection}" Opacity="0.65"
+                       Text="Sélectionnez une équipe dans l'onglet Équipes." />
+            <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="11" Opacity="0.8" Margin="0,0,0,4">
+                <Run Text="{Binding Selected.Team.Name, FallbackValue=''}" FontWeight="SemiBold" />
+                <Run Text="— " />
+                <Run Text="{Binding StrengthHistory}" />
+            </TextBlock>
+            <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <ComboBox ItemsSource="{Binding OutReasons}" SelectedItem="{Binding SelectedOutReason}" MinWidth="170" Margin="0,0,6,4" />
+                <TextBox Text="{Binding OutNotes}" Width="160" PlaceholderText="Précision (facultatif)" Margin="0,0,6,4" />
+                <NumericUpDown Value="{Binding AnonymousCount}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="110"
+                               IsVisible="{Binding !SelectedTeamHasMembers}" Margin="0,0,6,4"
+                               ToolTip.Tip="Nombre de joueurs (équipe sans membres saisis)" />
+                <Button Content="Hors jeu" Command="{Binding PlayerOutCommand}" Margin="0,0,6,4" />
+                <Button Content="Retour en jeu" Command="{Binding PlayerBackCommand}" Margin="0,0,6,4" />
+            </WrapPanel>
+            <ListBox ItemsSource="{Binding Players}" SelectedItem="{Binding SelectedPlayer}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PlayerRow">
+                        <Grid ColumnDefinitions="220,*">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Grid.Column="1" Text="{Binding StateText}" Classes.warning="{Binding IsOut}" TextWrapping="Wrap" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </TabItem>
+    <TabItem Header="Objets d'objectif">
+        <DockPanel>
+            <Border DockPanel.Dock="Top" Padding="8,4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding ItemEventOptions}" SelectedItem="{Binding SelectedItemEvent}" MinWidth="170" />
+                    <ComboBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding ItemEventTeam}" MinWidth="140"
+                              IsVisible="{Binding ItemEventNeedsTeam}" PlaceholderText="Équipe…">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TeamStatusViewModel">
+                                <TextBlock Text="{Binding Team.Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Enregistrer" Command="{Binding RecordItemEventCommand}"
+                            ToolTip.Tip="« Placé » et « Déposé » demandent ensuite un clic sur la carte" />
+                    <TextBlock Text="→ cliquez sur la carte" IsVisible="{Binding IsPlacingItem}" Foreground="#EF6C00"
+                               VerticalAlignment="Center" FontWeight="SemiBold" />
+                </StackPanel>
+            </Border>
+            <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !TrackedItems.Count}" Margin="10" Opacity="0.65" TextWrapping="Wrap"
+                       Text="Aucun objet suivi : cochez « Objet d'objectif à suivre » sur les éléments concernés dans l'onglet Matériel de jeu." />
+            <ListBox ItemsSource="{Binding TrackedItems}" SelectedItem="{Binding SelectedItem}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TrackedItemViewModel">
+                        <Grid ColumnDefinitions="Auto,200,*">
+                            <Border Width="12" Height="12" CornerRadius="2" Margin="0,4,10,0" VerticalAlignment="Top"
+                                    Background="{Binding StateColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            <StackPanel Grid.Column="1">
+                                <TextBlock Text="{Binding Item.Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding StateText}" FontSize="11"
+                                           Foreground="{Binding StateColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{Binding LocationText}" FontSize="11" FontWeight="SemiBold" />
+                                <ItemsControl ItemsSource="{Binding History}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="x:String">
+                                            <TextBlock Text="{Binding}" FontSize="11" Opacity="0.65" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+    </TabItem>
+    </TabControl>
+</UserControl>
