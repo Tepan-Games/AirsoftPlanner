@@ -1,0 +1,65 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             x:Class="AirsoftPlanner.App.Views.TeamsView"
+             x:DataType="vm:TeamsViewModel">
+    <Grid ColumnDefinitions="300,*">
+        <DockPanel Margin="12">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Content="Ajouter" Command="{Binding AddCommand}" />
+                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:TeamViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="16" Height="16" CornerRadius="8" BorderBrush="Gray" BorderThickness="1"
+                                    Background="{Binding Faction.Color, FallbackValue={x:Null}, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding Faction.Name, FallbackValue='Sans faction'}" FontSize="11" Opacity="0.6" />
+                            </StackPanel>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24"
+                   Text="Ajoutez les équipes participantes et rattachez-les à une faction." />
+
+        <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
+            <StackPanel Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="12">
+                <TextBlock Text="Équipe" Classes="h1" />
+                <TextBlock Text="Nom" Classes="label" />
+                <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
+                <TextBlock Text="Faction" Classes="label" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding Factions}" SelectedItem="{Binding Selected.Faction, FallbackValue={x:Null}}"
+                              MinWidth="240" PlaceholderText="Sans faction">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FactionViewModel">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Border Width="14" Height="14" CornerRadius="3"
+                                            Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                    <TextBlock Text="{Binding Name}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Retirer" Command="{Binding ClearFactionCommand}" />
+                </StackPanel>
+                <TextBlock Text="Chef d'équipe" Classes="label" />
+                <TextBox Text="{Binding Selected.LeaderName, FallbackValue=''}" />
+                <TextBlock Text="Téléphone du chef d'équipe" Classes="label" />
+                <TextBox Text="{Binding Selected.LeaderPhone, FallbackValue=''}" />
+                <TextBlock Text="Nombre de joueurs" Classes="label" />
+                <NumericUpDown Value="{Binding Selected.PlayerCount, FallbackValue=0}" Minimum="0" Maximum="500"
+                               Increment="1" FormatString="0" Width="160" HorizontalAlignment="Left" />
+                <TextBlock Text="Notes" Classes="label" />
+                <TextBox Text="{Binding Selected.Notes, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="100" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

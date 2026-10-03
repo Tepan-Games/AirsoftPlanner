@@ -1,0 +1,503 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
+using System.Globalization;
+using System.Linq;
+using System.Windows.Input;
+using AirsoftPlanner.App.ViewModels;
+using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Geo;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Data;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Media.Imaging;
+
+namespace AirsoftPlanner.App.Controls;
+
+/// <summary>
+/// Carte du terrain hors ligne : fond calé en GPS, zones, quadrillage UTM.
+/// Molette = zoom, glisser = déplacer, clic = sélectionner ou ajouter un sommet en mode tracé,
+/// glisser un sommet de la zone sélectionnée = le déplacer, double-clic = vue d'ensemble.
+/// </summary>
+public class TerrainMapControl : Control
+{
+    public static readonly StyledProperty<GeoBounds?> ViewBoundsProperty =
+        AvaloniaProperty.Register<TerrainMapControl, GeoBounds?>(nameof(ViewBounds));
+
+    public static readonly StyledProperty<MapLayerViewModel?> LayerProperty =
+        AvaloniaProperty.Register<TerrainMapControl, MapLayerViewModel?>(nameof(Layer));
+
+    public static readonly StyledProperty<GeoBounds?> AreaProperty =
+        AvaloniaProperty.Register<TerrainMapControl, GeoBounds?>(nameof(Area));
+
+    public static readonly StyledProperty<IEnumerable?> ZonesProperty =
+        AvaloniaProperty.Register<TerrainMapControl, IEnumerable?>(nameof(Zones));
+
+    public static readonly StyledProperty<ZoneViewModel?> SelectedZoneProperty =
+        AvaloniaProperty.Register<TerrainMapControl, ZoneViewModel?>(nameof(SelectedZone), defaultBindingMode: BindingMode.TwoWay);
+
+    public static readonly StyledProperty<bool> IsDrawingProperty =
+        AvaloniaProperty.Register<TerrainMapControl, bool>(nameof(IsDrawing));
+
+    public static readonly StyledProperty<bool> ShowUtmGridProperty =
+        AvaloniaProperty.Register<TerrainMapControl, bool>(nameof(ShowUtmGrid));
+
+    public static readonly StyledProperty<GeoPoint?> PointerPositionProperty =
+        AvaloniaProperty.Register<TerrainMapControl, GeoPoint?>(nameof(PointerPosition), defaultBindingMode: BindingMode.OneWayToSource);
+
+    public static readonly StyledProperty<ICommand?> MapClickCommandProperty =
+        AvaloniaProperty.Register<TerrainMapControl, ICommand?>(nameof(MapClickCommand));
+
+    private const double ClickTolerance = 4;
+    private const double HitTolerance = 10;
+    private static readonly IBrush EmptyBackground = new SolidColorBrush(Color.FromRgb(0x2B, 0x2F, 0x33));
+    private static readonly IPen GridPen = new Pen(new SolidColorBrush(Color.FromArgb(0xB0, 0x00, 0x00, 0x00)), 1);
+    private static readonly IPen GridHaloPen = new Pen(new SolidColorBrush(Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)), 3);
+    private static readonly IPen AreaPen = new Pen(Brushes.White, 1.5, new DashStyle([6, 4], 0));
+    private static readonly IBrush LabelBackground = new SolidColorBrush(Color.FromArgb(0xC0, 0x10, 0x10, 0x10));
+    private static readonly Typeface LabelTypeface = new(FontFamily.Default, weight: FontWeight.SemiBold);
+
+    private readonly HashSet<INotifyPropertyChanged> _observedZones = [];
+    private INotifyCollectionChanged? _observedCollection;
+
+    private double _zoom = 1;
+    private Vector _pan;
+    private Point? _pressPosition;
+    private Vector _panAtPress;
+    private bool _isPanning;
+    private int? _draggedVertex;
+
+    static TerrainMapControl()
+    {
+        AffectsRender<TerrainMapControl>(LayerProperty, AreaProperty, SelectedZoneProperty, IsDrawingProperty, ShowUtmGridProperty);
+        FocusableProperty.OverrideDefaultValue<TerrainMapControl>(true);
+    }
+
+    public TerrainMapControl()
+    {
+        ClipToBounds = true;
+    }
+
+    public GeoBounds? ViewBounds { get => GetValue(ViewBoundsProperty); set => SetValue(ViewBoundsProperty, value); }
+
+    public MapLayerViewModel? Layer { get => GetValue(LayerProperty); set => SetValue(LayerProperty, value); }
+
+    public GeoBounds? Area { get => GetValue(AreaProperty); set => SetValue(AreaProperty, value); }
+
+    public IEnumerable? Zones { get => GetValue(ZonesProperty); set => SetValue(ZonesProperty, value); }
+
+    public ZoneViewModel? SelectedZone { get => GetValue(SelectedZoneProperty); set => SetValue(SelectedZoneProperty, value); }
+
+    public bool IsDrawing { get => GetValue(IsDrawingProperty); set => SetValue(IsDrawingProperty, value); }
+
+    public bool ShowUtmGrid { get => GetValue(ShowUtmGridProperty); set => SetValue(ShowUtmGridProperty, value); }
+
+    public GeoPoint? PointerPosition { get => GetValue(PointerPositionProperty); set => SetValue(PointerPositionProperty, value); }
+
+    public ICommand? MapClickCommand { get => GetValue(MapClickCommandProperty); set => SetValue(MapClickCommandProperty, value); }
+
+    private IEnumerable<ZoneViewModel> ZoneItems => Zones?.OfType<ZoneViewModel>() ?? [];
+
+    /// <summary>Revient à la vue d'ensemble.</summary>
+    public void ResetView()
+    {
+        _zoom = 1;
+        _pan = default;
+        InvalidateVisual();
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+        if (change.Property == ViewBoundsProperty)
+        {
+            // Ne recadre que si l'emprise change vraiment (pas à chaque ajout de sommet).
+            if (!Equals(change.OldValue, change.NewValue))
+                ResetView();
+        }
+        else if (change.Property == ZonesProperty)
+        {
+            ObserveZones(change.NewValue as IEnumerable);
+            InvalidateVisual();
+        }
+        else if (change.Property == IsDrawingProperty)
+        {
+            Cursor = IsDrawing ? new Cursor(StandardCursorType.Cross) : Cursor.Default;
+        }
+    }
+
+    public override void Render(DrawingContext context)
+    {
+        context.FillRectangle(EmptyBackground, new Rect(Bounds.Size));
+        if (ViewBounds is not { IsValid: true } view)
+        {
+            DrawCenteredMessage(context, "Définissez l'emprise du terrain ou téléchargez un fond de carte pour afficher la carte.");
+            return;
+        }
+
+        if (Layer is { } layer)
+        {
+            var bitmap = layer.Bitmap;
+            context.DrawImage(bitmap, new Rect(bitmap.Size), ToScreenRect(view, layer.Bounds));
+        }
+
+        if (ShowUtmGrid)
+            DrawUtmGrid(context, view);
+
+        if (Area is { IsValid: true } area && Layer is null)
+            context.DrawRectangle(null, AreaPen, ToScreenRect(view, area));
+
+        foreach (var zone in ZoneItems.Where(z => z.IsArea))
+            DrawArea(context, view, zone);
+        foreach (var zone in ZoneItems.Where(z => !z.IsArea))
+            DrawPoint(context, view, zone);
+        foreach (var zone in ZoneItems.Where(z => z.Points.Count > 0))
+            DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.Name);
+
+        if (Layer is { Attribution.Length: > 0 })
+            DrawText(context, new Point(Bounds.Width - 6, Bounds.Height - 6), "© " + Layer.Attribution, 10, alignRight: true, alignBottom: true);
+    }
+
+    // ----- Interactions -----
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        var cursor = e.GetPosition(this);
+        var newZoom = Math.Clamp(_zoom * Math.Pow(1.25, e.Delta.Y), 0.5, 200);
+        _pan = (Vector)cursor - ((Vector)cursor - _pan) * (newZoom / _zoom);
+        _zoom = newZoom;
+        InvalidateVisual();
+        e.Handled = true;
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        if (ViewBounds is not { IsValid: true } view)
+            return;
+
+        var position = e.GetPosition(this);
+        if (e.ClickCount == 2)
+        {
+            ResetView();
+            e.Handled = true;
+            return;
+        }
+
+        _pressPosition = position;
+        _panAtPress = _pan;
+        _isPanning = false;
+        _draggedVertex = IsDrawing ? null : FindVertex(view, position);
+        e.Pointer.Capture(this);
+        e.Handled = true;
+    }
+
+    protected override void OnPointerMoved(PointerEventArgs e)
+    {
+        base.OnPointerMoved(e);
+        if (ViewBounds is not { IsValid: true } view)
+            return;
+
+        var position = e.GetPosition(this);
+        PointerPosition = ToGeo(view, position);
+
+        if (_pressPosition is not { } press)
+            return;
+
+        if (_draggedVertex is { } vertex && SelectedZone is { } zone)
+        {
+            zone.MovePoint(vertex, ToGeo(view, position));
+            InvalidateVisual();
+            return;
+        }
+
+        if (!_isPanning && Distance(position, press) > ClickTolerance)
+            _isPanning = true;
+        if (_isPanning)
+        {
+            _pan = _panAtPress + (position - press);
+            InvalidateVisual();
+        }
+    }
+
+    protected override void OnPointerReleased(PointerReleasedEventArgs e)
+    {
+        base.OnPointerReleased(e);
+        var wasClick = _pressPosition is not null && !_isPanning && _draggedVertex is null;
+        _pressPosition = null;
+        _isPanning = false;
+        _draggedVertex = null;
+        e.Pointer.Capture(null);
+
+        if (!wasClick || ViewBounds is not { IsValid: true } view || e.InitialPressMouseButton != MouseButton.Left)
+            return;
+
+        var position = e.GetPosition(this);
+        if (IsDrawing)
+        {
+            var point = ToGeo(view, position);
+            if (MapClickCommand?.CanExecute(point) == true)
+                MapClickCommand.Execute(point);
+        }
+        else
+        {
+            SelectedZone = HitTest(view, position);
+        }
+
+        InvalidateVisual();
+    }
+
+    protected override void OnPointerExited(PointerEventArgs e)
+    {
+        base.OnPointerExited(e);
+        PointerPosition = null;
+    }
+
+    // ----- Projection -----
+
+    /// <summary>Rectangle de la vue d'ensemble, aux proportions réelles du terrain.</summary>
+    private Rect BaseRect(GeoBounds view)
+    {
+        const double margin = 8;
+        var (widthMeters, heightMeters) = view.SizeInMeters();
+        var available = new Size(Math.Max(1, Bounds.Width - 2 * margin), Math.Max(1, Bounds.Height - 2 * margin));
+        var scale = Math.Min(available.Width / widthMeters, available.Height / heightMeters);
+        var size = new Size(widthMeters * scale, heightMeters * scale);
+        return new Rect(new Point((Bounds.Width - size.Width) / 2, (Bounds.Height - size.Height) / 2), size);
+    }
+
+    private Point ToScreen(GeoBounds view, GeoPoint point)
+    {
+        var rect = BaseRect(view);
+        var (x, y) = view.ToRelative(point);
+        var world = new Point(rect.X + x * rect.Width, rect.Y + y * rect.Height);
+        return new Point(world.X * _zoom + _pan.X, world.Y * _zoom + _pan.Y);
+    }
+
+    private GeoPoint ToGeo(GeoBounds view, Point screen)
+    {
+        var rect = BaseRect(view);
+        var world = new Point((screen.X - _pan.X) / _zoom, (screen.Y - _pan.Y) / _zoom);
+        return view.FromRelative((world.X - rect.X) / rect.Width, (world.Y - rect.Y) / rect.Height);
+    }
+
+    private Rect ToScreenRect(GeoBounds view, GeoBounds bounds) =>
+        new(ToScreen(view, new GeoPoint(bounds.North, bounds.West)), ToScreen(view, new GeoPoint(bounds.South, bounds.East)));
+
+    // ----- Dessin -----
+
+    private void DrawArea(DrawingContext context, GeoBounds view, ZoneViewModel zone)
+    {
+        if (zone.Points.Count == 0)
+            return;
+
+        var color = ParseColor(zone.Color);
+        var selected = zone == SelectedZone;
+        var screen = zone.Points.Select(p => ToScreen(view, p)).ToList();
+        var geometry = new StreamGeometry();
+        using (var geometryContext = geometry.Open())
+        {
+            geometryContext.BeginFigure(screen[0], zone.IsComplete);
+            foreach (var point in screen.Skip(1))
+                geometryContext.LineTo(point);
+            geometryContext.EndFigure(zone.IsComplete);
+        }
+
+        var fill = zone.IsComplete ? new SolidColorBrush(color, selected ? 0.45 : 0.3) : null;
+        context.DrawGeometry(fill, new Pen(new SolidColorBrush(color), selected ? 3 : 2), geometry);
+
+        if (selected)
+        {
+            foreach (var point in screen)
+                context.DrawRectangle(Brushes.White, new Pen(new SolidColorBrush(color), 2),
+                    new Rect(point.X - 4, point.Y - 4, 8, 8));
+        }
+    }
+
+    private void DrawPoint(DrawingContext context, GeoBounds view, ZoneViewModel zone)
+    {
+        if (zone.Points.Count == 0)
+            return;
+
+        var center = ToScreen(view, zone.Points[0]);
+        var radius = zone == SelectedZone ? 9 : 7;
+        context.DrawEllipse(new SolidColorBrush(ParseColor(zone.Color)), new Pen(Brushes.White, 2), center, radius, radius);
+    }
+
+    private void DrawUtmGrid(DrawingContext context, GeoBounds view)
+    {
+        var topLeft = ToGeo(view, new Point(0, 0));
+        var bottomRight = ToGeo(view, new Point(Bounds.Width, Bounds.Height));
+        var center = new GeoPoint((topLeft.Latitude + bottomRight.Latitude) / 2, (topLeft.Longitude + bottomRight.Longitude) / 2);
+        if (!center.IsValid)
+            return;
+
+        var zone = UtmCoordinate.ZoneOf(center);
+        var corners = new[]
+        {
+            topLeft, bottomRight,
+            new GeoPoint(topLeft.Latitude, bottomRight.Longitude), new GeoPoint(bottomRight.Latitude, topLeft.Longitude),
+        }.Select(p => UtmCoordinate.FromGeo(p, zone)).ToList();
+        var minE = corners.Min(c => c.Easting);
+        var maxE = corners.Max(c => c.Easting);
+        var minN = corners.Min(c => c.Northing);
+        var maxN = corners.Max(c => c.Northing);
+
+        // Pas du quadrillage : environ une ligne tous les 80 pixels.
+        var metersPerPixel = (maxE - minE) / Math.Max(1, Bounds.Width);
+        var spacing = new[] { 10.0, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 }
+            .FirstOrDefault(s => s / metersPerPixel >= 80, 10000);
+        var band = UtmCoordinate.FromGeo(center).Band;
+        UtmCoordinate Utm(double easting, double northing) => new(zone, band, easting, northing);
+
+        for (var easting = Math.Ceiling(minE / spacing) * spacing; easting <= maxE; easting += spacing)
+        {
+            var start = ToScreen(view, Utm(easting, minN).ToGeo());
+            var end = ToScreen(view, Utm(easting, maxN).ToGeo());
+            DrawGridLine(context, start, end);
+            // Étiquette là où la ligne croise le haut de la carte.
+            var topX = start.X + (end.X - start.X) * (start.Y / Math.Max(1, start.Y - end.Y));
+            DrawText(context, new Point(topX + 3, 2), GridLabel(easting, spacing), 10);
+        }
+
+        for (var northing = Math.Ceiling(minN / spacing) * spacing; northing <= maxN; northing += spacing)
+        {
+            var start = ToScreen(view, Utm(minE, northing).ToGeo());
+            var end = ToScreen(view, Utm(maxE, northing).ToGeo());
+            DrawGridLine(context, start, end);
+            // Étiquette là où la ligne croise le bord gauche de la carte.
+            var leftY = start.Y + (end.Y - start.Y) * (-start.X / Math.Max(1, end.X - start.X));
+            DrawText(context, new Point(3, leftY - 14), GridLabel(northing, spacing), 10);
+        }
+
+        DrawText(context, new Point(6, Bounds.Height - 6),
+            $"Quadrillage UTM {zone}{band} · {(spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m")}", 10, alignBottom: true);
+    }
+
+    private static string GridLabel(double value, double spacing) => spacing >= 1000
+        ? (value / 1000).ToString("0", CultureInfo.InvariantCulture)
+        : (value / 1000).ToString(spacing >= 100 ? "0.0" : "0.00", CultureInfo.GetCultureInfo("fr-FR"));
+
+    private static void DrawGridLine(DrawingContext context, Point start, Point end)
+    {
+        context.DrawLine(GridHaloPen, start, end);
+        context.DrawLine(GridPen, start, end);
+    }
+
+    private void DrawCenteredMessage(DrawingContext context, string message)
+    {
+        var text = new FormattedText(message, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 14, Brushes.Gainsboro)
+        {
+            MaxTextWidth = Math.Max(100, Bounds.Width - 80),
+            TextAlignment = TextAlignment.Center,
+        };
+        context.DrawText(text, new Point((Bounds.Width - text.MaxTextWidth) / 2, (Bounds.Height - text.Height) / 2));
+    }
+
+    private static void DrawLabel(DrawingContext context, Point center, string label)
+    {
+        if (string.IsNullOrWhiteSpace(label))
+            return;
+
+        var text = new FormattedText(label, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, LabelTypeface, 12, Brushes.White);
+        var origin = new Point(center.X - text.Width / 2, center.Y - text.Height / 2);
+        context.DrawRectangle(LabelBackground, null, new Rect(origin, new Size(text.Width, text.Height)).Inflate(new Thickness(4, 1)), 3, 3);
+        context.DrawText(text, origin);
+    }
+
+    private static void DrawText(DrawingContext context, Point anchor, string value, double size,
+        bool alignRight = false, bool alignBottom = false)
+    {
+        var text = new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, size, Brushes.White);
+        var origin = new Point(alignRight ? anchor.X - text.Width : anchor.X, alignBottom ? anchor.Y - text.Height : anchor.Y);
+        context.DrawRectangle(LabelBackground, null, new Rect(origin, new Size(text.Width, text.Height)).Inflate(new Thickness(3, 1)), 2, 2);
+        context.DrawText(text, origin);
+    }
+
+    // ----- Sélection -----
+
+    private ZoneViewModel? HitTest(GeoBounds view, Point position)
+    {
+        var points = ZoneItems.Where(z => !z.IsArea && z.Points.Count > 0)
+            .FirstOrDefault(z => Distance(ToScreen(view, z.Points[0]), position) <= HitTolerance);
+        if (points is not null)
+            return points;
+
+        // Parmi les zones qui contiennent le clic, la dernière dessinée (au-dessus des autres).
+        return ZoneItems.Where(z => z.IsArea && z.IsComplete)
+            .LastOrDefault(z => Contains(z.Points.Select(p => ToScreen(view, p)).ToList(), position));
+    }
+
+    private int? FindVertex(GeoBounds view, Point position)
+    {
+        if (SelectedZone is not { IsArea: true } zone)
+            return null;
+
+        for (var i = 0; i < zone.Points.Count; i++)
+        {
+            if (Distance(ToScreen(view, zone.Points[i]), position) <= HitTolerance)
+                return i;
+        }
+
+        return null;
+    }
+
+    private static bool Contains(IReadOnlyList<Point> polygon, Point point)
+    {
+        var inside = false;
+        for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+        {
+            if ((polygon[i].Y > point.Y) != (polygon[j].Y > point.Y)
+                && point.X < (polygon[j].X - polygon[i].X) * (point.Y - polygon[i].Y) / (polygon[j].Y - polygon[i].Y) + polygon[i].X)
+                inside = !inside;
+        }
+
+        return inside;
+    }
+
+    // ----- Suivi des zones -----
+
+    private void ObserveZones(IEnumerable? zones)
+    {
+        if (_observedCollection is not null)
+            _observedCollection.CollectionChanged -= OnZonesCollectionChanged;
+        _observedCollection = zones as INotifyCollectionChanged;
+        if (_observedCollection is not null)
+            _observedCollection.CollectionChanged += OnZonesCollectionChanged;
+        ResubscribeZoneItems();
+    }
+
+    private void OnZonesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        ResubscribeZoneItems();
+        InvalidateVisual();
+    }
+
+    private void ResubscribeZoneItems()
+    {
+        foreach (var zone in _observedZones)
+            zone.PropertyChanged -= OnZoneChanged;
+        _observedZones.Clear();
+        foreach (var zone in ZoneItems)
+        {
+            zone.PropertyChanged += OnZoneChanged;
+            _observedZones.Add(zone);
+        }
+    }
+
+    private void OnZoneChanged(object? sender, PropertyChangedEventArgs e) => InvalidateVisual();
+
+    // ----- Utilitaires -----
+
+    private static GeoPoint Centroid(IReadOnlyList<GeoPoint> points) =>
+        new(points.Average(p => p.Latitude), points.Average(p => p.Longitude));
+
+    private static double Distance(Point a, Point b) => Math.Sqrt(Math.Pow(a.X - b.X, 2) + Math.Pow(a.Y - b.Y, 2));
+
+    private static Color ParseColor(string hex) => Color.TryParse(hex, out var color) ? color : Colors.Orange;
+}

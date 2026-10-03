@@ -12,7 +12,11 @@ public sealed class OperationFile : IDisposable
 {
     public const string Extension = ".aop";
 
-    public const int CurrentFormatVersion = 1;
+    /// <summary>Version 2 : factions, équipes, zones et fond de carte.</summary>
+    public const int CurrentFormatVersion = 2;
+
+    /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
+    public const int MinimumFormatVersion = 2;
 
     private OperationFile(string path, OperationDbContext context)
     {
@@ -44,6 +48,7 @@ public sealed class OperationFile : IDisposable
             StartsAt = today.AddHours(9),
             EndsAt = today.AddHours(18),
         });
+        file.Context.TerrainMaps.Add(new TerrainMap());
         file.Context.SaveChanges();
         return file;
     }
@@ -61,6 +66,9 @@ public sealed class OperationFile : IDisposable
             if (info.FormatVersion > CurrentFormatVersion)
                 throw new InvalidDataException(
                     "Ce fichier a été créé avec une version plus récente d'Airsoft Planner. Mettez le logiciel à jour.");
+            if (info.FormatVersion < MinimumFormatVersion)
+                throw new InvalidDataException(
+                    "Ce fichier a été créé avec une préversion d'Airsoft Planner et ne peut plus être ouvert.");
         }
         catch (SqliteException ex)
         {
@@ -77,6 +85,39 @@ public sealed class OperationFile : IDisposable
     }
 
     public Operation Operation => Context.Operations.Single();
+
+    public TerrainMap TerrainMap => Context.TerrainMaps.Single();
+
+    public IReadOnlyList<Faction> LoadFactions() => Context.Factions.OrderBy(f => f.Name).ToList();
+
+    public IReadOnlyList<Team> LoadTeams() => Context.Teams.OrderBy(t => t.Name).ToList();
+
+    public IReadOnlyList<Zone> LoadZones() => Context.Zones.OrderBy(z => z.Name).ToList();
+
+    public IReadOnlyList<MapLayer> LoadMapLayers() => Context.MapLayers.OrderBy(l => l.SortOrder).ToList();
+
+    public void Add(Entity entity) => Context.Add(entity);
+
+    /// <summary>
+    /// Supprime un élément. Un élément jamais enregistré disparaît ; sinon il est seulement
+    /// marqué supprimé, pour que la suppression puisse être reportée lors d'une fusion.
+    /// </summary>
+    public void Remove(Entity entity)
+    {
+        if (Context.Entry(entity).State == EntityState.Added)
+            Context.Entry(entity).State = EntityState.Detached;
+        else
+            entity.IsDeleted = true;
+    }
+
+    public bool HasUnsavedChanges
+    {
+        get
+        {
+            Context.ChangeTracker.DetectChanges();
+            return Context.ChangeTracker.HasChanges();
+        }
+    }
 
     public void Save() => Context.SaveChanges();
 

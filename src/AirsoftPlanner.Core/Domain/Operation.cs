@@ -1,3 +1,5 @@
+using AirsoftPlanner.Core.Geo;
+
 namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>Une OP (partie organisée). Un fichier d'OP contient exactement une opération.</summary>
@@ -12,4 +14,7 @@ public class Operation : Entity
     public DateTimeOffset StartsAt { get; set; }
 
     public DateTimeOffset EndsAt { get; set; }
+
+    /// <summary>Format des coordonnées affichées dans l'OP et ses documents.</summary>
+    public CoordinateFormat CoordinateFormat { get; set; } = CoordinateFormat.Utm;
 }

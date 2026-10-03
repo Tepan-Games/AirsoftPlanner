@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:app="using:AirsoftPlanner.App"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             xmlns:controls="using:AirsoftPlanner.App.Controls"
+             xmlns:sys="using:System"
+             x:Class="AirsoftPlanner.App.Views.TerrainView"
+             x:DataType="vm:TerrainViewModel">
+    <Grid ColumnDefinitions="340,*">
+        <ScrollViewer>
+            <StackPanel Margin="12" Spacing="8">
+
+                <!-- Emprise -->
+                <TextBlock Text="Emprise du terrain" Classes="h2" />
+                <TextBlock Text="Centre (copié depuis Google Maps, Géoportail, un GPS…)" Classes="label" TextWrapping="Wrap" />
+                <TextBox Text="{Binding CenterText}" PlaceholderText="ex. 31T 448251 5411952 ou 48.8583, 2.2944" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <NumericUpDown Value="{Binding AreaSizeKm}" Minimum="0.1" Maximum="20" Increment="0.5"
+                                   FormatString="0.0" Width="130" />
+                    <TextBlock Text="km de côté" VerticalAlignment="Center" />
+                    <Button Content="Appliquer" Command="{Binding ApplyCenterCommand}" />
+                </StackPanel>
+                <Expander Header="Ou saisir les deux coins">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Coin nord-ouest" Classes="label" />
+                        <TextBox Text="{Binding NorthWestText}" />
+                        <TextBlock Text="Coin sud-est" Classes="label" />
+                        <TextBox Text="{Binding SouthEastText}" />
+                    </StackPanel>
+                </Expander>
+                <TextBlock Text="{Binding AreaSummary}" TextWrapping="Wrap" Opacity="0.75" />
+
+                <!-- Fonds de carte -->
+                <TextBlock Text="Fonds de carte" Classes="h2" Margin="0,12,0,0" />
+                <TextBlock Text="Téléchargés une fois (connexion Internet nécessaire), puis enregistrés dans le fichier d'OP pour un usage hors ligne."
+                           TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
+                <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="160">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MapLayerViewModel">
+                            <StackPanel>
+                                <TextBlock Text="{Binding Name}" />
+                                <TextBlock Text="{Binding Details}" FontSize="11" Opacity="0.6" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" MinWidth="190" />
+                    <Button Content="Télécharger" Command="{Binding DownloadCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding DownloadSummary}" FontSize="12" Opacity="0.7" />
+                <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsDownloading}">
+                    <ProgressBar Value="{Binding DownloadProgress}" Width="220" ShowProgressText="True" />
+                    <Button Content="Annuler" Command="{Binding CancelDownloadCommand}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Importer une image…" Command="{Binding ImportImageCommand}"
+                            ToolTip.Tip="Image orientée nord en haut, couvrant exactement l'emprise du terrain" />
+                    <Button Content="Supprimer le fond" Command="{Binding RemoveLayerCommand}" />
+                </StackPanel>
+
+                <!-- Zones -->
+                <TextBlock Text="Zones et points" Classes="h2" Margin="0,12,0,0" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="+ Zone" Command="{Binding AddAreaCommand}" ToolTip.Tip="Surface : base, secteur, zone interdite…" />
+                    <Button Content="+ Point" Command="{Binding AddPointCommand}" ToolTip.Tip="Objectif, caisse, respawn…" />
+                    <Button Content="Supprimer" Command="{Binding RemoveZoneCommand}" />
+                </StackPanel>
+                <ListBox ItemsSource="{Binding Zones}" SelectedItem="{Binding SelectedZone}" MaxHeight="220">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ZoneViewModel">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Border Width="14" Height="14" CornerRadius="3"
+                                        Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding Summary}" FontSize="11" Opacity="0.6" />
+                                </StackPanel>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel IsVisible="{Binding HasSelectedZone}" Spacing="6">
+                    <TextBlock Text="Nom" Classes="label" />
+                    <TextBox Text="{Binding SelectedZone.Name, FallbackValue=''}" />
+                    <TextBlock Text="Couleur" Classes="label" />
+                    <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding SelectedZone.Color, FallbackValue={x:Null}}" Width="120">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="sys:String">
+                                <Border Width="70" Height="18" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
+                                        Background="{Binding Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel IsVisible="{Binding !SelectedZone.IsArea, FallbackValue=False}" Spacing="6">
+                        <TextBlock Text="Position (tous formats acceptés)" Classes="label" />
+                        <TextBox Text="{Binding SelectedZone.PositionText, FallbackValue=''}" />
+                    </StackPanel>
+                    <TextBlock Text="Description / consignes" Classes="label" />
+                    <TextBox Text="{Binding SelectedZone.Description, FallbackValue=''}" AcceptsReturn="True"
+                             TextWrapping="Wrap" MinHeight="70" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <ToggleButton Content="Placer sur la carte" IsChecked="{Binding IsDrawing}" />
+                        <Button Content="Annuler sommet" Command="{Binding UndoPointCommand}"
+                                IsVisible="{Binding SelectedZone.IsArea, FallbackValue=False}" />
+                        <Button Content="Effacer" Command="{Binding ClearPointsCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <DockPanel Grid.Column="1">
+            <Border DockPanel.Dock="Top" Padding="10,6" BorderThickness="1,0,0,1"
+                    BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <DockPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <CheckBox Content="Quadrillage UTM" IsChecked="{Binding ShowUtmGrid}" />
+                        <Button Content="Vue d'ensemble" Click="OnResetViewClick" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding PointerText}" HorizontalAlignment="Right" VerticalAlignment="Center"
+                               FontFamily="Consolas,monospace" />
+                </DockPanel>
+            </Border>
+            <Border DockPanel.Dock="Bottom" Padding="10,4" IsVisible="{Binding IsDrawing}" Background="#FFF3E0">
+                <TextBlock Foreground="#E65100" Text="Mode placement : cliquez sur la carte pour placer le point ou ajouter les sommets de la zone. Désactivez « Placer sur la carte » pour terminer." TextWrapping="Wrap" />
+            </Border>
+            <controls:TerrainMapControl x:Name="Map"
+                                        ViewBounds="{Binding ViewBounds}"
+                                        Layer="{Binding SelectedLayer}"
+                                        Area="{Binding Area}"
+                                        Zones="{Binding Zones}"
+                                        SelectedZone="{Binding SelectedZone}"
+                                        IsDrawing="{Binding IsDrawing}"
+                                        ShowUtmGrid="{Binding ShowUtmGrid}"
+                                        PointerPosition="{Binding PointerPosition}"
+                                        MapClickCommand="{Binding MapClickedCommand}" />
+        </DockPanel>
+    </Grid>
+</UserControl>

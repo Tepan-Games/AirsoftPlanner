@@ -1,0 +1,51 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:app="using:AirsoftPlanner.App"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             xmlns:sys="using:System"
+             x:Class="AirsoftPlanner.App.Views.FactionsView"
+             x:DataType="vm:FactionsViewModel">
+    <Grid ColumnDefinitions="280,*">
+        <DockPanel Margin="12">
+            <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
+                <Button Content="Ajouter" Command="{Binding AddCommand}" />
+                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+            </StackPanel>
+            <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:FactionViewModel">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <Border Width="16" Height="16" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
+                                    Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </DockPanel>
+
+        <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24"
+                   Text="Ajoutez les camps de l'OP (ex. OTAN / Insurgés), puis rattachez-y les équipes." />
+
+        <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
+            <StackPanel DataContext="{Binding Selected}" x:DataType="vm:FactionViewModel"
+                        Margin="24" MaxWidth="560" HorizontalAlignment="Left" Spacing="12">
+                <TextBlock Text="Faction" Classes="h1" />
+                <TextBlock Text="Nom" Classes="label" />
+                <TextBox Text="{Binding Name}" />
+                <TextBlock Text="Couleur (brassards, carte, frise)" Classes="label" />
+                <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding Color}" Width="120">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate x:DataType="sys:String">
+                            <Border Width="70" Height="18" CornerRadius="3" BorderBrush="Gray" BorderThickness="1"
+                                    Background="{Binding Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="Description, objectifs généraux, background" Classes="label" />
+                <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

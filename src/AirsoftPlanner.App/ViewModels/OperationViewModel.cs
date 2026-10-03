@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Geo;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -36,6 +39,24 @@ public class OperationViewModel(Operation operation) : ViewModelBase
             operation.StartsAt = new DateTimeOffset(date.Date + operation.StartsAt.LocalDateTime.TimeOfDay);
             operation.EndsAt = operation.StartsAt + duration;
             OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;
+
+    public CoordinateFormat CoordinateFormat => operation.CoordinateFormat;
+
+    public CoordinateFormatOption SelectedCoordinateFormat
+    {
+        get => CoordinateFormats.First(f => f.Value == operation.CoordinateFormat);
+        set
+        {
+            if (value is null || value.Value == operation.CoordinateFormat)
+                return;
+
+            operation.CoordinateFormat = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CoordinateFormat));
         }
     }
 }

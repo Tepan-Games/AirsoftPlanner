@@ -1,4 +1,6 @@
+using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace AirsoftPlanner.Core.Tests;
 
@@ -40,6 +42,84 @@ public sealed class OperationFileTests : IDisposable
         using var shared = OperationFile.Open(copy);
         Assert.Equal(operationId, shared.Operation.Id);
         Assert.Single(Directory.GetFiles(_directory));
+    }
+
+    [Fact]
+    public void Factions_teams_zones_and_terrain_survive_reopening()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            var red = new Faction { Name = "Rouges", Color = "#C62828" };
+            file.Add(red);
+            file.Add(new Team { Name = "Alpha", FactionId = red.Id, PlayerCount = 8 });
+            file.Add(new Zone
+            {
+                Name = "Village",
+                Kind = ZoneKind.Area,
+                Points = [new GeoPoint(45.1, 5.1), new GeoPoint(45.1, 5.2), new GeoPoint(45.0, 5.2)],
+            });
+            file.TerrainMap.Bounds = new GeoBounds(45.2, 45.0, 5.0, 5.3);
+            file.Add(new MapLayer { Name = "Photo aérienne", Image = [1, 2, 3], Bounds = new GeoBounds(45.2, 45.0, 5.0, 5.3) });
+            file.Operation.CoordinateFormat = AirsoftPlanner.Core.Geo.CoordinateFormat.DegreesMinutesSeconds;
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        var faction = Assert.Single(reopened.LoadFactions());
+        var team = Assert.Single(reopened.LoadTeams());
+        var zone = Assert.Single(reopened.LoadZones());
+        Assert.Equal(faction.Id, team.FactionId);
+        Assert.Equal(3, zone.Points.Count);
+        Assert.Equal(new GeoPoint(45.0, 5.2), zone.Points[2]);
+        Assert.Equal(45.2, reopened.TerrainMap.North);
+        var layer = Assert.Single(reopened.LoadMapLayers());
+        Assert.Equal([1, 2, 3], layer.Image);
+        Assert.Equal(5.3, layer.East);
+        Assert.Equal(AirsoftPlanner.Core.Geo.CoordinateFormat.DegreesMinutesSeconds, reopened.Operation.CoordinateFormat);
+    }
+
+    [Fact]
+    public void Editing_zone_points_in_place_is_saved()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Add(new Zone { Name = "Pont", Kind = ZoneKind.Point });
+            file.Save();
+            file.LoadZones()[0].Points.Add(new GeoPoint(44, 4));
+            Assert.True(file.HasUnsavedChanges);
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        Assert.Equal([new GeoPoint(44, 4)], reopened.LoadZones()[0].Points);
+    }
+
+    [Fact]
+    public void Removed_items_are_hidden_but_kept_in_the_file_for_merging()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            var kept = new Team { Name = "Gardée" };
+            var removed = new Team { Name = "Supprimée" };
+            var neverSaved = new Team { Name = "Jamais enregistrée" };
+            file.Add(kept);
+            file.Add(removed);
+            file.Save();
+            file.Add(neverSaved);
+            file.Remove(removed);
+            file.Remove(neverSaved);
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        Assert.Equal(["Gardée"], reopened.LoadTeams().Select(t => t.Name));
+        Assert.Equal(2, reopened.Context.Teams.IgnoreQueryFilters().Count());
     }
 
     [Fact]

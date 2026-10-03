@@ -1,0 +1,22 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             x:Class="AirsoftPlanner.App.Views.GeneralView"
+             x:DataType="vm:OperationViewModel">
+    <ScrollViewer>
+        <StackPanel Margin="24" MaxWidth="640" HorizontalAlignment="Left" Spacing="12">
+            <TextBlock Text="Informations générales" Classes="h1" />
+            <TextBlock Text="Nom de l'OP" Classes="label" />
+            <TextBox Text="{Binding Name}" />
+            <TextBlock Text="Terrain / lieu" Classes="label" />
+            <TextBox Text="{Binding Location}" />
+            <TextBlock Text="Date" Classes="label" />
+            <CalendarDatePicker SelectedDate="{Binding Date}" />
+            <TextBlock Text="Format des coordonnées (carte, ordres de mission)" Classes="label" />
+            <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
+                      MinWidth="320" />
+            <TextBlock Text="Description / contexte" Classes="label" />
+            <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
