@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Fichiers d'OP (données utilisateur, à ne pas versionner)
+*.aop

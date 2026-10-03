@@ -23,6 +23,8 @@ public partial class App : Application
             window.DataContext = viewModel;
             desktop.MainWindow = window;
             desktop.Exit += (_, _) => viewModel.Dispose();
+            if (desktop.Args is [var path, ..])
+                window.Opened += async (_, _) => await viewModel.OpenFileAsync(path);
         }
 
         base.OnFrameworkInitializationCompleted();

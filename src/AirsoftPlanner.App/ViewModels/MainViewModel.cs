@@ -49,6 +49,9 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
         await RunAsync(() => Load(OperationFile.Open(path)));
     }
 
+    /// <summary>Ouvre directement un fichier d'OP (passé en argument au lancement, par exemple).</summary>
+    public Task OpenFileAsync(string path) => RunAsync(() => Load(OperationFile.Open(path)));
+
     [RelayCommand(CanExecute = nameof(HasOperation))]
     private async Task SaveAsync() => await RunAsync(() => _file!.Save());
 
