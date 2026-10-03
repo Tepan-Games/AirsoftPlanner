@@ -225,6 +225,31 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             _syncTimer.Stop();
     }
 
+    // ----- Installation -----
+
+    public string VersionText => $"Airsoft Planner {typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
+
+    /// <summary>Associe les fichiers .aop au logiciel (utilisateur courant) : ouverture par double-clic.</summary>
+    [RelayCommand]
+    private async Task AssociateFilesAsync()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+
+        try
+        {
+            FileAssociation.Register();
+            await dialogs.ShowInfoAsync("Fichiers .aop", "Les fichiers d'OP (.aop) s'ouvrent désormais dans Airsoft Planner par double-clic.");
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
+        {
+            await dialogs.ShowErrorAsync($"Association impossible : {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private async Task AboutAsync() => await dialogs.ShowInfoAsync("À propos", $"{VersionText}\nLogiciel de préparation et de suivi d'OP d'airsoft.\nCartes : IGN (Géoplateforme, Licence Ouverte). PDF : QuestPDF (licence Community).");
+
     // ----- Fichier -----
 
     /// <summary>
