@@ -27,4 +27,7 @@ public class Team : Entity
 
     /// <summary>Date de la demande d'inscription (ordre de la liste d'attente).</summary>
     public DateTimeOffset? RegisteredAt { get; set; }
+
+    /// <summary>Somme due fixée à la main (remise, forfait), ou null pour effectif × tarif de l'OP.</summary>
+    public decimal? AmountDueOverride { get; set; }
 }

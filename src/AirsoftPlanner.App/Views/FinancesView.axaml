@@ -1,0 +1,197 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:conv="using:AirsoftPlanner.App.Converters"
+             x:Class="AirsoftPlanner.App.Views.FinancesView"
+             x:DataType="vm:FinancesViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="MinWidth" Value="190" />
+        </Style>
+        <Style Selector="TextBlock.amount">
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </UserControl.Styles>
+    <DockPanel Margin="12">
+        <!-- Bilan -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                <TextBlock Text="Participation par joueur (€)" VerticalAlignment="Center" />
+                <TextBox Text="{Binding PricePerPlayerText}" Width="90" />
+                <Button Content="Exporter (CSV)…" Command="{Binding ExportCsvCommand}" />
+            </StackPanel>
+            <TextBlock Text="Finances de l'OP" Classes="h1" />
+        </DockPanel>
+        <WrapPanel DockPanel.Dock="Top">
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Recettes encaissées" Classes="label" />
+                    <TextBlock Text="{Binding ReceivedIncomeText}" Classes="amount" />
+                    <TextBlock FontSize="11" Opacity="0.7">
+                        <Run Text="sur" />
+                        <Run Text="{Binding ExpectedIncomeText}" />
+                        <Run Text="attendus" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Reste à encaisser" Classes="label" />
+                    <TextBlock Text="{Binding OutstandingText}" Classes="amount" Foreground="#EF6C00" />
+                </StackPanel>
+            </Border>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Dépenses" Classes="label" />
+                    <TextBlock Text="{Binding ExpensesText}" Classes="amount" />
+                    <TextBlock FontSize="11" Opacity="0.7">
+                        <Run Text="dont" />
+                        <Run Text="{Binding UnpaidExpensesText}" />
+                        <Run Text="à payer" />
+                    </TextBlock>
+                </StackPanel>
+            </Border>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Trésorerie actuelle" Classes="label" />
+                    <TextBlock Text="{Binding CurrentBalanceText}" Classes="amount" />
+                    <TextBlock Text="encaissé − dépenses réglées" FontSize="11" Opacity="0.7" />
+                </StackPanel>
+            </Border>
+            <Border Classes="card">
+                <StackPanel>
+                    <TextBlock Text="Bilan prévisionnel" Classes="label" />
+                    <TextBlock Text="{Binding ProjectedBalanceText}" Classes="amount" Classes.warning="{Binding IsProjectedNegative}" />
+                    <TextBlock Text="recettes attendues − toutes les dépenses" FontSize="11" Opacity="0.7" />
+                </StackPanel>
+            </Border>
+        </WrapPanel>
+
+        <Grid ColumnDefinitions="*,12,*">
+            <!-- Participation des équipes -->
+            <Grid RowDefinitions="Auto,*,Auto,Auto">
+                <TextBlock Text="Participation des équipes" Classes="h2" Margin="0,0,0,6" />
+                <ListBox Grid.Row="1" ItemsSource="{Binding TeamRows}" SelectedItem="{Binding SelectedTeam}">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TeamFinanceRow">
+                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                <Border Width="12" Height="12" CornerRadius="6" Margin="0,4,10,0" VerticalAlignment="Top"
+                                        Background="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock Text="{Binding Team.Name}" FontWeight="SemiBold" />
+                                    <TextBlock FontSize="11" Opacity="0.7">
+                                        <Run Text="{Binding Team.SizeText}" />
+                                        <Run Text="·" />
+                                        <Run Text="{Binding StatusLabel}"
+                                             Foreground="{Binding StatusColor, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                    </TextBlock>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right">
+                                    <TextBlock HorizontalAlignment="Right">
+                                        <Run Text="{Binding PaidText}" FontWeight="SemiBold" />
+                                        <Run Text="/" />
+                                        <Run Text="{Binding DueText}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding RemainingText}" FontSize="11" HorizontalAlignment="Right" Opacity="0.75" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <StackPanel Grid.Row="2" Spacing="6" Margin="0,8,0,0" IsVisible="{Binding SelectedTeam, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Somme due fixée (vide = effectif × tarif) :" VerticalAlignment="Center" />
+                        <TextBox Text="{Binding SelectedTeam.OverrideText, FallbackValue=''}" Width="90" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding TeamPayments}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PaymentRow">
+                                <TextBlock FontSize="12">
+                                    <Run Text="{Binding DateText}" />
+                                    <Run Text="—" />
+                                    <Run Text="{Binding AmountText}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding MethodText}" />
+                                    <Run Text="{Binding Details}" Foreground="Gray" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <WrapPanel Grid.Row="3" Margin="0,6,0,0">
+                    <TextBox Text="{Binding NewAmount}" Width="90" PlaceholderText="Montant" Margin="0,0,6,4" />
+                    <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding NewMethod}" MinWidth="130" Margin="0,0,6,4" />
+                    <TextBox Text="{Binding NewReference}" Width="150" PlaceholderText="Référence (virement…)" Margin="0,0,6,4" />
+                    <Button Content="Enregistrer le paiement" Command="{Binding AddPaymentCommand}" Margin="0,0,6,4" />
+                    <ComboBox ItemsSource="{Binding TeamPayments}" SelectedItem="{Binding SelectedPayment}" MinWidth="150"
+                              PlaceholderText="Paiement à annuler…" Margin="0,0,6,4">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PaymentRow">
+                                <TextBlock>
+                                    <Run Text="{Binding DateText}" />
+                                    <Run Text="{Binding AmountText}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="Annuler ce paiement" Command="{Binding RemovePaymentCommand}" Margin="0,0,6,4" />
+                </WrapPanel>
+            </Grid>
+
+            <!-- Dépenses et autres recettes -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*,Auto,Auto,Auto,Auto">
+                <DockPanel Margin="0,0,0,6">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
+                        <Button Content="+ Dépense" Command="{Binding AddExpenseCommand}" />
+                        <Button Content="Supprimer" Command="{Binding RemoveExpenseCommand}" />
+                    </StackPanel>
+                    <TextBlock Text="Dépenses (fournitures, prestataires…)" Classes="h2" />
+                </DockPanel>
+                <DataGrid Grid.Row="1" ItemsSource="{Binding Expenses}" SelectedItem="{Binding SelectedExpense}"
+                          AutoGenerateColumns="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column" BorderThickness="1"
+                          BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Libellé" Binding="{Binding Label}" Width="2*" />
+                        <DataGridTemplateColumn Header="Catégorie" Width="150">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate x:DataType="vm:ExpenseViewModel">
+                                    <ComboBox ItemsSource="{x:Static vm:ExpenseCategoryOption.All}" SelectedItem="{Binding Category}"
+                                              HorizontalAlignment="Stretch" BorderThickness="0" Background="Transparent" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn Header="Fournisseur" Binding="{Binding Supplier}" Width="*" />
+                        <DataGridTextColumn Header="Montant (€)" Binding="{Binding AmountText}" Width="100" />
+                        <DataGridCheckBoxColumn Header="Payée" Binding="{Binding IsPaid}" Width="70" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <TextBlock Grid.Row="2" Text="Autres recettes (sponsor, buvette, subvention…)" Classes="h2" Margin="0,12,0,6" />
+                <ListBox Grid.Row="3" ItemsSource="{Binding OtherIncome}" SelectedItem="{Binding SelectedIncome}" MaxHeight="130">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaymentRow">
+                            <TextBlock>
+                                <Run Text="{Binding DateText}" />
+                                <Run Text="—" />
+                                <Run Text="{Binding Details}" FontWeight="SemiBold" />
+                                <Run Text="{Binding AmountText}" />
+                                <Run Text="{Binding MethodText}" Foreground="Gray" />
+                            </TextBlock>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+                <WrapPanel Grid.Row="4" Margin="0,6,0,0">
+                    <TextBox Text="{Binding NewIncomeLabel}" Width="180" PlaceholderText="Libellé (ex. Sponsor)" Margin="0,0,6,4" />
+                    <TextBox Text="{Binding NewIncomeAmount}" Width="90" PlaceholderText="Montant" Margin="0,0,6,4" />
+                    <Button Content="Ajouter la recette" Command="{Binding AddIncomeCommand}" Margin="0,0,6,4" />
+                    <Button Content="Supprimer" Command="{Binding RemoveIncomeCommand}" Margin="0,0,6,4" />
+                </WrapPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</UserControl>

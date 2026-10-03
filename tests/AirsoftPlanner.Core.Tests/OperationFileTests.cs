@@ -189,6 +189,10 @@ public sealed class OperationFileTests : IDisposable
             file.Add(new TeamMember { TeamId = team.Id, FirstName = "Jean", Callsign = "Faucon", Phone = "06 00 00 00 00", IsLeader = true });
             file.Add(new TeamVehicle { TeamId = team.Id, Kind = "4x4", Quantity = 2 });
             file.Add(crate);
+            file.Operation.PricePerPlayer = 25.5m;
+            team.AmountDueOverride = 120m;
+            file.Add(new Payment { TeamId = team.Id, Amount = 60.25m, Method = PaymentMethod.HelloAsso, Date = DateTimeOffset.UtcNow });
+            file.Add(new Expense { Label = "Fumigènes", Category = ExpenseCategory.Pyrotechnics, Amount = 89.9m, IsPaid = true, Date = DateTimeOffset.UtcNow });
             file.Add(new PlayerStatusEvent { TeamId = team.Id, IsOut = true, Reason = OutReason.RealInjury, At = DateTimeOffset.UtcNow, Notes = "Cheville" });
             file.Add(new ItemEvent { ItemId = crate.Id, Kind = ItemEventKind.PickedUp, TeamId = team.Id, Location = new GeoPoint(45, 5), At = DateTimeOffset.UtcNow });
             file.Add(new Mission { Name = "Livraison", TeamIds = [team.Id], MaxPlayers = 6, Items = [new MissionItemUse(crate.Id, 2)] });
@@ -202,6 +206,12 @@ public sealed class OperationFileTests : IDisposable
         Assert.Equal("Faucon", Assert.Single(reopened.LoadMembers()).Callsign);
         Assert.Equal(2, Assert.Single(reopened.LoadVehicles()).Quantity);
         Assert.Equal(GameItemCategory.Crate, Assert.Single(reopened.LoadGameItems()).Category);
+        Assert.Equal(25.5m, reopened.Operation.PricePerPlayer);
+        Assert.Equal(120m, reopened.LoadTeams().Single().AmountDueOverride);
+        var payment = Assert.Single(reopened.LoadPayments());
+        Assert.Equal((60.25m, PaymentMethod.HelloAsso), (payment.Amount, payment.Method));
+        var expense = Assert.Single(reopened.LoadExpenses());
+        Assert.Equal((89.9m, ExpenseCategory.Pyrotechnics, true), (expense.Amount, expense.Category, expense.IsPaid));
         var playerEvent = Assert.Single(reopened.LoadPlayerStatusEvents());
         Assert.Equal((OutReason.RealInjury, "Cheville"), (playerEvent.Reason, playerEvent.Notes));
         var itemEvent = Assert.Single(reopened.LoadItemEvents());
@@ -224,7 +234,7 @@ public sealed class OperationFileTests : IDisposable
             file.Add(new Mission { Name = "Ancienne" });
             file.Save();
             foreach (var table in new[] { "TeamMembers", "TeamVehicles", "GameItems", "TeamPositions" })
-                file.Context.Database.ExecuteSqlRaw($"DROP TABLE {table}");
+                file.Context.Database.ExecuteSqlRaw("DROP TABLE " + table);
             file.Context.Database.ExecuteSqlRaw("ALTER TABLE Missions DROP COLUMN Items");
             file.Context.Database.ExecuteSqlRaw("ALTER TABLE Missions DROP COLUMN MaxPlayers");
             file.Context.Database.ExecuteSqlRaw("ALTER TABLE Operations DROP COLUMN WalkingSpeedKmh");

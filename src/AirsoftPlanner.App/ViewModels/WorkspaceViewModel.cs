@@ -16,6 +16,7 @@ public class WorkspaceViewModel : ViewModelBase
         GameItems = new GameItemsViewModel(file);
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
+        Finances = new FinancesViewModel(file, Teams, dialogs);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }
 
@@ -34,4 +35,6 @@ public class WorkspaceViewModel : ViewModelBase
     public TrackingViewModel Tracking { get; }
 
     public DocumentsViewModel Documents { get; }
+
+    public FinancesViewModel Finances { get; }
 }

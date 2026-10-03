@@ -20,4 +20,7 @@ public class Operation : Entity
 
     /// <summary>Vitesse de déplacement à pied retenue pour estimer les retards (terrain, équipement, prudence).</summary>
     public double WalkingSpeedKmh { get; set; } = 3;
+
+    /// <summary>Participation aux frais demandée par joueur.</summary>
+    public decimal PricePerPlayer { get; set; }
 }

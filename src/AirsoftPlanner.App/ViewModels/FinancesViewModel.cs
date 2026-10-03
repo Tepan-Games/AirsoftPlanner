@@ -1,0 +1,449 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using AirsoftPlanner.App.Services;
+using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Finance;
+using AirsoftPlanner.Data;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+
+namespace AirsoftPlanner.App.ViewModels;
+
+/// <summary>Montants en euros, à la française (« 1 234,50 € »), et saisie avec virgule ou point.</summary>
+public static class Money
+{
+    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+
+    public static string Format(decimal amount) => amount.ToString("#,##0.00 €", French);
+
+    public static bool TryParse(string? text, out decimal amount) =>
+        decimal.TryParse((text ?? "").Replace("€", "").Replace(" ", "").Replace(" ", "").Replace(" ", "").Replace(',', '.'),
+            NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
+
+    public static decimal Parse(string? text) =>
+        TryParse(text, out var amount) ? amount : throw new FormatException("Montant non reconnu (ex. 25 ou 12,50).");
+}
+
+public record PaymentMethodOption(PaymentMethod Value, string Label)
+{
+    public static IReadOnlyList<PaymentMethodOption> All { get; } =
+    [
+        new(PaymentMethod.BankTransfer, "Virement"),
+        new(PaymentMethod.Cash, "Espèces"),
+        new(PaymentMethod.Check, "Chèque"),
+        new(PaymentMethod.Card, "Carte bancaire"),
+        new(PaymentMethod.PayPal, "PayPal"),
+        new(PaymentMethod.HelloAsso, "HelloAsso"),
+        new(PaymentMethod.Other, "Autre"),
+    ];
+
+    public static PaymentMethodOption Of(PaymentMethod method) => All.First(o => o.Value == method);
+
+    public override string ToString() => Label;
+}
+
+public record ExpenseCategoryOption(ExpenseCategory Value, string Label)
+{
+    public static IReadOnlyList<ExpenseCategoryOption> All { get; } =
+    [
+        new(ExpenseCategory.Supplies, "Fournitures"),
+        new(ExpenseCategory.Provider, "Prestataire"),
+        new(ExpenseCategory.FieldRental, "Location du terrain"),
+        new(ExpenseCategory.Insurance, "Assurance"),
+        new(ExpenseCategory.Pyrotechnics, "Pyrotechnie"),
+        new(ExpenseCategory.Catering, "Restauration"),
+        new(ExpenseCategory.Other, "Autre"),
+    ];
+
+    public static ExpenseCategoryOption Of(ExpenseCategory category) => All.First(o => o.Value == category);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Ligne affichée d'un paiement ou d'une autre recette.</summary>
+public record PaymentRow(Payment Model, string DateText, string AmountText, string MethodText, string Details);
+
+/// <summary>Situation financière d'une équipe.</summary>
+public partial class TeamFinanceRow(TeamViewModel team, FinancesViewModel owner) : ViewModelBase
+{
+    public TeamViewModel Team => team;
+
+    public TeamBalance Balance { get; private set; } = new(0, 0);
+
+    public string DueText => Money.Format(Balance.Due);
+
+    public string PaidText => Money.Format(Balance.Paid);
+
+    public string RemainingText => Balance.Remaining > 0 ? $"reste {Money.Format(Balance.Remaining)}"
+        : Balance.Remaining < 0 ? $"trop-perçu {Money.Format(-Balance.Remaining)}" : "";
+
+    public string StatusLabel => Balance.Status switch
+    {
+        PaymentStatus.Paid => "Payé",
+        PaymentStatus.Partial => "Paiement partiel",
+        PaymentStatus.Unpaid => "Non payé",
+        PaymentStatus.Overpaid => "Trop-perçu",
+        _ => team.IsPlaying ? "Gratuit" : $"{team.Status.Label}",
+    };
+
+    public string StatusColor => Balance.Status switch
+    {
+        PaymentStatus.Paid => "#2E7D32",
+        PaymentStatus.Partial => "#EF6C00",
+        PaymentStatus.Unpaid => "#C62828",
+        PaymentStatus.Overpaid => "#6A1B9A",
+        _ => "#757575",
+    };
+
+    /// <summary>Somme due fixée à la main (vide = effectif × tarif).</summary>
+    public string OverrideText
+    {
+        get => team.Model.AmountDueOverride is { } amount ? amount.ToString("0.##", CultureInfo.GetCultureInfo("fr-FR")) : "";
+        set
+        {
+            team.Model.AmountDueOverride = string.IsNullOrWhiteSpace(value) ? null : Money.Parse(value);
+            owner.Refresh();
+        }
+    }
+
+    public void Update(TeamBalance balance)
+    {
+        Balance = balance;
+        OnPropertyChanged(string.Empty);
+    }
+}
+
+/// <summary>Une dépense, modifiable dans le tableau.</summary>
+public class ExpenseViewModel(Expense expense, Action onChanged) : ViewModelBase
+{
+    public Expense Model => expense;
+
+    public string Label
+    {
+        get => expense.Label;
+        set => SetProperty(expense.Label, value, expense, (e, v) => e.Label = v);
+    }
+
+    public ExpenseCategoryOption Category
+    {
+        get => ExpenseCategoryOption.Of(expense.Category);
+        set
+        {
+            if (value is not null && SetProperty(expense.Category, value.Value, expense, (e, v) => e.Category = v))
+                onChanged();
+        }
+    }
+
+    public string Supplier
+    {
+        get => expense.Supplier;
+        set => SetProperty(expense.Supplier, value, expense, (e, v) => e.Supplier = v);
+    }
+
+    public string AmountText
+    {
+        get => expense.Amount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        set
+        {
+            if (SetProperty(expense.Amount, Money.Parse(value), expense, (e, v) => e.Amount = v))
+                onChanged();
+        }
+    }
+
+    public DateTime? Date
+    {
+        get => expense.Date.LocalDateTime.Date;
+        set
+        {
+            if (value is { } date)
+                SetProperty(expense.Date, new DateTimeOffset(date.Date), expense, (e, v) => e.Date = v);
+        }
+    }
+
+    public bool IsPaid
+    {
+        get => expense.IsPaid;
+        set
+        {
+            if (SetProperty(expense.IsPaid, value, expense, (e, v) => e.IsPaid = v))
+                onChanged();
+        }
+    }
+
+    public string Notes
+    {
+        get => expense.Notes;
+        set => SetProperty(expense.Notes, value, expense, (e, v) => e.Notes = v);
+    }
+}
+
+/// <summary>Finances de l'OP : participation des équipes, autres recettes, dépenses et bilan.</summary>
+public partial class FinancesViewModel : ViewModelBase
+{
+    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+
+    private readonly OperationFile _file;
+    private readonly TeamsViewModel _teams;
+    private readonly IFileDialogService _dialogs;
+    private readonly List<Payment> _payments;
+
+    public FinancesViewModel(OperationFile file, TeamsViewModel teams, IFileDialogService dialogs)
+    {
+        _file = file;
+        _teams = teams;
+        _dialogs = dialogs;
+        _payments = file.LoadPayments().ToList();
+        Expenses = new ObservableCollection<ExpenseViewModel>(file.LoadExpenses().Select(e => new ExpenseViewModel(e, Refresh)));
+        teams.Items.CollectionChanged += (_, e) =>
+        {
+            foreach (var team in e.NewItems?.OfType<TeamViewModel>() ?? [])
+                team.PropertyChanged += OnTeamChanged;
+            Refresh();
+        };
+        foreach (var team in teams.Items)
+            team.PropertyChanged += OnTeamChanged;
+        Refresh();
+    }
+
+    public ObservableCollection<TeamFinanceRow> TeamRows { get; } = [];
+
+    public ObservableCollection<ExpenseViewModel> Expenses { get; }
+
+    public IReadOnlyList<PaymentMethodOption> PaymentMethods => PaymentMethodOption.All;
+
+    public IReadOnlyList<ExpenseCategoryOption> ExpenseCategories => ExpenseCategoryOption.All;
+
+    /// <summary>Participation demandée par joueur.</summary>
+    public string PricePerPlayerText
+    {
+        get => _file.Operation.PricePerPlayer.ToString("0.##", French);
+        set
+        {
+            _file.Operation.PricePerPlayer = Money.Parse(value);
+            OnPropertyChanged();
+            Refresh();
+        }
+    }
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AddPaymentCommand))]
+    private TeamFinanceRow? _selectedTeam;
+
+    [ObservableProperty]
+    private IReadOnlyList<PaymentRow> _teamPayments = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemovePaymentCommand))]
+    private PaymentRow? _selectedPayment;
+
+    [ObservableProperty]
+    private string _newAmount = "";
+
+    [ObservableProperty]
+    private PaymentMethodOption _newMethod = PaymentMethodOption.Of(PaymentMethod.BankTransfer);
+
+    [ObservableProperty]
+    private string _newReference = "";
+
+    [ObservableProperty]
+    private IReadOnlyList<PaymentRow> _otherIncome = [];
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveIncomeCommand))]
+    private PaymentRow? _selectedIncome;
+
+    [ObservableProperty]
+    private string _newIncomeLabel = "";
+
+    [ObservableProperty]
+    private string _newIncomeAmount = "";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveExpenseCommand))]
+    private ExpenseViewModel? _selectedExpense;
+
+    [ObservableProperty]
+    private FinanceSummary _summary = new(0, 0, 0, 0, 0);
+
+    public string ExpectedIncomeText => Money.Format(Summary.ExpectedIncome);
+
+    public string ReceivedIncomeText => Money.Format(Summary.ReceivedIncome);
+
+    public string OutstandingText => Money.Format(Summary.Outstanding);
+
+    public string ExpensesText => Money.Format(Summary.Expenses);
+
+    public string UnpaidExpensesText => Money.Format(Summary.UnpaidExpenses);
+
+    public string CurrentBalanceText => Money.Format(Summary.CurrentBalance);
+
+    public string ProjectedBalanceText => Money.Format(Summary.ProjectedBalance);
+
+    public bool IsProjectedNegative => Summary.ProjectedBalance < 0;
+
+    partial void OnSummaryChanged(FinanceSummary value) => OnPropertyChanged(string.Empty);
+
+    partial void OnSelectedTeamChanged(TeamFinanceRow? value)
+    {
+        NewAmount = value is { Balance.Remaining: > 0 } row ? row.Balance.Remaining.ToString("0.##", French) : "";
+        RefreshTeamPayments();
+    }
+
+    // ----- Paiements des équipes -----
+
+    [RelayCommand(CanExecute = nameof(HasSelectedTeam))]
+    private async Task AddPaymentAsync()
+    {
+        if (!Money.TryParse(NewAmount, out var amount) || amount <= 0)
+        {
+            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 25 ou 12,50).");
+            return;
+        }
+
+        AddPayment(new Payment
+        {
+            TeamId = SelectedTeam!.Team.Model.Id,
+            Amount = amount,
+            Method = NewMethod.Value,
+            Reference = NewReference.Trim(),
+            Date = DateTimeOffset.Now,
+        });
+        NewReference = "";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedPayment))]
+    private void RemovePayment() => RemovePaymentModel(SelectedPayment!.Model);
+
+    // ----- Autres recettes -----
+
+    [RelayCommand]
+    private async Task AddIncomeAsync()
+    {
+        if (!Money.TryParse(NewIncomeAmount, out var amount) || amount <= 0)
+        {
+            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 150 ou 12,50).");
+            return;
+        }
+
+        AddPayment(new Payment { Amount = amount, Label = NewIncomeLabel.Trim(), Method = NewMethod.Value, Date = DateTimeOffset.Now });
+        NewIncomeLabel = "";
+        NewIncomeAmount = "";
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedIncome))]
+    private void RemoveIncome() => RemovePaymentModel(SelectedIncome!.Model);
+
+    // ----- Dépenses -----
+
+    [RelayCommand]
+    private void AddExpense()
+    {
+        var expense = new Expense { Label = "Nouvelle dépense", Category = ExpenseCategory.Supplies, Date = DateTimeOffset.Now };
+        _file.Add(expense);
+        var viewModel = new ExpenseViewModel(expense, Refresh);
+        Expenses.Add(viewModel);
+        SelectedExpense = viewModel;
+        Refresh();
+    }
+
+    [RelayCommand(CanExecute = nameof(HasSelectedExpense))]
+    private void RemoveExpense()
+    {
+        _file.Remove(SelectedExpense!.Model);
+        Expenses.Remove(SelectedExpense);
+        SelectedExpense = null;
+        Refresh();
+    }
+
+    /// <summary>Export pour la comptabilité : une ligne par recette et par dépense (CSV pour Excel).</summary>
+    [RelayCommand]
+    private async Task ExportCsvAsync()
+    {
+        var path = await _dialogs.PickSaveFileAsync("Exporter les finances", "finances.csv", "Fichier CSV", ".csv");
+        if (path is null)
+            return;
+
+        static string Quote(string value) => value.IndexOfAny([';', '"', '\n']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
+        var teams = _teams.Items.ToDictionary(t => t.Model.Id, t => t.Name);
+        var text = new StringBuilder("Type;Date;Libellé;Catégorie / moyen;Tiers;Montant;Réglé\n");
+        foreach (var p in _payments.OrderBy(p => p.Date))
+            text.AppendLine(string.Join(";", "Recette", p.Date.LocalDateTime.ToString("dd/MM/yyyy"),
+                Quote(p.TeamId is { } id ? $"Participation {teams.GetValueOrDefault(id, "équipe supprimée")}" : p.Label),
+                PaymentMethodOption.Of(p.Method).Label, Quote(p.Reference), p.Amount.ToString("0.00", French), "oui"));
+        foreach (var e in Expenses.Select(x => x.Model).OrderBy(e => e.Date))
+            text.AppendLine(string.Join(";", "Dépense", e.Date.LocalDateTime.ToString("dd/MM/yyyy"), Quote(e.Label),
+                ExpenseCategoryOption.Of(e.Category).Label, Quote(e.Supplier), (-e.Amount).ToString("0.00", French), e.IsPaid ? "oui" : "non"));
+        await File.WriteAllTextAsync(path, text.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+    }
+
+    /// <summary>Recalcule les sommes dues, les statuts et le bilan.</summary>
+    public void Refresh()
+    {
+        var price = _file.Operation.PricePerPlayer;
+        var involved = _teams.Items
+            .Where(t => t.IsPlaying || _payments.Any(p => p.TeamId == t.Model.Id))
+            .ToList();
+        var selected = SelectedTeam?.Team;
+        if (!TeamRows.Select(r => r.Team).SequenceEqual(involved))
+        {
+            TeamRows.Clear();
+            foreach (var team in involved)
+                TeamRows.Add(new TeamFinanceRow(team, this));
+        }
+
+        var dues = new Dictionary<Guid, decimal>();
+        foreach (var row in TeamRows)
+        {
+            var due = row.Team.IsPlaying ? FinanceCalculator.AmountDue(row.Team.Size, price, row.Team.Model.AmountDueOverride) : 0;
+            if (row.Team.IsPlaying)
+                dues[row.Team.Model.Id] = due;
+            row.Update(FinanceCalculator.Balance(due, _payments.Where(p => p.TeamId == row.Team.Model.Id)));
+        }
+
+        SelectedTeam = TeamRows.FirstOrDefault(r => r.Team == selected) ?? SelectedTeam;
+        Summary = FinanceCalculator.Summarize(dues, _payments, Expenses.Select(e => e.Model).ToList());
+        OtherIncome = _payments.Where(p => p.TeamId is null).OrderBy(p => p.Date).Select(ToRow).ToList();
+        RefreshTeamPayments();
+    }
+
+    private bool HasSelectedTeam => SelectedTeam is not null;
+
+    private bool HasSelectedPayment => SelectedPayment is not null;
+
+    private bool HasSelectedIncome => SelectedIncome is not null;
+
+    private bool HasSelectedExpense => SelectedExpense is not null;
+
+    private void AddPayment(Payment payment)
+    {
+        _file.Add(payment);
+        _payments.Add(payment);
+        Refresh();
+    }
+
+    private void RemovePaymentModel(Payment payment)
+    {
+        _file.Remove(payment);
+        _payments.Remove(payment);
+        Refresh();
+    }
+
+    private void RefreshTeamPayments() =>
+        TeamPayments = SelectedTeam is null ? [] : _payments.Where(p => p.TeamId == SelectedTeam.Team.Model.Id).OrderBy(p => p.Date).Select(ToRow).ToList();
+
+    private static PaymentRow ToRow(Payment p) => new(p, p.Date.LocalDateTime.ToString("dd/MM/yyyy", French), Money.Format(p.Amount),
+        PaymentMethodOption.Of(p.Method).Label, p.TeamId is null ? p.Label : p.Reference);
+
+    private void OnTeamChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Status) or nameof(TeamViewModel.Name))
+            Refresh();
+    }
+}

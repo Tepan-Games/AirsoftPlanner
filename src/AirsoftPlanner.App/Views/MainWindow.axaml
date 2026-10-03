@@ -69,6 +69,9 @@
                     <TabItem Header="Matériel de jeu">
                         <views:GameItemsView DataContext="{Binding GameItems}" />
                     </TabItem>
+                    <TabItem Header="Finances">
+                        <views:FinancesView DataContext="{Binding Finances}" />
+                    </TabItem>
                     <TabItem Header="Documents">
                         <views:DocumentsView DataContext="{Binding Documents}" />
                     </TabItem>

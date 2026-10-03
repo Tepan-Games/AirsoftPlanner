@@ -16,10 +16,10 @@ public sealed class OperationFile : IDisposable
     /// Historique : 2 = factions, équipes, zones, fonds de carte ; 3 = missions ;
     /// 4 = membres, véhicules, radio, matériel de jeu, positions des équipes ; 5 = règles et packages ;
     /// 6 = statut d'inscription des équipes ; 7 = suivi des objets d'objectif ;
-    /// 8 = joueurs hors jeu.
+    /// 8 = joueurs hors jeu ; 9 = finances (tarif, paiements, dépenses).
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 8;
+    public const int CurrentFormatVersion = 9;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -112,6 +112,10 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<TeamVehicle> LoadVehicles() => Context.TeamVehicles.OrderBy(v => v.SortOrder).ToList();
 
     public IReadOnlyList<RuleDocument> LoadRuleDocuments() => Context.RuleDocuments.OrderBy(r => r.SortOrder).ToList();
+
+    public IReadOnlyList<Payment> LoadPayments() => Context.Payments.AsEnumerable().OrderBy(p => p.Date).ToList();
+
+    public IReadOnlyList<Expense> LoadExpenses() => Context.Expenses.AsEnumerable().OrderBy(e => e.Date).ToList();
 
     public IReadOnlyList<PlayerStatusEvent> LoadPlayerStatusEvents() => Context.PlayerStatusEvents.AsEnumerable().OrderBy(e => e.At).ToList();
 
