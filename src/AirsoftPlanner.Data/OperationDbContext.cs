@@ -116,8 +116,14 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         configurationBuilder.Properties<DateTimeOffset>().HaveConversion<DateTimeOffsetToUtcTicksConverter>();
     }
 
+    /// <summary>Vrai pendant une fusion : les dates de modification d'origine sont conservées.</summary>
+    public bool PreserveTimestamps { get; set; }
+
     private void TouchModifiedEntities()
     {
+        if (PreserveTimestamps)
+            return;
+
         var now = DateTimeOffset.UtcNow;
         foreach (var entry in ChangeTracker.Entries<Entity>())
         {

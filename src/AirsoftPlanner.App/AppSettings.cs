@@ -56,6 +56,9 @@ public class AppSettings
 
     public string TraccarPasswordProtected { get; set; } = "";
 
+    /// <summary>Travail partagé : fichier partagé (dossier synchronisé) de chaque OP, par identifiant d'OP.</summary>
+    public System.Collections.Generic.Dictionary<string, string> SharedFiles { get; set; } = [];
+
     /// <summary>Déclenché quand le format d'affichage des coordonnées change.</summary>
     public static event Action? CoordinateFormatChanged;
 

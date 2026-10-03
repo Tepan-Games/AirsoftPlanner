@@ -21,14 +21,14 @@ public record UnknownDevice(string DeviceId, string Source, string LastSeen);
 /// </summary>
 public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 {
-    private readonly TrackingViewModel _tracking;
-    private readonly TeamsViewModel _teams;
+    private TrackingViewModel _tracking;
+    private TeamsViewModel _teams;
     private readonly IFileDialogService _dialogs;
     private readonly LocalGpsServer _server = new();
     private readonly MeshtasticMqttSource _meshtastic = new();
     private readonly TraccarServerSource _traccar = new();
 
-    private readonly VehicleTracker _vehicles;
+    private VehicleTracker _vehicles;
 
     public GpsViewModel(TrackingViewModel tracking, TeamsViewModel teams, IFileDialogService dialogs, VehicleTracker vehicles)
     {
@@ -235,6 +235,14 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     }
 
     private bool CanAssignDevice => SelectedUnknownDevice is not null && _tracking.Selected is not null;
+
+    /// <summary>Après un rechargement de l'OP : les sources restent connectées, seules les cibles changent.</summary>
+    public void Rebind(TrackingViewModel tracking, TeamsViewModel teams, VehicleTracker vehicles)
+    {
+        _tracking = tracking;
+        _teams = teams;
+        _vehicles = vehicles;
+    }
 
     public void NotifyTeamSelectionChanged() => AssignDeviceCommand.NotifyCanExecuteChanged();
 

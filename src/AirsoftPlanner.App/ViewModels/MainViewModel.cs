@@ -1,20 +1,34 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using AirsoftPlanner.App.Services;
 using AirsoftPlanner.Data;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Microsoft.EntityFrameworkCore;
 
 namespace AirsoftPlanner.App.ViewModels;
 
-public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, IDisposable
+public partial class MainViewModel : ViewModelBase, IDisposable
 {
+    /// <summary>Intervalle de synchronisation automatique en travail partagé.</summary>
+    private static readonly TimeSpan SyncInterval = TimeSpan.FromMinutes(2);
+
+    private readonly IFileDialogService dialogs;
+    private readonly DispatcherTimer _syncTimer;
     private OperationFile? _file;
+
+    public MainViewModel(IFileDialogService dialogs)
+    {
+        this.dialogs = dialogs;
+        _syncTimer = new DispatcherTimer(SyncInterval, DispatcherPriority.Background, async (_, _) => await SyncSilentlyAsync());
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOperation), nameof(WindowTitle))]
-    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand), nameof(MergeCopyCommand), nameof(ConfigureSharingCommand))]
     private WorkspaceViewModel? _workspace;
 
     public bool HasOperation => Workspace is not null;
@@ -77,14 +91,141 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
         if (path is null)
             return;
 
-        await RunAsync(() => Load(OperationFile.Open(path)));
+        await OpenFileAsync(path);
     }
 
     /// <summary>Ouvre directement un fichier d'OP (passé en argument au lancement, par exemple).</summary>
-    public Task OpenFileAsync(string path) => RunAsync(() => Load(OperationFile.Open(path)));
+    public async Task OpenFileAsync(string path)
+    {
+        await RunAsync(() => Load(OperationFile.Open(path)));
+        if (SharedPath is not null)
+            await SyncNowAsync();
+    }
 
     [RelayCommand(CanExecute = nameof(HasOperation))]
-    private async Task SaveAsync() => await RunAsync(() => _file!.Save());
+    private async Task SaveAsync()
+    {
+        await RunAsync(() => _file!.Save());
+        if (SharedPath is not null)
+            await SyncNowAsync();
+    }
+
+    // ----- Fusion d'une copie -----
+
+    /// <summary>
+    /// Fusionne une autre copie de la même OP (modifiée par un autre orga) : ce qui n'existe que là-bas est ajouté,
+    /// et pour un élément modifié des deux côtés, la version la plus récente est retenue.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasOperation))]
+    private async Task MergeCopyAsync()
+    {
+        var path = await dialogs.PickExistingOperationFileAsync();
+        if (path is null)
+            return;
+
+        MergeReport? report = null;
+        await RunAsync(() =>
+        {
+            _file!.Save();
+            report = OperationMerger.Merge(_file, path);
+        });
+        if (report is null)
+            return;
+
+        Reload();
+        await dialogs.ShowInfoAsync("Fusion terminée", report.Changes == 0
+            ? "Aucune différence : ce fichier contient déjà toutes les modifications de la copie."
+            : $"{report.Added} élément(s) ajouté(s), {report.Updated} mis à jour, {report.Deleted} supprimé(s)."
+              + (report.KeptLocal > 0 ? $" {report.KeptLocal} élément(s) plus récent(s) ici conservé(s)." : ""));
+    }
+
+    // ----- Travail partagé (OneDrive, Google Drive, Dropbox, partage réseau) -----
+
+    /// <summary>Fichier partagé associé à l'OP ouverte sur ce poste, ou null.</summary>
+    public string? SharedPath => OperationId is { } id && AppSettings.Current.SharedFiles.TryGetValue(id, out var path) ? path : null;
+
+    public bool IsShared => SharedPath is not null;
+
+    [ObservableProperty]
+    private string _sharingStatus = "";
+
+    /// <summary>
+    /// Active le travail partagé : on choisit l'emplacement du fichier partagé dans un dossier synchronisé
+    /// (OneDrive...). Les autres orgas ouvrent une copie de ce fichier et activent le partage sur le même fichier.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(HasOperation))]
+    private async Task ConfigureSharingAsync()
+    {
+        var path = await dialogs.PickSaveFileAsync(
+            "Fichier partagé (dans OneDrive, Google Drive, Dropbox ou un dossier réseau)",
+            Path.GetFileName(_file!.Path), "Fichier d'OP partagé", OperationFile.Extension);
+        if (path is null)
+            return;
+
+        if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(_file.Path), StringComparison.OrdinalIgnoreCase))
+        {
+            await dialogs.ShowErrorAsync("Le fichier partagé doit être différent de votre copie de travail : choisissez un emplacement dans le dossier synchronisé.");
+            return;
+        }
+
+        AppSettings.Current.SharedFiles[OperationId!] = path;
+        AppSettings.Current.Save();
+        RefreshSharing();
+        await SyncNowAsync();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsShared))]
+    private void StopSharing()
+    {
+        AppSettings.Current.SharedFiles.Remove(OperationId!);
+        AppSettings.Current.Save();
+        RefreshSharing();
+    }
+
+    [RelayCommand(CanExecute = nameof(IsShared))]
+    private async Task SyncNowAsync()
+    {
+        if (_file is null || SharedPath is not { } shared)
+            return;
+
+        try
+        {
+            var report = SharedSync.Sync(_file, shared);
+            if (report.Received.Changes > 0)
+                Reload();
+            SharingStatus = $"☁ Partagé · synchronisé à {DateTime.Now:HH:mm}"
+                            + (report.Received.Changes > 0 ? $" · {report.Received.Changes} modification(s) reçue(s)" : "")
+                            + (report.ConflictCopiesMerged > 0 ? $" · {report.ConflictCopiesMerged} copie(s) en conflit fusionnée(s)" : "");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or DbUpdateException)
+        {
+            // Dossier synchronisé momentanément indisponible (hors ligne...) : on réessaiera au prochain cycle.
+            SharingStatus = $"☁ Partagé · échec de synchronisation à {DateTime.Now:HH:mm} ({ex.Message})";
+        }
+    }
+
+    private async Task SyncSilentlyAsync()
+    {
+        if (IsShared)
+            await SyncNowAsync();
+    }
+
+    private string? OperationId => _file?.Context.Operations.IgnoreQueryFilters().AsNoTracking().Select(o => o.Id).SingleOrDefault().ToString();
+
+    private void RefreshSharing()
+    {
+        OnPropertyChanged(nameof(SharedPath));
+        OnPropertyChanged(nameof(IsShared));
+        StopSharingCommand.NotifyCanExecuteChanged();
+        SyncNowCommand.NotifyCanExecuteChanged();
+        SharingStatus = IsShared ? $"☁ Partagé : {Path.GetFileName(SharedPath)}" : "";
+        if (IsShared)
+            _syncTimer.Start();
+        else
+            _syncTimer.Stop();
+    }
+
+    // ----- Fichier -----
 
     /// <summary>
     /// Propose d'enregistrer les modifications en cours.
@@ -104,6 +245,8 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
                     _file.Save();
                     saved = true;
                 });
+                if (saved && IsShared)
+                    await SyncNowAsync();
                 return saved;
             case SaveChoice.Discard:
                 return true;
@@ -114,6 +257,7 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
 
     public void Dispose()
     {
+        _syncTimer.Stop();
         StopGps();
         _file?.Dispose();
     }
@@ -131,6 +275,33 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
         _file?.Dispose();
         _file = file;
         Workspace = new WorkspaceViewModel(file, dialogs);
+        RefreshSharing();
+    }
+
+    /// <summary>
+    /// Recharge l'OP après une fusion ou une synchronisation (nouveaux éléments à afficher), sans couper
+    /// la réception GPS ni perdre l'heure suivie.
+    /// </summary>
+    private void Reload()
+    {
+        var old = Workspace;
+        var path = _file!.Path;
+        _file.Dispose();
+        _file = OperationFile.Open(path);
+        var workspace = new WorkspaceViewModel(_file, dialogs);
+        if (old is not null)
+        {
+            workspace.Tracking.IsSimulation = old.Tracking.IsSimulation;
+            workspace.Tracking.SimulatedMinutes = old.Tracking.SimulatedMinutes;
+            workspace.Tracking.ShowTrails = old.Tracking.ShowTrails;
+            if (old.Tracking.Gps is { } gps)
+            {
+                gps.Rebind(workspace.Tracking, workspace.Teams, workspace.Vehicles);
+                workspace.Tracking.Gps = gps;
+            }
+        }
+
+        Workspace = workspace;
     }
 
     private async Task RunAsync(Action action)
@@ -140,7 +311,7 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
             action();
         }
         catch (Exception ex) when (ex is IOException or InvalidDataException or UnauthorizedAccessException
-                                       or Microsoft.EntityFrameworkCore.DbUpdateException)
+                                       or DbUpdateException)
         {
             await dialogs.ShowErrorAsync(ex.Message);
         }

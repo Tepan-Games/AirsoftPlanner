@@ -40,6 +40,13 @@
                     <Button Content="Nouvelle OP" Command="{Binding NewOperationCommand}" ToolTip.Tip="Ctrl+N" />
                     <Button Content="Ouvrir…" Command="{Binding OpenOperationCommand}" ToolTip.Tip="Ctrl+O" />
                     <Button Content="Enregistrer" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
+                    <Button Content="Fusionner une copie…" Command="{Binding MergeCopyCommand}"
+                            ToolTip.Tip="Intégrer les modifications d'une autre copie de cette OP (fichier reçu d'un autre orga)" />
+                    <Button Content="☁ Travail partagé…" Command="{Binding ConfigureSharingCommand}" IsVisible="{Binding !IsShared}"
+                            ToolTip.Tip="Travailler à plusieurs via un dossier synchronisé (OneDrive, Google Drive, Dropbox, partage réseau)" />
+                    <Button Content="⟳ Synchroniser" Command="{Binding SyncNowCommand}" IsVisible="{Binding IsShared}" />
+                    <Button Content="Arrêter le partage" Command="{Binding StopSharingCommand}" IsVisible="{Binding IsShared}" />
+                    <TextBlock Text="{Binding SharingStatus}" VerticalAlignment="Center" FontSize="12" Opacity="0.8" />
                 </StackPanel>
             </DockPanel>
         </Border>
