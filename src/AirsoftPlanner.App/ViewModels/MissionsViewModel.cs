@@ -222,6 +222,7 @@ public partial class MissionsViewModel : ViewModelBase
     {
         var factionOrder = _factions.Items.Select((f, i) => (f.Model.Id, i)).ToDictionary(x => x.Id, x => x.i);
         var ordered = _teams.Items
+            .Where(t => t.IsPlaying)
             .OrderBy(t => t.Model.FactionId is { } id && factionOrder.TryGetValue(id, out var index) ? index : int.MaxValue)
             .ThenBy(t => t.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -312,7 +313,7 @@ public partial class MissionsViewModel : ViewModelBase
 
     private void OnTeamPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name))
+        if (e.PropertyName is nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name) or nameof(TeamViewModel.Status))
             RebuildColumns();
         if (e.PropertyName == nameof(TeamViewModel.Size))
         {

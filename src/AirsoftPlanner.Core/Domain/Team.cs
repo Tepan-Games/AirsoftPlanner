@@ -1,3 +1,5 @@
+using AirsoftPlanner.Core.Registration;
+
 namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>Une équipe de joueurs, rattachée à une faction.</summary>
@@ -20,4 +22,9 @@ public class Team : Entity
     public string RadioFrequency { get; set; } = "";
 
     public string Notes { get; set; } = "";
+
+    public RegistrationStatus Status { get; set; }
+
+    /// <summary>Date de la demande d'inscription (ordre de la liste d'attente).</summary>
+    public DateTimeOffset? RegisteredAt { get; set; }
 }

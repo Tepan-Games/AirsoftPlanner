@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AirsoftPlanner.App.Services;
@@ -21,6 +22,12 @@ public interface IFileDialogService
     Task<string?> PickDocumentFileAsync();
 
     Task<string?> PickFolderAsync(string title, string? startFolder);
+
+    Task<string?> PickOpenFileAsync(string title, string typeName, IReadOnlyList<string> patterns);
+
+    Task<string?> PickSaveFileAsync(string title, string suggestedName, string typeName, string extension);
+
+    Task ShowInfoAsync(string title, string message);
 
     Task<SaveChoice> AskSaveChangesAsync(string fileName);
 

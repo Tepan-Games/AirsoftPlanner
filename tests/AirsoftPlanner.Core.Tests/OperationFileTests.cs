@@ -156,6 +156,7 @@ public sealed class OperationFileTests : IDisposable
             // Simule un fichier de la version 2 : pas de table des missions ni de colonne Notes.
             file.Context.Database.ExecuteSqlRaw("DROP TABLE Missions");
             file.Context.Database.ExecuteSqlRaw("ALTER TABLE Teams DROP COLUMN Notes");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Teams DROP COLUMN Status");
             file.Context.Database.ExecuteSqlRaw("UPDATE DocumentInfo SET FormatVersion = 2");
         }
 
@@ -164,6 +165,7 @@ public sealed class OperationFileTests : IDisposable
             var team = Assert.Single(upgraded.LoadTeams());
             Assert.Equal("Alpha", team.Name);
             Assert.Equal("", team.Notes);
+            Assert.Equal(AirsoftPlanner.Core.Registration.RegistrationStatus.Confirmed, team.Status);
             Assert.Empty(upgraded.LoadMissions());
             upgraded.Add(new Mission { Name = "Nouvelle", TeamIds = [team.Id] });
             upgraded.Save();

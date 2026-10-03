@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Registration;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -73,7 +74,7 @@ public class TeamViewModel : ViewModelBase
 
     public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : "📻 fréquence non définie";
 
-    /// <summary>Effectif annoncé, utilisé tant que les membres ne sont pas renseignés.</summary>
+    /// <summary>Effectif annoncé à l'inscription (les membres peuvent n'être saisis qu'en partie).</summary>
     public decimal? PlayerCount
     {
         get => _team.PlayerCount;
@@ -88,10 +89,15 @@ public class TeamViewModel : ViewModelBase
 
     public bool HasMembers => Members.Count > 0;
 
-    /// <summary>Effectif réel : le nombre de membres renseignés, sinon l'effectif annoncé.</summary>
-    public int Size => HasMembers ? Members.Count : _team.PlayerCount;
+    /// <summary>Effectif retenu : le plus grand entre les membres saisis et l'effectif annoncé.</summary>
+    public int Size => System.Math.Max(Members.Count, _team.PlayerCount);
 
-    public string SizeText => HasMembers ? $"{Members.Count} joueur(s)" : $"{_team.PlayerCount} joueur(s) annoncé(s)";
+    public string SizeText => Members.Count switch
+    {
+        0 => $"{_team.PlayerCount} joueur(s) annoncé(s)",
+        var count when count < _team.PlayerCount => $"{_team.PlayerCount} joueur(s) annoncé(s), {count} renseigné(s)",
+        var count => $"{count} joueur(s)",
+    };
 
     public MemberViewModel? Leader => Members.FirstOrDefault(m => m.IsLeader);
 
@@ -107,6 +113,38 @@ public class TeamViewModel : ViewModelBase
     {
         get => _team.Notes;
         set => SetProperty(_team.Notes, value, _team, (t, v) => t.Notes = v);
+    }
+
+    public RegistrationStatusOption Status
+    {
+        get => RegistrationStatusOption.Of(_team.Status);
+        set
+        {
+            if (value is null || value.Value == _team.Status)
+                return;
+
+            _team.Status = value.Value;
+            _team.RegisteredAt ??= System.DateTimeOffset.Now;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsPlaying));
+        }
+    }
+
+    /// <summary>Pré-inscrite ou confirmée : comptée dans les effectifs et présente sur la frise.</summary>
+    public bool IsPlaying => RegistrationRules.IsPlaying(_team.Status);
+
+    public System.DateTime? RegisteredAt
+    {
+        get => _team.RegisteredAt?.LocalDateTime.Date;
+        set
+        {
+            var date = value is { } d ? new System.DateTimeOffset(d.Date) : (System.DateTimeOffset?)null;
+            if (date == _team.RegisteredAt)
+                return;
+
+            _team.RegisteredAt = date;
+            OnPropertyChanged();
+        }
     }
 
     /// <summary>Ajoute un membre en appliquant la règle « un seul chef par équipe ».</summary>

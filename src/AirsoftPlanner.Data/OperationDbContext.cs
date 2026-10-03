@@ -82,6 +82,7 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<RuleDocument>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<RuleDocument>().Ignore(r => r.IsImported);
         modelBuilder.Entity<TeamPackage>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Team>().Property(t => t.Status).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

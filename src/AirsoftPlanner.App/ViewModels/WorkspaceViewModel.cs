@@ -10,7 +10,7 @@ public class WorkspaceViewModel : ViewModelBase
     {
         General = new OperationViewModel(file.Operation);
         Factions = new FactionsViewModel(file);
-        Teams = new TeamsViewModel(file, Factions);
+        Teams = new TeamsViewModel(file, Factions, dialogs);
         Factions.AttachTeams(Teams);
         Terrain = new TerrainViewModel(file, General, dialogs);
         GameItems = new GameItemsViewModel(file);

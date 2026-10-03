@@ -105,7 +105,12 @@ public class FactionViewModel(Faction faction) : ViewModelBase
         }
     }
 
-    public int PlayerCount => Teams.Sum(t => t.Size);
+    /// <summary>Équipes pré-inscrites ou confirmées (les équipes en attente ou annulées ne comptent pas).</summary>
+    public IReadOnlyList<TeamViewModel> PlayingTeams => Teams.Where(t => t.IsPlaying).ToList();
+
+    public int PlayerCount => PlayingTeams.Sum(t => t.Size);
+
+    public int WaitingCount => Teams.Count(t => t.Status.Value == AirsoftPlanner.Core.Registration.RegistrationStatus.WaitingList);
 
     public bool IsUnderstaffed => faction.MinPlayers > 0 && PlayerCount < faction.MinPlayers;
 
@@ -117,7 +122,7 @@ public class FactionViewModel(Faction faction) : ViewModelBase
     {
         get
         {
-            var teams = Teams.Count;
+            var teams = PlayingTeams.Count;
             var limits = (faction.MinPlayers, faction.MaxPlayers) switch
             {
                 (0, 0) => "",
@@ -128,7 +133,8 @@ public class FactionViewModel(Faction faction) : ViewModelBase
             var status = IsUnderstaffed ? $" — il manque {faction.MinPlayers - PlayerCount} joueur(s)"
                 : IsOverstaffed ? $" — {PlayerCount - faction.MaxPlayers} joueur(s) en trop"
                 : "";
-            return $"{PlayerCount} joueur(s) dans {teams} équipe(s){limits}{status}";
+            var waiting = WaitingCount > 0 ? $" · {WaitingCount} équipe(s) en attente" : "";
+            return $"{PlayerCount} joueur(s) dans {teams} équipe(s){limits}{status}{waiting}";
         }
     }
 
@@ -143,7 +149,9 @@ public class FactionViewModel(Faction faction) : ViewModelBase
     {
         OnPropertyChanged(nameof(Teams));
         OnPropertyChanged(nameof(CommandTeam));
+        OnPropertyChanged(nameof(PlayingTeams));
         OnPropertyChanged(nameof(PlayerCount));
+        OnPropertyChanged(nameof(WaitingCount));
         OnPropertyChanged(nameof(IsUnderstaffed));
         OnPropertyChanged(nameof(IsOverstaffed));
         OnPropertyChanged(nameof(HasStaffingIssue));

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AirsoftPlanner.Data;
@@ -25,6 +26,29 @@ public class FileDialogService(Window owner) : IFileDialogService
     {
         Patterns = ["*.pdf", "*.docx", "*.doc", "*.odt", "*.txt", "*.md"],
     };
+
+    public Task<string?> PickOpenFileAsync(string title, string typeName, IReadOnlyList<string> patterns) =>
+        PickFileAsync(title, new FilePickerFileType(typeName) { Patterns = patterns });
+
+    public async Task<string?> PickSaveFileAsync(string title, string suggestedName, string typeName, string extension)
+    {
+        var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+        {
+            Title = title,
+            SuggestedFileName = suggestedName,
+            DefaultExtension = extension,
+            FileTypeChoices = [new FilePickerFileType(typeName) { Patterns = ["*" + extension] }],
+        });
+        return file?.TryGetLocalPath();
+    }
+
+    public async Task ShowInfoAsync(string title, string message)
+    {
+        var close = new Button { Content = "OK" };
+        var dialog = CreateDialog(title, message, close);
+        close.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(owner);
+    }
 
     public Task<string?> PickDocumentFileAsync() => PickFileAsync("Importer un document de règles", DocumentFileType);
 

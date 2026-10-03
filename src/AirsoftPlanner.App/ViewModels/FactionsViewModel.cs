@@ -70,7 +70,8 @@ public partial class FactionsViewModel : ViewModelBase
 
     private void OnTeamChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name))
+        if (e.PropertyName is nameof(TeamViewModel.Size) or nameof(TeamViewModel.Faction) or nameof(TeamViewModel.Name)
+            or nameof(TeamViewModel.Status))
             RefreshStaffing();
     }
 
