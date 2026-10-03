@@ -58,6 +58,9 @@
                     <TabItem Header="Matériel de jeu">
                         <views:GameItemsView DataContext="{Binding GameItems}" />
                     </TabItem>
+                    <TabItem Header="Documents">
+                        <views:DocumentsView DataContext="{Binding Documents}" />
+                    </TabItem>
                     <TabItem Header="Scénario">
                         <TabControl Padding="0" TabStripPlacement="Top" Classes="modes">
                             <TabItem Header="Organisation">

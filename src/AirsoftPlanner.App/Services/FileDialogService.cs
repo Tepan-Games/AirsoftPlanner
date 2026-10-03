@@ -21,6 +21,25 @@ public class FileDialogService(Window owner) : IFileDialogService
         Patterns = ["*.png", "*.jpg", "*.jpeg"],
     };
 
+    private static readonly FilePickerFileType DocumentFileType = new("Document (PDF, Word, OpenDocument, texte)")
+    {
+        Patterns = ["*.pdf", "*.docx", "*.doc", "*.odt", "*.txt", "*.md"],
+    };
+
+    public Task<string?> PickDocumentFileAsync() => PickFileAsync("Importer un document de règles", DocumentFileType);
+
+    public async Task<string?> PickFolderAsync(string title, string? startFolder)
+    {
+        var start = startFolder is null ? null : await owner.StorageProvider.TryGetFolderFromPathAsync(startFolder);
+        var folders = await owner.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        {
+            Title = title,
+            AllowMultiple = false,
+            SuggestedStartLocation = start,
+        });
+        return folders.FirstOrDefault()?.TryGetLocalPath();
+    }
+
     public async Task<string?> PickNewOperationFileAsync(string suggestedName)
     {
         var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions

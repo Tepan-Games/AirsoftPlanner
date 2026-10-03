@@ -29,6 +29,10 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<TeamPosition> TeamPositions => Set<TeamPosition>();
 
+    public DbSet<RuleDocument> RuleDocuments => Set<RuleDocument>();
+
+    public DbSet<TeamPackage> TeamPackages => Set<TeamPackage>();
+
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
         TouchModifiedEntities();
@@ -75,6 +79,9 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<TeamPosition>().Ignore(p => p.Point);
         modelBuilder.Entity<TeamPosition>().HasIndex(p => new { p.TeamId, p.ReceivedAt });
         modelBuilder.Entity<Operation>().Property(o => o.WalkingSpeedKmh).HasDefaultValue(3.0);
+        modelBuilder.Entity<RuleDocument>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<RuleDocument>().Ignore(r => r.IsImported);
+        modelBuilder.Entity<TeamPackage>().HasQueryFilter(e => !e.IsDeleted);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

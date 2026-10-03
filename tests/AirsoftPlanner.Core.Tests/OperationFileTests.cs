@@ -232,6 +232,29 @@ public sealed class OperationFileTests : IDisposable
     }
 
     [Fact]
+    public void Rules_and_package_tracking_survive_reopening()
+    {
+        var path = Path.Combine(_directory, "op" + OperationFile.Extension);
+        var teamId = Guid.NewGuid();
+        var received = new DateTimeOffset(2026, 10, 1, 20, 30, 0, TimeSpan.FromHours(2));
+
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Add(new RuleDocument { Title = "Charte", FileName = "charte.pdf", FileContent = [37, 80, 68, 70] });
+            file.Add(new RuleDocument { Title = "Règles de l'OP", Text = "# Touches\nAnnoncer « touché ».", SortOrder = 1 });
+            file.Add(new TeamPackage { TeamId = teamId, GeneratedAt = received.AddDays(-1), Fingerprint = "ABC", SentAt = received.AddHours(-2), ReceivedAt = received, ReceivedBy = "Faucon" });
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        var rules = reopened.LoadRuleDocuments();
+        Assert.True(rules[0].IsImported);
+        Assert.False(rules[1].IsImported);
+        var package = Assert.Single(reopened.LoadTeamPackages());
+        Assert.Equal((teamId, received, "Faucon"), (package.TeamId, package.ReceivedAt!.Value, package.ReceivedBy));
+    }
+
+    [Fact]
     public void Open_rejects_a_file_that_is_not_an_operation()
     {
         var path = Path.Combine(_directory, "faux" + OperationFile.Extension);
