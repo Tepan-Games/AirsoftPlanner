@@ -16,16 +16,21 @@
         <KeyBinding Gesture="Ctrl+N" Command="{Binding NewOperationCommand}" />
         <KeyBinding Gesture="Ctrl+O" Command="{Binding OpenOperationCommand}" />
         <KeyBinding Gesture="Ctrl+S" Command="{Binding SaveCommand}" />
+        <KeyBinding Gesture="Ctrl+T" Command="{Binding ToggleThemeCommand}" />
     </Window.KeyBindings>
 
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="12,8" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-                <Button Content="Nouvelle OP" Command="{Binding NewOperationCommand}" ToolTip.Tip="Ctrl+N" />
-                <Button Content="Ouvrir…" Command="{Binding OpenOperationCommand}" ToolTip.Tip="Ctrl+O" />
-                <Button Content="Enregistrer" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
-            </StackPanel>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="{Binding ThemeButtonText}" Command="{Binding ToggleThemeCommand}"
+                        ToolTip.Tip="Basculer entre le mode jour et le mode nuit (Ctrl+T)" />
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <Button Content="Nouvelle OP" Command="{Binding NewOperationCommand}" ToolTip.Tip="Ctrl+N" />
+                    <Button Content="Ouvrir…" Command="{Binding OpenOperationCommand}" ToolTip.Tip="Ctrl+O" />
+                    <Button Content="Enregistrer" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
+                </StackPanel>
+            </DockPanel>
         </Border>
 
         <Panel>

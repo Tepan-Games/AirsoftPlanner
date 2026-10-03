@@ -19,6 +19,21 @@ public partial class MainViewModel(IFileDialogService dialogs) : ViewModelBase, 
 
     public bool HasOperation => Workspace is not null;
 
+    public bool IsNightMode => AppSettings.Current.Theme == AppTheme.Night;
+
+    public string ThemeButtonText => IsNightMode ? "☀ Mode jour" : "🌙 Mode nuit";
+
+    /// <summary>Bascule jour / nuit, mémorisée pour les prochains lancements.</summary>
+    [RelayCommand]
+    private void ToggleTheme()
+    {
+        AppSettings.Current.Theme = IsNightMode ? AppTheme.Day : AppTheme.Night;
+        AppSettings.Current.Save();
+        AppSettings.ApplyTheme();
+        OnPropertyChanged(nameof(IsNightMode));
+        OnPropertyChanged(nameof(ThemeButtonText));
+    }
+
     public string WindowTitle => _file is null
         ? "Airsoft Planner"
         : $"{Path.GetFileName(_file.Path)} — Airsoft Planner";

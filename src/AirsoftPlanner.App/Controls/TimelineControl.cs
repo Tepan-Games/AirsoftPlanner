@@ -61,12 +61,33 @@ public class TimelineControl : Control
     private const double ResizeHandle = 7;
     private const int Snap = 5;
 
-    private static readonly IBrush Background = new SolidColorBrush(Color.FromRgb(0xF4, 0xF5, 0xF7));
-    private static readonly IBrush OutsideOperation = new SolidColorBrush(Color.FromRgb(0xDD, 0xDF, 0xE3));
     private static readonly IBrush HeaderBackground = new SolidColorBrush(Color.FromRgb(0x26, 0x32, 0x38));
-    private static readonly IPen HourPen = new Pen(new SolidColorBrush(Color.FromRgb(0xB0, 0xB6, 0xBE)), 1);
-    private static readonly IPen HalfHourPen = new Pen(new SolidColorBrush(Color.FromRgb(0xD5, 0xD9, 0xDE)), 1, DashStyle.Dash);
-    private static readonly IPen ColumnPen = new Pen(new SolidColorBrush(Color.FromRgb(0xC8, 0xCC, 0xD2)), 1);
+
+    /// <summary>Couleurs du fond de la frise, selon le thème jour ou nuit.</summary>
+    private sealed record Palette(IBrush Background, IBrush OutsideOperation, IBrush Gutter, IBrush HourText, IBrush HalfHourText,
+        IPen HourPen, IPen HalfHourPen, IPen ColumnPen, IBrush Hint)
+    {
+        public static readonly Palette Day = new(
+            new SolidColorBrush(Color.FromRgb(0xF4, 0xF5, 0xF7)), new SolidColorBrush(Color.FromRgb(0xDD, 0xDF, 0xE3)),
+            Brushes.White, Brushes.Black, Brushes.Gray,
+            new Pen(new SolidColorBrush(Color.FromRgb(0xB0, 0xB6, 0xBE)), 1),
+            new Pen(new SolidColorBrush(Color.FromRgb(0xD5, 0xD9, 0xDE)), 1, DashStyle.Dash),
+            new Pen(new SolidColorBrush(Color.FromRgb(0xC8, 0xCC, 0xD2)), 1), Brushes.DimGray);
+
+        public static readonly Palette Night = new(
+            new SolidColorBrush(Color.FromRgb(0x1E, 0x21, 0x24)), new SolidColorBrush(Color.FromRgb(0x14, 0x16, 0x18)),
+            new SolidColorBrush(Color.FromRgb(0x26, 0x2A, 0x2E)), Brushes.Gainsboro, Brushes.Gray,
+            new Pen(new SolidColorBrush(Color.FromRgb(0x4A, 0x50, 0x57)), 1),
+            new Pen(new SolidColorBrush(Color.FromRgb(0x33, 0x38, 0x3D)), 1, DashStyle.Dash),
+            new Pen(new SolidColorBrush(Color.FromRgb(0x3A, 0x3F, 0x45)), 1), Brushes.Gray);
+    }
+
+    private Palette ThemeColors => ActualThemeVariant == Avalonia.Styling.ThemeVariant.Dark ? Palette.Night : Palette.Day;
+    private IBrush Background => ThemeColors.Background;
+    private IBrush OutsideOperation => ThemeColors.OutsideOperation;
+    private IPen HourPen => ThemeColors.HourPen;
+    private IPen HalfHourPen => ThemeColors.HalfHourPen;
+    private IPen ColumnPen => ThemeColors.ColumnPen;
     private static readonly IPen SelectedPen = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xC4, 0x00)), 3);
     private static readonly IPen IssuePen = new Pen(new SolidColorBrush(Color.FromRgb(0xD3, 0x2F, 0x2F)), 2.5);
     private static readonly IPen DependencyPen = new Pen(new SolidColorBrush(Color.FromArgb(0xA0, 0x37, 0x47, 0x4F)), 1.5);
@@ -139,6 +160,10 @@ public class TimelineControl : Control
         if (change.Property == ColumnsProperty || change.Property == MissionsProperty)
         {
             Observe();
+            InvalidateVisual();
+        }
+        else if (change.Property.Name == nameof(ActualThemeVariant))
+        {
             InvalidateVisual();
         }
         else if (change.Property == NowMinutesProperty || change.Property == FollowNowProperty || change.Property == BoundsProperty)
@@ -272,7 +297,7 @@ public class TimelineControl : Control
         if (columns.Count == 0)
         {
             DrawText(context, "Ajoutez des équipes (onglet Équipes) pour construire la frise du scénario.",
-                new Point(24, 24), 14, Brushes.DimGray, Bounds.Width - 48);
+                new Point(24, 24), 14, ThemeColors.Hint, Bounds.Width - 48);
             return;
         }
 
@@ -432,7 +457,7 @@ public class TimelineControl : Control
     private void DrawGutter(DrawingContext context, (int Start, int End) range)
     {
         var gutter = new Rect(0, HeaderHeight, GutterWidth, Math.Max(0, Bounds.Height - HeaderHeight));
-        context.FillRectangle(Brushes.White, gutter);
+        context.FillRectangle(ThemeColors.Gutter, gutter);
         context.DrawLine(ColumnPen, new Point(GutterWidth, HeaderHeight), new Point(GutterWidth, Bounds.Height));
         using (context.PushClip(gutter))
         {
@@ -440,7 +465,7 @@ public class TimelineControl : Control
             for (var minutes = range.Start; minutes <= range.End; minutes += step)
             {
                 var text = Format(MissionTime.Format(minutes), minutes % 60 == 0 ? 12 : 10,
-                    minutes % 60 == 0 ? Brushes.Black : Brushes.Gray, minutes % 60 == 0 ? Bold : Typeface.Default, GutterWidth);
+                    minutes % 60 == 0 ? ThemeColors.HourText : ThemeColors.HalfHourText, minutes % 60 == 0 ? Bold : Typeface.Default, GutterWidth);
                 context.DrawText(text, new Point(GutterWidth - text.Width - 8, YOf(minutes, range.Start) - text.Height / 2));
             }
         }
