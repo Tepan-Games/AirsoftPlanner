@@ -56,6 +56,9 @@ public class AppSettings
 
     public string TraccarPasswordProtected { get; set; } = "";
 
+    /// <summary>Second poste : adresse du serveur local du PC qui mène l'OP.</summary>
+    public string UpstreamUrl { get; set; } = "";
+
     /// <summary>Travail partagé : fichier partagé (dossier synchronisé) de chaque OP, par identifiant d'OP.</summary>
     public System.Collections.Generic.Dictionary<string, string> SharedFiles { get; set; } = [];
 

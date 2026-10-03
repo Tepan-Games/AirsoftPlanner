@@ -573,6 +573,15 @@ public partial class TrackingViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// Dernière position de chaque équipe, republiée par le serveur local pour les autres postes.
+    /// Remplacée d'un bloc à chaque rafraîchissement : lisible sans risque depuis le fil du serveur.
+    /// </summary>
+    public IReadOnlyList<Services.Gps.PublishedPosition> PublishedPositions { get; private set; } = [];
+
+    /// <summary>Équipes en jeu, pour la page de saisie du serveur local.</summary>
+    public IReadOnlyList<string> PublishedTeamNames { get; private set; } = [];
+
     /// <summary>Plan radio affiché en permanence sur l'écran de suivi.</summary>
     [ObservableProperty]
     private IReadOnlyList<RadioFaction> _radioPlan = [];
@@ -709,6 +718,12 @@ public partial class TrackingViewModel : ViewModelBase
         RefreshMarkers();
         RefreshRadioPlan();
         RefreshPlayers();
+        PublishedTeamNames = Statuses.Select(s => s.Team.Name).ToList();
+        PublishedPositions = Statuses
+            .Select(s => (s.Team.Name, Position: _positions.LastOrDefault(p => p.TeamId == s.Team.Model.Id)))
+            .Where(x => x.Position is not null)
+            .Select(x => new Services.Gps.PublishedPosition(x.Name, x.Position!.Latitude, x.Position.Longitude, x.Position.ReceivedAt, x.Position.Source))
+            .ToList();
     }
 
     public void RefreshRadioPlan()

@@ -27,6 +27,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private readonly LocalGpsServer _server = new();
     private readonly MeshtasticMqttSource _meshtastic = new();
     private readonly TraccarServerSource _traccar = new();
+    private readonly OperationServerSource _upstream = new();
 
     private VehicleTracker _vehicles;
 
@@ -48,6 +49,11 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _traccarPassword = Secret.Unprotect(settings.TraccarPasswordProtected);
 
         _server.FixReceived += OnFix;
+        _server.Positions = () => _tracking.PublishedPositions;
+        _server.TeamNames = () => _tracking.PublishedTeamNames;
+        _upstream.FixReceived += OnFix;
+        _upstream.Error += message => Dispatcher.UIThread.Post(() => Log($"PC de l'OP : {message}"));
+        _upstreamUrl = settings.UpstreamUrl;
         _meshtastic.FixReceived += OnFix;
         _traccar.FixReceived += OnFix;
         _traccar.Error += message => Dispatcher.UIThread.Post(() => Log($"Traccar : {message}"));
@@ -99,6 +105,45 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         }
 
         IsServerRunning = _server.IsRunning;
+    }
+
+    // ----- Second poste : connexion au PC de l'OP -----
+
+    [ObservableProperty]
+    private string _upstreamUrl;
+
+    [ObservableProperty]
+    private bool _isUpstreamConnected;
+
+    /// <summary>Récupère les positions collectées par le PC qui mène l'OP (son serveur local).</summary>
+    [RelayCommand]
+    private async Task ToggleUpstreamAsync()
+    {
+        try
+        {
+            if (_upstream.IsConnected)
+            {
+                _upstream.Disconnect();
+                Log("Déconnecté du PC de l'OP.");
+            }
+            else
+            {
+                var url = UpstreamUrl.Trim();
+                if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                    url = "http://" + url;
+                await _upstream.ConnectAsync(url, TimeSpan.FromSeconds(10));
+                AppSettings.Current.UpstreamUrl = url;
+                AppSettings.Current.Save();
+                UpstreamUrl = url;
+                Log($"Connecté au PC de l'OP : {url}");
+            }
+        }
+        catch (Exception ex)
+        {
+            await _dialogs.ShowErrorAsync($"Le PC de l'OP ne répond pas (adresse, même réseau, serveur actif, pare-feu ?) : {ex.Message}");
+        }
+
+        IsUpstreamConnected = _upstream.IsConnected;
     }
 
     // ----- Meshtastic (MQTT) -----
@@ -251,6 +296,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         await _server.DisposeAsync();
         await _meshtastic.DisposeAsync();
         _traccar.Dispose();
+        _upstream.Dispose();
     }
 
     // Les sources reçoivent sur leurs propres fils : tout est ramené sur le fil de l'interface.

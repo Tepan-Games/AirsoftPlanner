@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Text;
@@ -30,6 +31,12 @@ public sealed class LocalGpsServer : IAsyncDisposable
     private WebApplication? _app;
 
     public event Action<GpsFix>? FixReceived;
+
+    /// <summary>Dernière position connue de chaque équipe, publiée pour les autres postes (lue depuis le fil du serveur).</summary>
+    public Func<IReadOnlyList<PublishedPosition>> Positions { get; set; } = () => [];
+
+    /// <summary>Équipes proposées sur la page de saisie (lue depuis le fil du serveur).</summary>
+    public Func<IReadOnlyList<string>> TeamNames { get; set; } = () => [];
 
     public bool IsRunning => _app is not null;
 
@@ -57,6 +64,23 @@ public sealed class LocalGpsServer : IAsyncDisposable
 
         app.MapGet("/", (HttpContext context) => HandleQuery(context));
         app.MapPost("/", async (HttpContext context) => await HandlePostAsync(context));
+        // Lecture des positions par un autre poste Airsoft Planner (suivi en direct sur plusieurs PC).
+        app.MapGet("/api/positions", () => Results.Json(Positions()));
+
+        // Saisie manuelle depuis un téléphone (sans application, sans géolocalisation du navigateur).
+        app.MapGet("/saisie", () => Results.Content(EntryPage(null), "text/html; charset=utf-8"));
+        app.MapPost("/saisie", async (HttpContext context) =>
+        {
+            var form = await context.Request.ReadFormAsync();
+            var team = form["equipe"].ToString();
+            var text = form["coordonnees"].ToString();
+            if (!TeamNames().Contains(team) || !AirsoftPlanner.Core.Geo.Coordinates.TryParse(text, out var point))
+                return Results.Content(EntryPage("⚠ Équipe ou coordonnées non reconnues (ex. 31U 477439 5361677 ou 48.405, 2.699)."), "text/html; charset=utf-8");
+
+            FixReceived?.Invoke(new GpsFix(team, point, DateTimeOffset.Now, "Saisie web"));
+            return Results.Content(EntryPage($"✔ Position de {WebUtility.HtmlEncode(team)} enregistrée à {DateTime.Now:HH:mm}."), "text/html; charset=utf-8");
+        });
+
         app.MapPost("/api/positions", async (HttpContext context) =>
         {
             var body = await new StreamReader(context.Request.Body).ReadToEndAsync();
@@ -81,6 +105,25 @@ public sealed class LocalGpsServer : IAsyncDisposable
     }
 
     public async ValueTask DisposeAsync() => await StopAsync();
+
+    private string EntryPage(string? message)
+    {
+        var options = string.Concat(TeamNames().Select(t => $"<option>{WebUtility.HtmlEncode(t)}</option>"));
+        return $$"""
+            <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+            <title>Position d'équipe</title>
+            <body style="font-family:sans-serif;padding:16px;max-width:480px;margin:auto">
+            <h2>Envoyer la position de l'équipe</h2>
+            <p style="font-weight:bold">{{message}}</p>
+            <form method="post" action="/saisie">
+              <p><label>Équipe<br><select name="equipe" style="font-size:1.2em;width:100%">{{options}}</select></label></p>
+              <p><label>Coordonnées (UTM ou degrés)<br>
+                <input name="coordonnees" style="font-size:1.2em;width:100%" placeholder="31U 477439 5361677" autocomplete="off"></label></p>
+              <p><button style="font-size:1.2em;width:100%;padding:12px">Envoyer</button></p>
+            </form>
+            </body></html>
+            """;
+    }
 
     private IResult HandleQuery(HttpContext context)
     {
@@ -131,6 +174,78 @@ public sealed class LocalGpsServer : IAsyncDisposable
         if (fix is not null)
             FixReceived?.Invoke(fix);
         return Results.Ok();
+    }
+}
+
+/// <summary>Position publiée par le PC de l'OP pour les autres postes.</summary>
+public record PublishedPosition(string Team, double Latitude, double Longitude, DateTimeOffset Time, string Source);
+
+/// <summary>
+/// Second poste : récupère périodiquement les positions collectées par le PC qui mène l'OP
+/// (son serveur local, <c>GET /api/positions</c>), pour suivre l'OP en direct sur plusieurs PC.
+/// </summary>
+public sealed class OperationServerSource : IDisposable
+{
+    private readonly HttpClient _http = new() { Timeout = TimeSpan.FromSeconds(10) };
+    private CancellationTokenSource? _polling;
+
+    public event Action<GpsFix>? FixReceived;
+
+    public event Action<string>? Error;
+
+    public bool IsConnected => _polling is not null;
+
+    public async Task ConnectAsync(string baseUrl, TimeSpan interval)
+    {
+        Disconnect();
+        var url = baseUrl.TrimEnd('/') + "/api/positions";
+        (await _http.GetAsync(url)).EnsureSuccessStatusCode(); // vérifie tout de suite que le PC de l'OP répond
+        _polling = new CancellationTokenSource();
+        var token = _polling.Token;
+        _ = Task.Run(async () =>
+        {
+            var last = new Dictionary<string, DateTimeOffset>();
+            while (!token.IsCancellationRequested)
+            {
+                try
+                {
+                    var positions = await _http.GetFromJsonAsync<List<PublishedPosition>>(url, token) ?? [];
+                    foreach (var p in positions)
+                    {
+                        if (last.TryGetValue(p.Team, out var previous) && previous >= p.Time)
+                            continue;
+                        last[p.Team] = p.Time;
+                        FixReceived?.Invoke(new GpsFix(p.Team, new GeoPoint(p.Latitude, p.Longitude), p.Time, $"PC de l'OP ({p.Source})"));
+                    }
+                }
+                catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException && !token.IsCancellationRequested)
+                {
+                    Error?.Invoke(ex.Message);
+                }
+
+                try
+                {
+                    await Task.Delay(interval, token);
+                }
+                catch (TaskCanceledException)
+                {
+                    break;
+                }
+            }
+        }, token);
+    }
+
+    public void Disconnect()
+    {
+        _polling?.Cancel();
+        _polling?.Dispose();
+        _polling = null;
+    }
+
+    public void Dispose()
+    {
+        Disconnect();
+        _http.Dispose();
     }
 }
 

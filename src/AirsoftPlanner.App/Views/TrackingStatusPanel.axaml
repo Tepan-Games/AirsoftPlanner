@@ -90,7 +90,14 @@
                     <SelectableTextBlock Text="{Binding ServerAddresses}" VerticalAlignment="Center" FontFamily="Consolas,monospace" />
                 </WrapPanel>
                 <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
-                           Text="Dans Traccar Client : adresse du serveur = une adresse ci-dessus (même Wi-Fi que ce PC), identifiant de l'appareil = un identifiant GPS de l'équipe (onglet Équipes). Autorisez le logiciel dans le pare-feu Windows au premier démarrage." />
+                           Text="Dans Traccar Client : adresse du serveur = une adresse ci-dessus (même Wi-Fi que ce PC), identifiant de l'appareil = un identifiant GPS de l'équipe (onglet Équipes). Sans application : ouvrir l'adresse suivie de /saisie dans le navigateur du téléphone pour taper les coordonnées. Autres PC : /api/positions. Autorisez le logiciel dans le pare-feu Windows au premier démarrage." />
+                <TextBlock Text="Second poste : suivre l'OP menée sur un autre PC" FontWeight="SemiBold" Margin="0,6,0,0" />
+                <WrapPanel>
+                    <TextBox Text="{Binding UpstreamUrl}" Width="240" PlaceholderText="http://192.168.1.20:5055" Margin="0,0,6,4" />
+                    <ToggleButton Content="Connecté" IsChecked="{Binding IsUpstreamConnected, Mode=OneWay}"
+                                  Command="{Binding ToggleUpstreamCommand}" Margin="0,0,6,4"
+                                  ToolTip.Tip="Récupère toutes les 10 s les positions collectées par le PC de l'OP (son serveur doit être actif)" />
+                </WrapPanel>
 
                 <TextBlock Text="Meshtastic (passerelle MQTT, messages JSON)" FontWeight="SemiBold" Margin="0,6,0,0" />
                 <WrapPanel>
