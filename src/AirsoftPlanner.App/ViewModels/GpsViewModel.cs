@@ -258,7 +258,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             ? new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East)
             : null;
         return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, _tracking.MissionBriefFor(team, format), map,
-            CommsFor(team));
+            CommsFor(team), format);
     }
 
     /// <summary>Fréquences de la faction, des équipes alliées et de l'orga, numéro d'urgence.</summary>

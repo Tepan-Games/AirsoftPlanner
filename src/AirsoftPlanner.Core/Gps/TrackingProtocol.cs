@@ -58,7 +58,8 @@ public record TrackRequest(string Token, IReadOnlyList<TrackPoint> Positions);
 /// et positions des alliés selon le réglage de l'OP.
 /// </summary>
 public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode ShareMode = AllyShareMode.Coordinates,
-    IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null);
+    IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null,
+    AirsoftPlanner.Core.Geo.CoordinateFormat CoordinateFormat = AirsoftPlanner.Core.Geo.CoordinateFormat.Utm);
 
 /// <summary>Contenu du QR code d'enrôlement : <c>airsoftplanner://enroll?server=...&amp;code=...</c>.</summary>
 public static class EnrollmentLink

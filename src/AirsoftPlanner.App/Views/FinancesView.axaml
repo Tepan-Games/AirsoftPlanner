@@ -13,8 +13,18 @@
             <Setter Property="MinWidth" Value="190" />
         </Style>
         <Style Selector="TextBlock.amount">
-            <Setter Property="FontSize" Value="20" />
+            <Setter Property="FontSize" Value="22" />
             <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,2,0,2" />
+        </Style>
+        <!-- Libellé de carte : sans la marge négative du style « label » des formulaires. -->
+        <Style Selector="Border.card TextBlock.cardlabel">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Opacity" Value="0.75" />
+        </Style>
+        <Style Selector="Border.card TextBlock.cardnote">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Opacity" Value="0.7" />
         </Style>
     </UserControl.Styles>
     <DockPanel Margin="12">
@@ -32,10 +42,10 @@
         </DockPanel>
         <WrapPanel DockPanel.Dock="Top">
             <Border Classes="card">
-                <StackPanel>
-                    <TextBlock Text="Recettes encaissées" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Recettes encaissées" Classes="cardlabel" />
                     <TextBlock Text="{Binding ReceivedIncomeText}" Classes="amount" />
-                    <TextBlock FontSize="11" Opacity="0.7">
+                    <TextBlock Classes="cardnote">
                         <Run Text="sur" />
                         <Run Text="{Binding ExpectedIncomeText}" />
                         <Run Text="attendus" />
@@ -43,23 +53,23 @@
                 </StackPanel>
             </Border>
             <Border Classes="card">
-                <StackPanel>
-                    <TextBlock Text="Reste à encaisser" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Reste à encaisser" Classes="cardlabel" />
                     <TextBlock Text="{Binding OutstandingText}" Classes="amount" Foreground="#EF6C00" />
                 </StackPanel>
             </Border>
             <Border Classes="card" IsVisible="{Binding HasRefunds}">
-                <StackPanel>
-                    <TextBlock Text="Remboursements à faire" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Remboursements à faire" Classes="cardlabel" />
                     <TextBlock Text="{Binding RefundsText}" Classes="amount" Foreground="#6A1B9A" />
-                    <TextBlock Text="trop-perçus, remises après paiement" FontSize="11" Opacity="0.7" />
+                    <TextBlock Text="trop-perçus, remises après paiement" Classes="cardnote" />
                 </StackPanel>
             </Border>
             <Border Classes="card">
-                <StackPanel>
-                    <TextBlock Text="Dépenses" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Dépenses" Classes="cardlabel" />
                     <TextBlock Text="{Binding ExpensesText}" Classes="amount" />
-                    <TextBlock FontSize="11" Opacity="0.7">
+                    <TextBlock Classes="cardnote">
                         <Run Text="dont" />
                         <Run Text="{Binding UnpaidExpensesText}" />
                         <Run Text="à payer" />
@@ -67,17 +77,17 @@
                 </StackPanel>
             </Border>
             <Border Classes="card">
-                <StackPanel>
-                    <TextBlock Text="Trésorerie actuelle" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Trésorerie actuelle" Classes="cardlabel" />
                     <TextBlock Text="{Binding CurrentBalanceText}" Classes="amount" />
-                    <TextBlock Text="encaissé − dépenses réglées" FontSize="11" Opacity="0.7" />
+                    <TextBlock Text="encaissé − dépenses réglées" Classes="cardnote" />
                 </StackPanel>
             </Border>
             <Border Classes="card">
-                <StackPanel>
-                    <TextBlock Text="Bilan prévisionnel" Classes="label" />
+                <StackPanel Spacing="2">
+                    <TextBlock Text="Bilan prévisionnel" Classes="cardlabel" />
                     <TextBlock Text="{Binding ProjectedBalanceText}" Classes="amount" Classes.warning="{Binding IsProjectedNegative}" />
-                    <TextBlock Text="recettes attendues − toutes les dépenses" FontSize="11" Opacity="0.7" />
+                    <TextBlock Text="recettes attendues − toutes les dépenses" Classes="cardnote" />
                 </StackPanel>
             </Border>
         </WrapPanel>

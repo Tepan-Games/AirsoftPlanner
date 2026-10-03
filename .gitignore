@@ -483,3 +483,7 @@ $RECYCLE.BIN/
 
 # Fichiers d'OP (données utilisateur, à ne pas versionner)
 *.aop
+
+# Application Android : sorties de compilation
+src/AirsoftPlanner.Mobile/bin/
+src/AirsoftPlanner.Mobile/obj/
