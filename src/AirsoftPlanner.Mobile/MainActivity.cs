@@ -42,11 +42,13 @@ public class MainActivity : Activity
     private TextView? _status;
     private Button? _toggle;
     private TextView? _mission;
-    private TextView? _messages;
+    private LinearLayout? _messages;
+    private string _messagesSignature = "";
+    private readonly Dictionary<Guid, Bitmap> _photos = [];
     private Button? _history;
     private bool _showHistory;
     private TextView? _orgaComms;
-    private TextView? _orgaMessages;
+    private LinearLayout? _orgaMessages;
     private TextView? _comms;
     private Button? _emergency;
     private TextView? _allies;
@@ -107,6 +109,7 @@ public class MainActivity : Activity
     {
         _root.RemoveAllViews();
         _target = _root;
+        _messagesSignature = "";
         _toggle = null;
         AddHeader();
         if (Prefs.IsEnrolled)
@@ -244,7 +247,7 @@ public class MainActivity : Activity
 
         // Ordres du QG (en jeu) : groupés par mission, historique complet à la demande.
         Section("Messages du QG");
-        _messages = Text("", 15);
+        _messages = List();
         _history = new Button(this) { TextSize = 13 };
         _history.Click += (_, _) =>
         {
@@ -282,7 +285,7 @@ public class MainActivity : Activity
                 StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
         };
         Section("Messages de l'orga");
-        _orgaMessages = Text("", 15);
+        _orgaMessages = List();
 
         var leave = new Button(this) { Text = "Se désenrôler" };
         leave.Click += (_, _) =>
@@ -357,20 +360,9 @@ public class MainActivity : Activity
         var archive = Prefs.MessageArchive;
         RefreshTabs(archive);
         var groups = MessageHistory.Group(archive.Where(x => x.Sender == MessageSender.Hq));
-        var shown = _showHistory ? groups : groups.Take(1);
-        _messages!.Text = groups.Count == 0
-            ? "Aucun message du QG."
-            : string.Join("\n\n", shown.Select(g =>
-                (g.Mission.Length > 0 ? $"— Mission « {g.Mission} » —" : "— Hors mission —") + "\n" +
-                string.Join("\n\n", g.Messages.Reverse().Select(x => $"{x.SentAt.LocalDateTime:HH:mm} · {x.Audience}\n{x.Text}"))));
         _history!.Visibility = groups.Count > 1 ? ViewStates.Visible : ViewStates.Gone;
         _history.Text = _showHistory ? "Masquer l'historique" : $"Historique des messages ({groups.Count - 1} mission(s) précédente(s))";
-
-        var orgaMessages = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
-        _orgaMessages!.Text = orgaMessages.Count == 0
-            ? "Aucun message de l'orga."
-            : string.Join("\n\n", orgaMessages
-                .Select(x => $"{x.SentAt.LocalDateTime:ddd HH:mm} · {x.Audience}\n{x.Text}"));
+        RenderMessages(archive, groups);
 
         var comms = response?.Comms ?? Prefs.EnrollComms;
         _comms!.Text = comms is null
@@ -402,6 +394,81 @@ public class MainActivity : Activity
                     $"{a.Team} ({Freq(a.RadioFrequency)})\n{a.Coordinates}\nvu à {a.Time.LocalDateTime:HH:mm}"));
 
         UpdateMap(mode, response, own, allies);
+    }
+
+    /// <summary>
+    /// Messages du QG (groupés par mission) et de l'orga, avec leurs photos. Reconstruits seulement quand
+    /// l'historique change (nouveau message, photo téléchargée, historique affiché ou masqué).
+    /// </summary>
+    private void RenderMessages(IReadOnlyList<PhoneMessage> archive, IReadOnlyList<MessageGroup> groups)
+    {
+        var photosReady = archive.Count(m => m.HasPhoto && File.Exists(TrackingService.PhotoFile(this, m.Id)));
+        var signature = $"{_showHistory}|{archive.Count}|{archive.LastOrDefault()?.Id}|{photosReady}";
+        if (signature == _messagesSignature)
+            return;
+        _messagesSignature = signature;
+
+        _messages!.RemoveAllViews();
+        if (groups.Count == 0)
+            AddLine(_messages, "Aucun message du QG.", 15);
+        foreach (var group in _showHistory ? groups : groups.Take(1))
+        {
+            AddLine(_messages, group.Mission.Length > 0 ? $"— Mission « {group.Mission} » —" : "— Hors mission —", 14, bold: true);
+            foreach (var message in group.Messages.Reverse())
+                AddMessage(_messages, message, $"{message.SentAt.LocalDateTime:HH:mm} · {message.Audience}");
+        }
+
+        var orga = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
+        _orgaMessages!.RemoveAllViews();
+        if (orga.Count == 0)
+            AddLine(_orgaMessages, "Aucun message de l'orga.", 15);
+        foreach (var message in orga)
+            AddMessage(_orgaMessages, message, $"{message.SentAt.LocalDateTime.ToString("ddd HH:mm", French)} · {message.Audience}");
+
+        if (Prefs.NightMode)
+        {
+            Paint(_messages);
+            Paint(_orgaMessages);
+        }
+    }
+
+    private void AddMessage(LinearLayout list, PhoneMessage message, string header)
+    {
+        AddLine(list, message.Text.Length > 0 ? $"{header}\n{message.Text}" : header, 15);
+        if (!message.HasPhoto)
+            return;
+
+        var file = TrackingService.PhotoFile(this, message.Id);
+        if (!_photos.TryGetValue(message.Id, out var bitmap) && File.Exists(file) && BitmapFactory.DecodeFile(file) is { } decoded)
+            _photos[message.Id] = bitmap = decoded;
+        if (bitmap is null)
+        {
+            AddLine(list, "📷 Photo en cours de téléchargement…", 13);
+            return;
+        }
+
+        var image = new ImageView(this) { ContentDescription = "Photo jointe" };
+        image.SetAdjustViewBounds(true);
+        image.SetImageBitmap(bitmap);
+        if (Prefs.NightMode)
+            image.SetColorFilter(new ColorMatrixColorFilter(new ColorMatrix([0.12f, 0.24f, 0.04f, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0])));
+        list.AddView(image, Spaced(4));
+    }
+
+    private void AddLine(LinearLayout list, string text, float size, bool bold = false)
+    {
+        var view = new TextView(this) { Text = text, TextSize = size };
+        if (bold)
+            view.SetTypeface(null, TypefaceStyle.Bold);
+        view.SetTextIsSelectable(true);
+        list.AddView(view, Spaced(bold ? 12 : 6));
+    }
+
+    private LinearLayout List()
+    {
+        var list = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        _target.AddView(list, Spaced(0));
+        return list;
     }
 
     private void UpdateMap(AllyShareMode mode, TrackResponse? response, GeoPoint? own, IReadOnlyList<AllyPosition> allies)

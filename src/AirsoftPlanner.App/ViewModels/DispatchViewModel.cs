@@ -34,6 +34,14 @@ public partial class MessageRowViewModel(OrgaMessage message, string audience) :
 
     public bool IsMission => message.Kind != MessageKind.Text;
 
+    public bool HasPhoto => message.Photo is { Length: > 0 };
+
+    private Avalonia.Media.Imaging.Bitmap? _thumbnail;
+
+    /// <summary>Vignette de la photo jointe.</summary>
+    public Avalonia.Media.Imaging.Bitmap? Thumbnail =>
+        _thumbnail ??= HasPhoto ? Avalonia.Media.Imaging.Bitmap.DecodeToWidth(new System.IO.MemoryStream(message.Photo!), 160) : null;
+
     [ObservableProperty]
     private string _delivery = "";
 }
@@ -93,9 +101,12 @@ public partial class DispatchViewModel : ViewModelBase
     private readonly Dictionary<Guid, Guid> _urgent = [];
     private double _now;
 
+    private readonly Services.IFileDialogService? _dialogs;
+
     public DispatchViewModel(OperationFile file, OperationViewModel operation, TeamsViewModel teams, FactionsViewModel factions,
-        MissionsViewModel missions, TerrainViewModel terrain, GameItemsViewModel items)
+        MissionsViewModel missions, TerrainViewModel terrain, GameItemsViewModel items, Services.IFileDialogService? dialogs = null)
     {
+        _dialogs = dialogs;
         _file = file;
         _operation = operation;
         _teams = teams;
@@ -122,6 +133,36 @@ public partial class DispatchViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     private string _composeText = "";
 
+    /// <summary>Photo à joindre au prochain message (JPEG réduit).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasComposePhoto))]
+    [NotifyCanExecuteChangedFor(nameof(SendCommand))]
+    private byte[]? _composePhoto;
+
+    public bool HasComposePhoto => ComposePhoto is not null;
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task AttachPhotoAsync()
+    {
+        if (_dialogs is null || await _dialogs.PickPhotoFileAsync() is not { } path)
+            return;
+        try
+        {
+            ComposePhoto = Services.PhotoResizer.ToJpeg(await System.IO.File.ReadAllBytesAsync(path));
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or InvalidOperationException or UnauthorizedAccessException)
+        {
+            await _dialogs.ShowErrorAsync($"Photo illisible : {ex.Message}");
+        }
+    }
+
+    [RelayCommand]
+    private void RemovePhoto() => ComposePhoto = null;
+
+    /// <summary>Photo d'un message, si ce message est destiné à l'équipe.</summary>
+    public byte[]? PhotoFor(TeamViewModel team, Guid messageId) =>
+        _messages.FirstOrDefault(m => m.Id == messageId && m.IsFor(team.Model))?.Photo;
+
     /// <summary>Message du QG (ordre en jeu, roleplay) ; sinon message de l'orga (organisation, sécurité).</summary>
     [ObservableProperty]
     private bool _composeAsHq = true;
@@ -133,11 +174,12 @@ public partial class DispatchViewModel : ViewModelBase
     private void Send()
     {
         AddMessage(ComposeText.Trim(), SelectedTarget!.Target, SelectedTarget.Id, MessageKind.Text, null,
-            ComposeAsHq ? MessageSender.Hq : MessageSender.Orga);
+            ComposeAsHq ? MessageSender.Hq : MessageSender.Orga, ComposePhoto);
         ComposeText = "";
+        ComposePhoto = null;
     }
 
-    private bool CanSend => SelectedTarget is not null && ComposeText.Trim().Length > 0;
+    private bool CanSend => SelectedTarget is not null && (ComposeText.Trim().Length > 0 || ComposePhoto is not null);
 
     /// <summary>Messages destinés à une équipe (les plus récents), pour son téléphone ; ils sont alors comptés comme reçus.</summary>
     public IReadOnlyList<PhoneMessage> PhoneMessagesFor(TeamViewModel team)
@@ -159,7 +201,7 @@ public partial class DispatchViewModel : ViewModelBase
         if (changed)
             RefreshDelivery();
         return tagged.Select(t => new PhoneMessage(t.Message.Id, t.Message.SentAt, t.Message.Text, AudienceOf(t.Message), t.Message.Kind,
-            t.Message.Sender, t.Mission)).ToList();
+            t.Message.Sender, t.Mission, t.Message.Photo is { Length: > 0 })).ToList();
     }
 
     // ----- Missions -----
@@ -327,7 +369,8 @@ public partial class DispatchViewModel : ViewModelBase
         };
     }
 
-    private void AddMessage(string text, MessageTarget target, Guid? targetId, MessageKind kind, Guid? missionId, MessageSender sender)
+    private void AddMessage(string text, MessageTarget target, Guid? targetId, MessageKind kind, Guid? missionId, MessageSender sender,
+        byte[]? photo = null)
     {
         var message = new OrgaMessage
         {
@@ -337,6 +380,7 @@ public partial class DispatchViewModel : ViewModelBase
             Kind = kind,
             MissionId = missionId,
             Sender = sender,
+            Photo = photo,
             SentAt = DateTimeOffset.Now,
         };
         _file.Add(message);

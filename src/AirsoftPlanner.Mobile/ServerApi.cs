@@ -72,6 +72,12 @@ internal static class ServerApi
         }
     }
 
+    public static async Task<byte[]?> MessagePhotoAsync(string server, string token, Guid id)
+    {
+        using var response = await Http.GetAsync($"{Normalize(server)}/api/message/photo?token={Uri.EscapeDataString(token)}&id={id}");
+        return response.IsSuccessStatusCode ? await response.Content.ReadAsByteArrayAsync() : null;
+    }
+
     public static async Task<byte[]?> MapImageAsync(string server, string token)
     {
         using var response = await Http.GetAsync($"{Normalize(server)}/api/map/image?token={Uri.EscapeDataString(token)}");

@@ -113,6 +113,9 @@ internal static class Prefs
         var server = ServerUrl;
         var device = DeviceName;
         Store.Edit()!.Clear()!.Apply();
+        var photos = System.IO.Path.Combine(Application.Context.FilesDir!.AbsolutePath, "photos");
+        if (Directory.Exists(photos))
+            Directory.Delete(photos, recursive: true);
         ServerUrl = server;
         DeviceName = device;
         // Le message de révocation éventuel est réécrit juste après par le service.

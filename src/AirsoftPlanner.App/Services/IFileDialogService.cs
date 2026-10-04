@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace AirsoftPlanner.App.Services;
@@ -17,6 +17,9 @@ public interface IFileDialogService
     Task<string?> PickExistingOperationFileAsync();
 
     Task<string?> PickImageFileAsync();
+
+    /// <summary>Photo à joindre à un message.</summary>
+    Task<string?> PickPhotoFileAsync() => PickImageFileAsync();
 
     /// <summary>Document de règles à importer (PDF, Word, OpenDocument, texte).</summary>
     Task<string?> PickDocumentFileAsync();

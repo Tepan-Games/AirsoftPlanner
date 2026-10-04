@@ -94,6 +94,14 @@ dispatch.SendCommand.Execute(null);
 Check("Message de faction affiché sur le téléphone", () => Screen().Contains("Regroupement au point Bravo à 11 h"), 25);
 Check("Message de faction notifié", () => Notifications().Contains("Regroupement au point Bravo"), 10);
 
+// Photo jointe à un message du QG
+dispatch.SelectedTarget = dispatch.Targets.First(t => t.Target == MessageTarget.Team && t.Id == alpha.Model.Id);
+dispatch.ComposeText = "Photo de reconnaissance du village";
+dispatch.ComposePhoto = AirsoftPlanner.App.Services.PhotoResizer.ToJpeg(
+    AirsoftPlanner.App.Services.MapSnapshot.Render(ws.Terrain.Layers.First().Model, [], maxSide: 800));
+dispatch.SendCommand.Execute(null);
+Check("Photo jointe affichée sur le téléphone", () => { Swipe(up: true); Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Photo jointe"); }, 40);
+
 Check("Messages du QG regroupés sous la mission en cours", () => Screen().Contains("— Mission « Reconnaissance du village » —"), 10);
 
 // Message de l'orga (hors jeu) : section Orga

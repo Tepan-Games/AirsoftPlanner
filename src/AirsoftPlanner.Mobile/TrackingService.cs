@@ -142,6 +142,7 @@ public class TrackingService : Service, ILocationListener
             var previous = Prefs.LastResponse;
             Prefs.LastResponse = response;
             Prefs.MessageArchive = MessageHistory.Merge(Prefs.MessageArchive, response.Messages ?? []);
+            await DownloadPhotosAsync();
             NotifyNews(previous, response);
             await DownloadMapIfNeededAsync(response);
             if (response.IntervalSeconds != _interval)
@@ -200,6 +201,22 @@ public class TrackingService : Service, ILocationListener
             await File.WriteAllTextAsync(stampFile, stamp);
         }
     }
+
+    /// <summary>Photos jointes aux messages : téléchargées une fois, conservées pour l'historique.</summary>
+    private async Task DownloadPhotosAsync()
+    {
+        foreach (var message in Prefs.MessageArchive.Where(m => m.HasPhoto && !File.Exists(PhotoFile(this, m.Id))).TakeLast(5))
+        {
+            if (await ServerApi.MessagePhotoAsync(Prefs.ServerUrl, Prefs.Token, message.Id) is not { } photo)
+                continue;
+            var file = PhotoFile(this, message.Id);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file)!);
+            await File.WriteAllBytesAsync(file + ".tmp", photo);
+            File.Move(file + ".tmp", file, overwrite: true);
+        }
+    }
+
+    public static string PhotoFile(Context context, Guid id) => System.IO.Path.Combine(context.FilesDir!.AbsolutePath, "photos", $"{id}.jpg");
 
     public static string MapFile(Context context) => Path.Combine(context.FilesDir!.AbsolutePath, "carte.jpg");
 

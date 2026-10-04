@@ -20,7 +20,7 @@ public class WorkspaceViewModel : ViewModelBase
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Tracking.Vehicles = Vehicles;
-        Tracking.Dispatch = new DispatchViewModel(file, General, Teams, Factions, Missions, Terrain, GameItems);
+        Tracking.Dispatch = new DispatchViewModel(file, General, Teams, Factions, Missions, Terrain, GameItems, dialogs);
         RadioCheck = new RadioCheckViewModel(file.Operation, General, Factions, Teams, Organizers);
         Tracking.RadioCheck = RadioCheck;
         Tracking.Gps = new GpsViewModel(file, Tracking, Teams, dialogs, Vehicles);

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AirsoftPlanner.Data;
@@ -105,6 +105,8 @@ public class FileDialogService(Window owner) : IFileDialogService
     public Task<string?> PickExistingOperationFileAsync() => PickFileAsync("Ouvrir une OP", OperationFileType);
 
     public Task<string?> PickImageFileAsync() => PickFileAsync("Importer une image du terrain", ImageFileType);
+
+    public Task<string?> PickPhotoFileAsync() => PickFileAsync("Joindre une photo au message", ImageFileType);
 
     public async Task<SaveChoice> AskSaveChangesAsync(string fileName)
     {

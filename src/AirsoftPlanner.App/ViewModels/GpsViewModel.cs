@@ -82,6 +82,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         // Appelés depuis le fil du serveur : le travail se fait sur le fil de l'interface (données de l'OP).
         _server.Enroll = request => Dispatcher.UIThread.InvokeAsync(() => EnrollDevice(request)).GetAwaiter().GetResult();
         _server.Authorize = token => Dispatcher.UIThread.InvokeAsync(() => AuthorizeDevice(token)).GetAwaiter().GetResult();
+        _server.MessagePhoto = (token, id) => Dispatcher.UIThread.InvokeAsync(() => MessagePhotoFor(token, id)).GetAwaiter().GetResult();
         _server.MapImage = token => Dispatcher.UIThread.InvokeAsync(() => MapImageFor(token)).GetAwaiter().GetResult();
         _shareMode = AllyShareModeOption.Of(file.Operation.AllyShareMode);
         RefreshDevices();
@@ -309,6 +310,13 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             : faction.PlayingTeams.Select(t => new TeamFrequency(t.Name, t.RadioFrequency, faction.CommandTeam == t)).ToList();
         return new Comms(faction?.Name ?? "", faction?.RadioFrequency ?? "", teams,
             _file.Operation.OrgaRadioFrequency, _file.Operation.EmergencyPhone);
+    }
+
+    private byte[]? MessagePhotoFor(string token, Guid id)
+    {
+        var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
+        var team = device is null ? null : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId);
+        return team is null ? null : _tracking.Dispatch?.PhotoFor(team, id);
     }
 
     /// <summary>Fond de carte (redimensionné pour un téléphone), uniquement si l'OP autorise le mode carte.</summary>

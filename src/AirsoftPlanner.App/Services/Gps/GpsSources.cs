@@ -46,6 +46,9 @@ public sealed class LocalGpsServer : IAsyncDisposable
     /// <summary>Équipe et intervalle associés à un jeton d'appareil : null si le jeton est inconnu ou révoqué.</summary>
     public Func<string, TrackResponse?> Authorize { get; set; } = _ => null;
 
+    /// <summary>Photo d'un message destiné à l'équipe du jeton, sinon null.</summary>
+    public Func<string, Guid, byte[]?> MessagePhoto { get; set; } = (_, _) => null;
+
     /// <summary>Image du fond de carte pour un jeton autorisé en mode carte, sinon null.</summary>
     public Func<string, byte[]?> MapImage { get; set; } = _ => null;
 
@@ -127,6 +130,9 @@ public sealed class LocalGpsServer : IAsyncDisposable
 
             return Results.Json(authorization);
         });
+
+        app.MapGet("/api/message/photo", (string token, Guid id) =>
+            MessagePhoto(token, id) is { } photo ? Results.File(photo, "image/jpeg") : Results.NotFound());
 
         app.MapGet("/api/map/image", (string token) =>
             MapImage(token) is { } image ? Results.File(image, "image/jpeg") : Results.NotFound());

@@ -42,6 +42,9 @@ public class OrgaMessage : Entity
 
     public MessageSender Sender { get; set; }
 
+    /// <summary>Photo jointe (JPEG réduit), ou null.</summary>
+    public byte[]? Photo { get; set; }
+
     /// <summary>Mission concernée (annonce de mission).</summary>
     public Guid? MissionId { get; set; }
 
