@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
@@ -145,6 +145,18 @@ public class OperationViewModel : ViewModelBase
         OnPropertyChanged(nameof(Day));
         OnPropertyChanged(nameof(StartMinutes));
         OnPropertyChanged(nameof(EndMinutes));
+    }
+
+    public string OrganizerName
+    {
+        get => operation.OrganizerName;
+        set => SetProperty(operation.OrganizerName, value, operation, (o, v) => o.OrganizerName = v);
+    }
+
+    public decimal? VehicleSpeedKmh
+    {
+        get => (decimal)operation.VehicleSpeedKmh;
+        set => SetProperty(operation.VehicleSpeedKmh, (double)Math.Clamp(value ?? 25, 1m, 120m), operation, (o, v) => o.VehicleSpeedKmh = v);
     }
 
     public string OrgaRadioFrequency

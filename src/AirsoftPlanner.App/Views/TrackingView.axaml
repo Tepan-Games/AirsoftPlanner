@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -33,45 +33,64 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="📻 Plan radio" FontWeight="SemiBold" VerticalAlignment="Center" Margin="0,0,12,0" />
-                <TextBlock DockPanel.Dock="Right" Text="{Binding OrgaContact}" FontWeight="SemiBold" Foreground="#C62828"
-                           VerticalAlignment="Center" Margin="12,0,0,0" />
-                <ItemsControl ItemsSource="{Binding RadioPlan}">
-                    <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                            <WrapPanel />
-                        </ItemsPanelTemplate>
-                    </ItemsControl.ItemsPanel>
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:RadioFaction">
-                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,2,20,2">
-                                <Border Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center"
-                                        Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                                <TextBlock VerticalAlignment="Center">
-                                    <Run Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <Run Text="{Binding Frequency}" FontWeight="SemiBold"
-                                         Foreground="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
-                                </TextBlock>
-                                <ItemsControl ItemsSource="{Binding Teams}" VerticalAlignment="Center">
-                                    <ItemsControl.ItemsPanel>
-                                        <ItemsPanelTemplate>
-                                            <StackPanel Orientation="Horizontal" Spacing="10" />
-                                        </ItemsPanelTemplate>
-                                    </ItemsControl.ItemsPanel>
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:RadioTeam">
-                                            <TextBlock>
-                                                <Run Text="{Binding Name}" />
-                                                <Run Text="{Binding IsCommand, Converter={x:Static conv:BoolToTextConverter.CommandStar}}" />
-                                                <Run Text="{Binding Frequency}" FontFamily="Consolas,monospace" />
-                                            </TextBlock>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <TextBlock DockPanel.Dock="Left" Text="📻 Plan radio" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,12,0" />
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding OrgaContact}" FontWeight="SemiBold" Foreground="#C62828" VerticalAlignment="Center" />
+                    <ToggleButton IsChecked="{Binding IsRadioPlanExpanded}" Padding="6,1" FontSize="11"
+                                  ToolTip.Tip="Replier le plan radio sur quelques lignes (défilement) ou afficher toutes les équipes">
+                        <Panel>
+                            <TextBlock Text="▾ Tout afficher" IsVisible="{Binding !IsRadioPlanExpanded}" />
+                            <TextBlock Text="▴ Replier" IsVisible="{Binding IsRadioPlanExpanded}" />
+                        </Panel>
+                    </ToggleButton>
+                </StackPanel>
+                <!-- Une ligne par faction, ses équipes passent à la ligne : lisible même avec une vingtaine d'équipes -->
+                <ScrollViewer MaxHeight="{Binding RadioPlanMaxHeight}" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding RadioPlan}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RadioFaction">
+                                <DockPanel Margin="0,1">
+                                    <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="6" MinWidth="190" VerticalAlignment="Top" Margin="0,0,14,0">
+                                        <Border Width="10" Height="10" CornerRadius="2" VerticalAlignment="Center"
+                                                Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                        <TextBlock VerticalAlignment="Center">
+                                            <Run Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <Run Text="{Binding Frequency}" FontWeight="SemiBold"
+                                                 Foreground="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                            <Run Text="{Binding IsDuplicate, Converter={x:Static conv:BoolToTextConverter.DuplicateWarning}}"
+                                                 Foreground="#E65100" FontWeight="Bold" />
+                                        </TextBlock>
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Teams}" VerticalAlignment="Center">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:RadioTeam">
+                                                <Border Padding="4,0" Margin="0,0,10,0" CornerRadius="3"
+                                                        Classes.duplicate="{Binding IsDuplicate}"
+                                                        ToolTip.Tip="{Binding IsDuplicate, Converter={x:Static conv:BoolToTextConverter.DuplicateFrequencyTip}}">
+                                                    <Border.Styles>
+                                                        <Style Selector="Border.duplicate">
+                                                            <Setter Property="Background" Value="#33E65100" />
+                                                        </Style>
+                                                    </Border.Styles>
+                                                    <TextBlock>
+                                                        <Run Text="{Binding Name}" />
+                                                        <Run Text="{Binding IsCommand, Converter={x:Static conv:BoolToTextConverter.CommandStar}}" />
+                                                        <Run Text="{Binding Frequency}" FontFamily="Consolas,monospace" />
+                                                    </TextBlock>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 

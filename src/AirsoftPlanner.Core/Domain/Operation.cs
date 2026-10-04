@@ -11,6 +11,9 @@ public class Operation : Entity
 
     public string Location { get; set; } = "";
 
+    /// <summary>Équipe ou association qui organise l'OP.</summary>
+    public string OrganizerName { get; set; } = "";
+
     public DateTimeOffset StartsAt { get; set; }
 
     public DateTimeOffset EndsAt { get; set; }
@@ -20,6 +23,9 @@ public class Operation : Entity
 
     /// <summary>Vitesse de déplacement à pied retenue pour estimer les retards (terrain, équipement, prudence).</summary>
     public double WalkingSpeedKmh { get; set; } = 3;
+
+    /// <summary>Vitesse estimée des équipes qui ont un véhicule en jeu (pistes, chemins forestiers).</summary>
+    public double VehicleSpeedKmh { get; set; } = 25;
 
     /// <summary>Participation aux frais demandée par joueur.</summary>
     public decimal PricePerPlayer { get; set; }
@@ -41,6 +47,9 @@ public class Operation : Entity
     /// imprimée dans les packages et les QR codes. Vide : adresse IP actuelle du PC sur le réseau local.
     /// </summary>
     public string ServerAddress { get; set; } = "";
+
+    /// <summary>Doublons de fréquences radio déclarés normaux par l'orga (signatures, voir RadioPlanCheck).</summary>
+    public List<string> IgnoredRadioConflicts { get; set; } = [];
 
     /// <summary>Ce que l'application Android montre des équipes alliées.</summary>
     public AirsoftPlanner.Core.Gps.AllyShareMode AllyShareMode { get; set; } = AirsoftPlanner.Core.Gps.AllyShareMode.Coordinates;

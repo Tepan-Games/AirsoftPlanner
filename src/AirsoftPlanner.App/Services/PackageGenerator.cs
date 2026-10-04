@@ -138,6 +138,8 @@ public static class PackageGenerator
                     col.Item().Element(c => Box(c, "Opération", b =>
                     {
                         b.Item().Text($"Du {op.StartsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French)} au {op.EndsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French)}");
+                        if (op.OrganizerName.Length > 0)
+                            b.Item().Text(t => { t.Span("Organisé par : ").SemiBold(); t.Span(op.OrganizerName); });
                         if (op.Location.Length > 0)
                             b.Item().Text(t => { t.Span("Lieu : ").SemiBold(); t.Span(op.Location); });
                         if (op.Description.Length > 0)

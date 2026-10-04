@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
@@ -114,6 +114,8 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<TeamVehicle> LoadVehicles() => Context.TeamVehicles.OrderBy(v => v.SortOrder).ToList();
 
     public IReadOnlyList<RuleDocument> LoadRuleDocuments() => Context.RuleDocuments.OrderBy(r => r.SortOrder).ToList();
+
+    public IReadOnlyList<Organizer> LoadOrganizers() => Context.Organizers.OrderBy(o => o.SortOrder).ToList();
 
     public IReadOnlyList<AirsoftPlanner.Core.Gps.EnrolledDevice> LoadEnrolledDevices() => Context.EnrolledDevices.ToList();
 

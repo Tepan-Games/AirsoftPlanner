@@ -1,4 +1,4 @@
-using AirsoftPlanner.App.Services;
+﻿using AirsoftPlanner.App.Services;
 using AirsoftPlanner.Data;
 
 namespace AirsoftPlanner.App.ViewModels;
@@ -9,6 +9,7 @@ public class WorkspaceViewModel : ViewModelBase
     public WorkspaceViewModel(OperationFile file, IFileDialogService dialogs)
     {
         General = new OperationViewModel(file.Operation);
+        Organizers = new OrganizersViewModel(file, General);
         Factions = new FactionsViewModel(file);
         Vehicles = new VehicleTracker(file);
         Teams = new TeamsViewModel(file, Factions, dialogs, Vehicles);
@@ -18,12 +19,19 @@ public class WorkspaceViewModel : ViewModelBase
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Tracking.Vehicles = Vehicles;
+        RadioCheck = new RadioCheckViewModel(file.Operation, General, Factions, Teams, Organizers);
+        Tracking.RadioCheck = RadioCheck;
         Tracking.Gps = new GpsViewModel(file, Tracking, Teams, dialogs, Vehicles);
         Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }
 
     public OperationViewModel General { get; }
+
+    public OrganizersViewModel Organizers { get; }
+
+    /// <summary>Fréquences radio en double.</summary>
+    public RadioCheckViewModel RadioCheck { get; }
 
     /// <summary>Traces GPS des véhicules mis en jeu.</summary>
     public VehicleTracker Vehicles { get; }

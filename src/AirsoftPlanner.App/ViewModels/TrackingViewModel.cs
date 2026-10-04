@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -16,10 +16,10 @@ using CommunityToolkit.Mvvm.Input;
 namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>Une équipe dans le plan radio.</summary>
-public record RadioTeam(string Name, string Frequency, bool IsCommand);
+public record RadioTeam(string Name, string Frequency, bool IsCommand, bool IsDuplicate = false);
 
 /// <summary>Une faction dans le plan radio : sa fréquence de commandement et celles de ses équipes.</summary>
-public record RadioFaction(string Name, string Color, string Frequency, IReadOnlyList<RadioTeam> Teams);
+public record RadioFaction(string Name, string Color, string Frequency, IReadOnlyList<RadioTeam> Teams, bool IsDuplicate = false);
 
 public record OutReasonOption(OutReason Value, string Label)
 {
@@ -715,7 +715,8 @@ public partial class TrackingViewModel : ViewModelBase
         var now = NowMinutes;
         var zones = _terrain.Zones.ToDictionary(z => z.Model.Id, z => z.Model);
         var missions = Missions.Missions.Select(m => m.Model).ToList();
-        var speed = (double)(_operation.WalkingSpeedKmh ?? 3);
+        var walking = (double)(_operation.WalkingSpeedKmh ?? 3);
+        var driving = (double)(_operation.VehicleSpeedKmh ?? 25);
 
         foreach (var status in Statuses)
         {
@@ -723,6 +724,8 @@ public partial class TrackingViewModel : ViewModelBase
             var last = _positions.LastOrDefault(p => p.TeamId == status.Team.Model.Id
                                                      && _operation.ToMinutes(p.ReceivedAt.LocalDateTime) <= now + 0.01);
             (GeoPoint, double)? known = last is null ? null : (last.Point, _operation.ToMinutes(last.ReceivedAt.LocalDateTime));
+            // Équipe motorisée (véhicule mis en jeu) : vitesse estimée en véhicule.
+            var speed = status.Team.Vehicles.Any(v => v.InGame) ? driving : walking;
             var progress = ProgressTracker.Evaluate(status.Team.Model.Id, missions, zones, known, now, speed);
             status.Update(progress, last?.Point, DescribeMission, p => Coordinates.Format(p, _operation.CoordinateFormat));
             var strength = StrengthOf(status.Team, new DateTimeOffset(_operation.ToDateTime(now)));
@@ -760,8 +763,31 @@ public partial class TrackingViewModel : ViewModelBase
     [ObservableProperty]
     private string _orgaContact = "";
 
+    private RadioCheckViewModel? _radioCheck;
+
+    /// <summary>Vérification des doublons : les fréquences en double sont signalées dans le plan radio.</summary>
+    public RadioCheckViewModel? RadioCheck
+    {
+        get => _radioCheck;
+        set
+        {
+            _radioCheck = value;
+            if (value is not null)
+                value.Changed += RefreshRadioPlan;
+            RefreshRadioPlan();
+        }
+    }
+
+    /// <summary>Plan radio replié (quelques lignes, défilement) ou déplié (toutes les équipes).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(RadioPlanMaxHeight))]
+    private bool _isRadioPlanExpanded;
+
+    public double RadioPlanMaxHeight => IsRadioPlanExpanded ? double.PositiveInfinity : 68;
+
     public void RefreshRadioPlan()
     {
+        var duplicates = RadioCheck?.ConflictingKeys ?? new HashSet<string>();
         static string Frequency(string value) => value.Length > 0 ? value : "—";
         var operation = _file.Operation;
         OrgaContact = string.Join(" · ", new[]
@@ -775,7 +801,9 @@ public partial class TrackingViewModel : ViewModelBase
                 g.Key?.Name ?? "Sans faction",
                 g.Key?.Color ?? "#607D8B",
                 g.Key is null ? "" : Frequency(g.Key.RadioFrequency),
-                g.Select(t => new RadioTeam(t.Name, Frequency(t.RadioFrequency), g.Key?.CommandTeam == t)).ToList()))
+                g.Select(t => new RadioTeam(t.Name, Frequency(t.RadioFrequency), g.Key?.CommandTeam == t,
+                    duplicates.Contains(RadioCheckViewModel.KeyOf(t)))).ToList(),
+                g.Key is not null && duplicates.Contains(RadioCheckViewModel.KeyOf(g.Key))))
             .ToList();
     }
 
@@ -839,7 +867,7 @@ public partial class TrackingViewModel : ViewModelBase
             SimulatedMinutes = Math.Clamp(SimulatedMinutes, SimulationStart, SimulationEnd);
         }
 
-        if (e.PropertyName is nameof(OperationViewModel.WalkingSpeedKmh) or nameof(OperationViewModel.CoordinateFormat)
+        if (e.PropertyName is nameof(OperationViewModel.WalkingSpeedKmh) or nameof(OperationViewModel.VehicleSpeedKmh) or nameof(OperationViewModel.CoordinateFormat)
             or nameof(OperationViewModel.StartMinutes))
             Refresh();
     }

@@ -1,7 +1,8 @@
-<Window xmlns="https://github.com/avaloniaui"
+﻿<Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AirsoftPlanner.App.ViewModels"
         xmlns:views="using:AirsoftPlanner.App.Views"
+        xmlns:radio="using:AirsoftPlanner.Core.Radio"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1200" d:DesignHeight="760"
@@ -68,9 +69,35 @@
             </StackPanel>
 
             <Panel IsVisible="{Binding HasOperation}">
-                <TabControl DataContext="{Binding Workspace}" x:DataType="vm:WorkspaceViewModel" Padding="0">
+                <DockPanel DataContext="{Binding Workspace}" x:DataType="vm:WorkspaceViewModel">
+                    <!-- Fréquences radio en double : visible dans tous les onglets, ignorable si c'est voulu -->
+                    <Border DockPanel.Dock="Top" IsVisible="{Binding RadioCheck.HasConflicts}" Background="#26E65100"
+                            BorderBrush="#E65100" BorderThickness="0,0,0,1" Padding="10,4">
+                        <ScrollViewer MaxHeight="96" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding RadioCheck.Conflicts}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="radio:RadioConflict">
+                                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
+                                            <TextBlock VerticalAlignment="Center">
+                                                <Run Text="⚠ Fréquence en double" FontWeight="SemiBold" Foreground="#E65100" />
+                                                <Run Text="{Binding Description}" />
+                                            </TextBlock>
+                                            <Button Content="C'est normal, ignorer" Padding="6,1" FontSize="11"
+                                                    Command="{Binding $parent[ItemsControl].((vm:WorkspaceViewModel)DataContext).RadioCheck.IgnoreCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="Doublon voulu (ex. faction et équipe de commandement) : il ne sera plus signalé, sauf si une autre équipe prend cette fréquence" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                <TabControl Padding="0">
                     <TabItem Header="Général">
                         <views:GeneralView DataContext="{Binding General}" />
+                    </TabItem>
+                    <TabItem Header="Orgas">
+                        <views:OrganizersView DataContext="{Binding Organizers}" />
                     </TabItem>
                     <TabItem Header="Factions">
                         <views:FactionsView DataContext="{Binding Factions}" />
@@ -101,6 +128,7 @@
                         </TabControl>
                     </TabItem>
                 </TabControl>
+                </DockPanel>
             </Panel>
         </Panel>
     </DockPanel>

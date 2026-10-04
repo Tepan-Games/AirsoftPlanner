@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              x:Class="AirsoftPlanner.App.Views.GeneralView"
@@ -8,6 +8,8 @@
             <TextBlock Text="Informations générales" Classes="h1" />
             <TextBlock Text="Nom de l'OP" Classes="label" />
             <TextBox Text="{Binding Name}" />
+            <TextBlock Text="Organisé par (équipe ou association)" Classes="label" />
+            <TextBox Text="{Binding OrganizerName}" PlaceholderText="ex. Association Airsoft du Gâtinais" />
             <TextBlock Text="Terrain / lieu" Classes="label" />
             <TextBox Text="{Binding Location}" />
             <Grid ColumnDefinitions="Auto,12,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
@@ -32,9 +34,16 @@
                     <TextBox Text="{Binding EmergencyPhone}" Width="200" PlaceholderText="ex. 06 00 00 00 00" />
                 </StackPanel>
             </StackPanel>
-            <TextBlock Text="Vitesse de déplacement à pied (km/h), pour estimer les retards" Classes="label" />
-            <NumericUpDown Value="{Binding WalkingSpeedKmh}" Minimum="0.5" Maximum="20" Increment="0.5"
-                           FormatString="0.0" Width="140" HorizontalAlignment="Left" />
+            <TextBlock Text="Vitesses estimées (km/h), pour estimer les retards" Classes="label" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="À pied" VerticalAlignment="Center" />
+                <NumericUpDown Value="{Binding WalkingSpeedKmh}" Minimum="0.5" Maximum="20" Increment="0.5"
+                               FormatString="0.0" Width="140" />
+                <TextBlock Text="En véhicule" VerticalAlignment="Center" Margin="16,0,0,0" />
+                <NumericUpDown Value="{Binding VehicleSpeedKmh}" Minimum="1" Maximum="120" Increment="5"
+                               FormatString="0" Width="140"
+                               ToolTip.Tip="Utilisée pour les équipes qui ont un véhicule « en jeu » (onglet Équipes)" />
+            </StackPanel>
             <TextBlock Text="Format des coordonnées dans les documents imprimés (l'affichage à l'écran se règle dans la barre du haut)" TextWrapping="Wrap" Classes="label" />
             <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
                       MinWidth="320" />

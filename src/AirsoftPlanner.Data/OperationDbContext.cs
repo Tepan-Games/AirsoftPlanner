@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
 using Microsoft.EntityFrameworkCore;
 
 namespace AirsoftPlanner.Data;
@@ -44,6 +44,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
     public DbSet<TeamAdjustment> TeamAdjustments => Set<TeamAdjustment>();
 
     public DbSet<VehiclePosition> VehiclePositions => Set<VehiclePosition>();
+
+    public DbSet<Organizer> Organizers => Set<Organizer>();
 
     public DbSet<AirsoftPlanner.Core.Gps.EnrolledDevice> EnrolledDevices => Set<AirsoftPlanner.Core.Gps.EnrolledDevice>();
 
@@ -114,6 +116,9 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<AirsoftPlanner.Core.Gps.EnrolledDevice>().HasIndex(d => d.Token);
         modelBuilder.Entity<Operation>().Property(o => o.TrackingIntervalSeconds).HasDefaultValue(30);
         modelBuilder.Entity<Operation>().Property(o => o.AllyShareMode).HasConversion<string>();
+        modelBuilder.Entity<Operation>().Property(o => o.VehicleSpeedKmh).HasDefaultValue(25.0);
+        modelBuilder.Entity<Organizer>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<Operation>().Property(o => o.IgnoredRadioConflicts).HasJsonListConversion();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
