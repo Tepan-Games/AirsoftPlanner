@@ -51,6 +51,9 @@ public class Operation : Entity
     /// <summary>Doublons de fréquences radio déclarés normaux par l'orga (signatures, voir RadioPlanCheck).</summary>
     public List<string> IgnoredRadioConflicts { get; set; } = [];
 
-    /// <summary>Ce que l'application Android montre des équipes alliées.</summary>
+    /// <summary>Ancien réglage du partage des positions, remplacé par <see cref="HqDifficulty"/> (conservé pour les anciens fichiers).</summary>
     public AirsoftPlanner.Core.Gps.AllyShareMode AllyShareMode { get; set; } = AirsoftPlanner.Core.Gps.AllyShareMode.Coordinates;
+
+    /// <summary>Niveau de difficulté de l'onglet QG des téléphones (chaque faction peut avoir le sien).</summary>
+    public HqDifficulty HqDifficulty { get; set; } = HqDifficulty.Easy;
 }

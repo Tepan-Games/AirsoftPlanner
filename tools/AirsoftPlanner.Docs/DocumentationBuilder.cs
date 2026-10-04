@@ -198,7 +198,8 @@ public static class DocumentationBuilder
             "Adresse publiée : nom DynDNS (DuckDNS, No-IP, Dynu…) ou adresse fixe, utilisée dans les QR codes et les packages. Le logiciel met à jour le nom DynDNS avec l'IP du PC (adresse de mise à jour contenant {ip}, jeton chiffré) au démarrage du serveur puis dès que l'IP change.",
             "Recherche sur le Wi-Fi (UDP 5056, sans Internet) : si l'adresse ne répond plus (autre box, IP changée), l'application retrouve seule le PC de son OP, à l'enrôlement comme pendant la partie.",
             "Intervalle d'envoi réglable pendant l'OP (appliqué au prochain échange) ; positions gardées sur le téléphone pendant une coupure du Wi-Fi et envoyées au retour.",
-            "Ce que voient les téléphones : rien, les alliés en coordonnées (version difficile) ou les alliés sur la carte du terrain. Un téléphone peut être révoqué à tout moment.");
+            "Niveau de difficulté (onglet QG des téléphones), réglé pour l'OP dans les paramètres du suivi et modifiable par faction (onglet Factions), même pendant l'OP : Facile (mission, ordres du QG, radio, points d'intérêt et positions sur la carte), Moyen (la même chose sans carte, en coordonnées), Difficile (seulement les fréquences de l'équipe et de son QG : tout passe par la radio), Extrême (aucune information de jeu, seul le niveau et son explication sont affichés). Le PC n'envoie que ce que le niveau autorise ; l'onglet ORGA (messages de l'orga, urgence) n'est jamais limité.",
+            "Un téléphone peut être révoqué à tout moment.");
         H2(col, "Traccar Client / OsmAnd (sans l'application Airsoft Planner)");
         Bullets(col,
             "Adresse du serveur : http://<adresse du PC>:5055 ; identifiant de l'appareil : par exemple « alpha-chef ».",

@@ -21,6 +21,8 @@ public partial class FactionsViewModel : ViewModelBase
     {
         _file = file;
         Items = new ObservableCollection<FactionViewModel>(file.LoadFactions().Select(f => new FactionViewModel(f)));
+        foreach (var faction in Items)
+            faction.UseOperationDifficulty(() => _file.Operation.HqDifficulty);
         Selected = Items.FirstOrDefault();
     }
 
@@ -43,10 +45,18 @@ public partial class FactionsViewModel : ViewModelBase
         var faction = new Faction { Name = L.F("faction_x", Items.Count + 1), Color = unusedColor };
         _file.Add(faction);
         var viewModel = new FactionViewModel(faction);
+        viewModel.UseOperationDifficulty(() => _file.Operation.HqDifficulty);
         if (_teams is { } teams)
             viewModel.AttachTeams(() => teams.Items);
         Items.Add(viewModel);
         Selected = viewModel;
+    }
+
+    /// <summary>Niveau de difficulté de l'OP modifié : rappel « niveau de l'OP » des factions mis à jour.</summary>
+    public void RefreshDifficulty()
+    {
+        foreach (var faction in Items)
+            faction.RefreshDifficulty();
     }
 
     /// <summary>Relie les factions aux équipes, pour calculer les effectifs et choisir l'équipe chef de faction.</summary>

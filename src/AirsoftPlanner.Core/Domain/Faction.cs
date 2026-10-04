@@ -27,4 +27,7 @@ public class Faction : Entity
 
     /// <summary>Équipe qui commande la faction.</summary>
     public Guid? CommandTeamId { get; set; }
+
+    /// <summary>Niveau de difficulté de l'onglet QG des téléphones de la faction (null : celui de l'OP).</summary>
+    public HqDifficulty? HqDifficulty { get; set; }
 }

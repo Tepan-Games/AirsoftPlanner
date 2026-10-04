@@ -15,16 +15,15 @@ using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
-public record AllyShareModeOption(AllyShareMode Value, string Label)
+/// <summary>Niveau de difficulté proposé dans une liste (null : « niveau de l'OP » pour une faction).</summary>
+public record DifficultyOption(HqDifficulty? Value, string Label)
 {
-    public static IReadOnlyList<AllyShareModeOption> All { get; } =
-    [
-        new(AllyShareMode.None, L.T("rien_sa_propre_position_seulement")),
-        new(AllyShareMode.Coordinates, L.T("allies_en_coordonnees_version_difficile")),
-        new(AllyShareMode.Map, L.T("allies_sur_la_carte")),
-    ];
+    public static IReadOnlyList<DifficultyOption> Levels { get; } =
+        HqDifficultyRules.All.Select(l => new DifficultyOption(l, HqDifficultyRules.Label(l))).ToList();
 
-    public static AllyShareModeOption Of(AllyShareMode mode) => All.First(o => o.Value == mode);
+    public string Explanation => Value is { } level ? HqDifficultyRules.Explanation(level) : "";
+
+    public static DifficultyOption Of(HqDifficulty level) => Levels.First(o => o.Value == level);
 
     public override string ToString() => Label;
 }
@@ -85,7 +84,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _server.Authorize = token => Dispatcher.UIThread.InvokeAsync(() => AuthorizeDevice(token)).GetAwaiter().GetResult();
         _server.MessagePhoto = (token, id) => Dispatcher.UIThread.InvokeAsync(() => MessagePhotoFor(token, id)).GetAwaiter().GetResult();
         _server.MapImage = token => Dispatcher.UIThread.InvokeAsync(() => MapImageFor(token)).GetAwaiter().GetResult();
-        _shareMode = AllyShareModeOption.Of(file.Operation.AllyShareMode);
+        _difficulty = DifficultyOption.Of(file.Operation.HqDifficulty);
         RefreshDevices();
         _upstream.FixReceived += OnFix;
         _upstream.Error += message => Dispatcher.UIThread.Post(() => Log(L.F("pc_de_l_op_x_2", message)));
@@ -222,13 +221,20 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     [ObservableProperty]
     private decimal? _intervalSeconds;
 
-    public IReadOnlyList<AllyShareModeOption> ShareModes => AllyShareModeOption.All;
+    public IReadOnlyList<DifficultyOption> Difficulties => DifficultyOption.Levels;
 
-    /// <summary>Ce que les téléphones voient des alliés : rien, coordonnées (version difficile) ou carte.</summary>
+    /// <summary>Niveau de difficulté de l'OP : ce que l'onglet QG des téléphones montre (modifiable par faction et pendant l'OP).</summary>
     [ObservableProperty]
-    private AllyShareModeOption _shareMode;
+    private DifficultyOption _difficulty;
 
-    partial void OnShareModeChanged(AllyShareModeOption value) => _file.Operation.AllyShareMode = value.Value;
+    partial void OnDifficultyChanged(DifficultyOption value)
+    {
+        _file.Operation.HqDifficulty = value.Value ?? HqDifficulty.Easy;
+        Factions?.RefreshDifficulty();
+    }
+
+    /// <summary>Factions de l'OP : celles qui suivent le niveau de l'OP mettent leur affichage à jour quand il change.</summary>
+    public FactionsViewModel? Factions { get; set; }
 
     partial void OnIntervalSecondsChanged(decimal? value) =>
         _file.Operation.TrackingIntervalSeconds = Math.Clamp((int)(value ?? 30), 5, 3600);
@@ -327,8 +333,10 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _devices.Add(device);
         RefreshDevices();
         Log(L.F("telephone_x_enrole_pour_x", device.DeviceName, team.Name));
+        var level = DifficultyFor(team);
         return new EnrollResponse(device.Token, team.Name, _file.Operation.Name, team.Faction?.Name ?? "",
-            team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team), _file.Operation.Id);
+            team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, HqDifficultyRules.ShareMode(level), CommsFor(team, level),
+            _file.Operation.Id, level);
     }
 
     private EnrollResponse EnrollOrganizer(OrganizerViewModel organizer, EnrollRequest request)
@@ -393,7 +401,10 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 
         device.LastSeenAt = DateTimeOffset.Now;
         RefreshDevices();
-        var mode = _file.Operation.AllyShareMode;
+        // Le niveau de difficulté de la faction décide de ce qui est envoyé : rien de plus n'arrive sur le téléphone.
+        var level = DifficultyFor(team);
+        var game = HqDifficultyRules.SharesGame(level);
+        var mode = HqDifficultyRules.ShareMode(level);
         var format = _file.Operation.CoordinateFormat;
         var allies = mode == AllyShareMode.None ? [] : _tracking.LatestPositions()
             .Where(p => p.Team != team && p.Team.Faction is not null && p.Team.Faction == team.Faction)
@@ -405,23 +416,33 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var map = mode == AllyShareMode.Map && layer is not null
             ? new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East)
             : null;
-        var points = _tracking.Terrain.Zones
+        var points = !game ? [] : _tracking.Terrain.Zones
             .Where(z => z.IsComplete && z.Model.IsVisibleTo(team.Model))
             .Select(PoiFor)
             .ToList();
         var dispatch = _tracking.Dispatch;
-        return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, dispatch?.MissionBriefFor(team, format), map,
-            CommsFor(team), format, dispatch?.PhoneMessagesFor(team) ?? [], points);
+        // Messages de l'orga toujours transmis (onglet ORGA) ; ordres du QG et mission seulement en Facile et Moyen.
+        var messages = (dispatch?.PhoneMessagesFor(team) ?? []).Where(m => game || m.Sender == MessageSender.Orga).ToList();
+        return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, game ? dispatch?.MissionBriefFor(team, format) : null,
+            map, CommsFor(team, level), format, messages, points, level);
     }
 
-    /// <summary>Fréquences de la faction, des équipes alliées et de l'orga, numéro d'urgence.</summary>
-    private Comms CommsFor(TeamViewModel team)
+    private HqDifficulty DifficultyFor(TeamViewModel team) => HqDifficultyRules.For(_file.Operation, team.Faction?.Model);
+
+    /// <summary>
+    /// Fréquences de la faction et des équipes alliées selon le niveau (Difficile : l'équipe et son QG ; Extrême : aucune),
+    /// fréquence de l'orga et numéro d'urgence (toujours).
+    /// </summary>
+    private Comms CommsFor(TeamViewModel team, HqDifficulty level)
     {
         var faction = team.Faction;
         var teams = faction is null
             ? [new TeamFrequency(team.Name, team.RadioFrequency, false)]
             : faction.PlayingTeams.Select(t => new TeamFrequency(t.Name, t.RadioFrequency, faction.CommandTeam == t)).ToList();
-        return new Comms(faction?.Name ?? "", faction?.RadioFrequency ?? "", teams,
+        if (level == HqDifficulty.Hard)
+            teams = teams.Where(t => t.Team == team.Name || t.IsCommand).ToList();
+        var radio = HqDifficultyRules.SharesRadio(level);
+        return new Comms(faction?.Name ?? "", radio ? faction?.RadioFrequency ?? "" : "", radio ? teams : [],
             _file.Operation.OrgaRadioFrequency, _file.Operation.EmergencyPhone);
     }
 
@@ -434,11 +455,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         return team is null ? null : _tracking.Dispatch?.PhotoFor(team, id);
     }
 
-    /// <summary>Fond de carte (redimensionné pour un téléphone), uniquement si l'OP autorise le mode carte.</summary>
+    /// <summary>Fond de carte (redimensionné pour un téléphone) : téléphones d'orga et équipes en niveau Facile.</summary>
     private byte[]? MapImageFor(string token)
     {
         var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
-        if (device is null || (_file.Operation.AllyShareMode != AllyShareMode.Map && !device.IsOrganizer))
+        var team = device is null || device.IsOrganizer ? null : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId);
+        if (device is null || (!device.IsOrganizer && (team is null || DifficultyFor(team) != HqDifficulty.Easy)))
             return null;
         var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
         return layer is null ? null : MapSnapshot.Render(layer.Model, [], maxSide: 2048);
@@ -732,6 +754,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     {
         _file = file;
         ServerAddress = file.Operation.ServerAddress;
+        Difficulty = DifficultyOption.Of(file.Operation.HqDifficulty);
         _devices.Clear();
         _devices.AddRange(file.LoadEnrolledDevices());
         RefreshDevices();

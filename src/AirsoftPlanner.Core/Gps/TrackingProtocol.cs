@@ -8,19 +8,21 @@ public record EnrollRequest(string Code, string DeviceName);
 
 /// <summary>Réponse à l'enrôlement : jeton à conserver et rappel de l'équipe, de l'OP et de la radio.</summary>
 /// <param name="OperationId">Identifiant de l'OP : permet au téléphone de retrouver le PC de son OP sur le Wi-Fi (<see cref="Discovery"/>).</param>
+/// <param name="Difficulty">Niveau de difficulté de l'onglet QG (le PC n'envoie que ce que le niveau autorise).</param>
 public record EnrollResponse(string Token, string Team, string Operation, string Faction, string RadioFrequency, int IntervalSeconds,
-    AllyShareMode ShareMode = AllyShareMode.Coordinates, Comms? Comms = null, Guid OperationId = default);
+    AllyShareMode ShareMode = AllyShareMode.Coordinates, Comms? Comms = null, Guid OperationId = default,
+    AirsoftPlanner.Core.Domain.HqDifficulty Difficulty = AirsoftPlanner.Core.Domain.HqDifficulty.Easy);
 
 /// <summary>Fréquence d'une équipe de la faction.</summary>
 public record TeamFrequency(string Team, string Frequency, bool IsCommand);
 
 /// <summary>
-/// Plan de communication de l'équipe : fréquences de sa faction et des équipes alliées, fréquence de l'orga
-/// et numéro d'urgence (toujours envoyés, quel que soit le partage des positions).
+/// Plan de communication de l'équipe : fréquences de sa faction et des équipes alliées (selon le niveau de difficulté :
+/// seulement l'équipe et son QG en Difficile, aucune en Extrême), fréquence de l'orga et numéro d'urgence (toujours envoyés).
 /// </summary>
 public record Comms(string Faction, string FactionFrequency, IReadOnlyList<TeamFrequency> Teams, string OrgaFrequency, string EmergencyPhone);
 
-/// <summary>Ce que les téléphones voient des équipes alliées (réglage de l'OP).</summary>
+/// <summary>Ce que les téléphones voient des équipes alliées (déduit du niveau de difficulté, voir HqDifficultyRules).</summary>
 /// <remarks>Coordinates vient en premier : c'est le réglage des OP créées avant cette option. Échangé en texte (JSON).</remarks>
 public enum AllyShareMode
 {
@@ -81,12 +83,13 @@ public record TrackRequest(string Token, IReadOnlyList<TrackPoint> Positions);
 
 /// <summary>
 /// Réponse à un envoi : intervalle à respecter (réglable depuis le PC pendant l'OP), mission en cours ou à venir,
-/// et positions des alliés selon le réglage de l'OP.
+/// et positions des alliés, selon le niveau de difficulté de la faction.
 /// </summary>
 public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode ShareMode = AllyShareMode.Coordinates,
     IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null,
     AirsoftPlanner.Core.Geo.CoordinateFormat CoordinateFormat = AirsoftPlanner.Core.Geo.CoordinateFormat.Utm,
-    IReadOnlyList<PhoneMessage>? Messages = null, IReadOnlyList<PoiInfo>? Points = null);
+    IReadOnlyList<PhoneMessage>? Messages = null, IReadOnlyList<PoiInfo>? Points = null,
+    AirsoftPlanner.Core.Domain.HqDifficulty Difficulty = AirsoftPlanner.Core.Domain.HqDifficulty.Easy);
 
 /// <summary>Contenu du QR code d'enrôlement : <c>airsoftplanner://enroll?server=...&amp;code=...</c>.</summary>
 public static class EnrollmentLink

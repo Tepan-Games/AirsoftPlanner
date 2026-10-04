@@ -260,6 +260,44 @@ public sealed class OperationFileTests : IDisposable
         Assert.Empty(upgraded.LoadMembers());
     }
 
+    [Theory]
+    [InlineData("Map", HqDifficulty.Easy)]
+    [InlineData("Coordinates", HqDifficulty.Medium)]
+    [InlineData("None", HqDifficulty.Medium)]
+    public void Files_from_format_20_get_a_difficulty_from_the_former_position_sharing(string sharing, HqDifficulty expected)
+    {
+        var path = Path.Combine(_directory, "v20-" + sharing + OperationFile.Extension);
+        using (var file = OperationFile.Create(path, "OP v20", "Orga"))
+        {
+            file.Add(new Faction { Name = "OTAN" });
+            file.Save();
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Operations DROP COLUMN HqDifficulty");
+            file.Context.Database.ExecuteSqlRaw("ALTER TABLE Factions DROP COLUMN HqDifficulty");
+            file.Context.Database.ExecuteSqlRaw($"UPDATE Operations SET AllyShareMode = '{sharing}'");
+            file.Context.Database.ExecuteSqlRaw("UPDATE DocumentInfo SET FormatVersion = 20");
+        }
+
+        using var upgraded = OperationFile.Open(path);
+        Assert.Equal(expected, upgraded.Operation.HqDifficulty);
+        Assert.Null(Assert.Single(upgraded.LoadFactions()).HqDifficulty);
+    }
+
+    [Fact]
+    public void Faction_difficulty_survives_reopening()
+    {
+        var path = Path.Combine(_directory, "difficulte" + OperationFile.Extension);
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Operation.HqDifficulty = HqDifficulty.Hard;
+            file.Add(new Faction { Name = "Insurgés", HqDifficulty = HqDifficulty.Extreme });
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        Assert.Equal(HqDifficulty.Hard, reopened.Operation.HqDifficulty);
+        Assert.Equal(HqDifficulty.Extreme, Assert.Single(reopened.LoadFactions()).HqDifficulty);
+    }
+
     [Fact]
     public void Rules_and_package_tracking_survive_reopening()
     {

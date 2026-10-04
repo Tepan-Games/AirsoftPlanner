@@ -21,7 +21,7 @@ public sealed class OperationFile : IDisposable
     /// 12 = enrôlement de l'application Android.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 20;
+    public const int CurrentFormatVersion = 21;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -80,6 +80,11 @@ public sealed class OperationFile : IDisposable
             if (info.FormatVersion < CurrentFormatVersion)
             {
                 SchemaUpgrader.Upgrade(context);
+                if (info.FormatVersion < 21)
+                {
+                    // Niveaux de difficulté : repris de l'ancien partage des positions (carte → Facile, sinon Moyen).
+                    context.Database.ExecuteSql($"UPDATE Operations SET HqDifficulty = CASE AllyShareMode WHEN 'Map' THEN 'Easy' ELSE 'Medium' END");
+                }
                 context.Database.ExecuteSql($"UPDATE DocumentInfo SET FormatVersion = {CurrentFormatVersion}");
             }
         }

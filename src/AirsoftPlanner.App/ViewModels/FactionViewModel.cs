@@ -93,6 +93,45 @@ public class FactionViewModel(Faction faction) : ViewModelBase
 
     public IReadOnlyList<TeamViewModel> Teams => _allTeams().Where(t => t.Model.FactionId == faction.Id).ToList();
 
+    private Func<HqDifficulty> _operationDifficulty = () => HqDifficulty.Easy;
+
+    /// <summary>Choix du niveau de difficulté : celui de l'OP (rappelé entre parenthèses) ou un niveau propre à la faction.</summary>
+    public IReadOnlyList<DifficultyOption> Difficulties =>
+    [
+        new(null, L.F("niveau_de_l_op_x", HqDifficultyRules.Label(_operationDifficulty()))),
+        .. DifficultyOption.Levels,
+    ];
+
+    public DifficultyOption Difficulty
+    {
+        get => Difficulties.First(o => o.Value == faction.HqDifficulty);
+        set
+        {
+            if (value is null || value.Value == faction.HqDifficulty)
+                return;
+            faction.HqDifficulty = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DifficultyExplanation));
+        }
+    }
+
+    /// <summary>Ce que l'onglet QG des téléphones de la faction montre au niveau appliqué.</summary>
+    public string DifficultyExplanation => HqDifficultyRules.Explanation(faction.HqDifficulty ?? _operationDifficulty());
+
+    /// <summary>Niveau de l'OP, suivi par la faction quand elle n'a pas le sien.</summary>
+    public void UseOperationDifficulty(Func<HqDifficulty> level)
+    {
+        _operationDifficulty = level;
+        RefreshDifficulty();
+    }
+
+    public void RefreshDifficulty()
+    {
+        OnPropertyChanged(nameof(Difficulties));
+        OnPropertyChanged(nameof(Difficulty));
+        OnPropertyChanged(nameof(DifficultyExplanation));
+    }
+
     public TeamViewModel? CommandTeam
     {
         get => Teams.FirstOrDefault(t => t.Model.Id == faction.CommandTeamId);

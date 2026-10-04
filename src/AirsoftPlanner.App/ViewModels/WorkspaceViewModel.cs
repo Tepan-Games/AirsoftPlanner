@@ -36,6 +36,7 @@ public class WorkspaceViewModel : ViewModelBase
     public void AttachGps(GpsViewModel gps)
     {
         gps.Organizers = Organizers;
+        gps.Factions = Factions;
         Teams.Gps = gps;
         Organizers.Gps = gps;
         gps.EnrollmentTeam = Teams.Selected;

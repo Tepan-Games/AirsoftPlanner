@@ -83,6 +83,9 @@
                 </ComboBox>
                 <TextBlock Text="{l:T frequence_radio_de_commandement_faction}" Classes="label" />
                 <TextBox Text="{Binding RadioFrequency}" PlaceholderText="{l:T ex_pmr_446_canal_1_446_00625_mhz}" />
+                <TextBlock Text="{l:T difficulte_onglet_qg}" Classes="label" />
+                <ComboBox ItemsSource="{Binding Difficulties}" SelectedItem="{Binding Difficulty}" MinWidth="260" ToolTip.Tip="{l:T difficulte_aide}" />
+                <TextBlock Text="{Binding DifficultyExplanation}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
                 <TextBlock Text="{l:T frequences_des_equipes}" Classes="label" />
                 <ItemsControl ItemsSource="{Binding Teams}">
                     <ItemsControl.ItemTemplate>

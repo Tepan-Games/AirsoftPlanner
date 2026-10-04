@@ -226,7 +226,7 @@ public class TrackingService : Service, ILocationListener
 
     /// <summary>
     /// Signale toute nouvelle information de l'orga : messages (dont mission diffusée ou terminée),
-    /// plan radio ou numéro d'urgence modifiés, partage des positions changé.
+    /// plan radio ou numéro d'urgence modifiés, niveau de difficulté changé.
     /// </summary>
     private void NotifyNews(TrackResponse? previous, TrackResponse response)
     {
@@ -256,13 +256,9 @@ public class TrackingService : Service, ILocationListener
         if (string.Join("|", (previous.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}"))
             != string.Join("|", (response.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}")))
             Notify(L.T("points_d_interet_mis_a_jour"), string.Join(", ", (response.Points ?? []).Select(p => p.Name).Take(6)), 4);
-        if (previous.ShareMode != response.ShareMode)
-            Notify(L.T("partage_des_positions_modifie"), response.ShareMode switch
-            {
-                AllyShareMode.Map => L.T("positions_des_allies_sur_la_carte"),
-                AllyShareMode.Coordinates => L.T("positions_des_allies_en_coordonnees"),
-                _ => L.T("positions_des_allies_non_partagees"),
-            }, 3);
+        if (previous.Difficulty != response.Difficulty)
+            Notify(L.F("niveau_de_difficulte_x", AirsoftPlanner.Core.Domain.HqDifficultyRules.Label(response.Difficulty)),
+                AirsoftPlanner.Core.Domain.HqDifficultyRules.Explanation(response.Difficulty), 3);
     }
 
     private static string Describe(Comms? comms) => comms is null

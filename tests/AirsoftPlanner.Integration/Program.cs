@@ -39,7 +39,7 @@ var alpha = ws.Teams.Items.First(t => t.Name == "Alpha");
 tracking.IsSimulation = true;
 tracking.SimulatedMinutes = 10 * 60 + 20;
 ws.General.EmergencyPhone = "06 99 99 99 99";
-gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
+gps.Difficulty = DifficultyOption.Of(HqDifficulty.Easy);
 gps.IntervalSeconds = 5;
 alpha.EnrollmentCode = "K7P4QZ";
 gps.ServerPort = Port;
@@ -59,7 +59,8 @@ Geo(43.6492, 5.9871);
 // 1. Code faux saisi à la main
 Adb($"shell am start -n {Activity}");
 // Les vérifications portent sur les textes français : langue de l'application choisie avec le bouton 🌐.
-Wait(3);
+for (var i = 0; i < 30 && !ScreenNodes().Any(n => n.Desc.Contains("Lang")); i++)
+    Wait(1);
 Tap("Lang");
 TapInPlace("Français"); // sans défilement : un glissement hors de la boîte de dialogue la fermerait
 Check("Écran d'enrôlement affiché", () => Screen().Contains("S'enrôler"), 15);
@@ -175,14 +176,25 @@ Check("Intervalle 8 s appliqué par le téléphone", () => Screen().Contains("en
 gps.IntervalSeconds = 5;
 Check("Intervalle 5 s rétabli", () => Screen().Contains("envoi toutes les 5 s"), 30);
 
-// 6. Partage des alliés
-Check("Mode carte : carte affichée", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 25);
-gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Coordinates);
-Check("Mode coordonnées : plus de carte, alliés en coordonnées",
+// 6. Niveaux de difficulté (onglet QG)
+Check("Facile : carte affichée", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 25);
+gps.Difficulty = DifficultyOption.Of(HqDifficulty.Medium);
+Check("Moyen : plus de carte, alliés en coordonnées",
     () => { Swipe(up: false); return !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*3[12][A-Z] \d{6} \d{7}"); }, 25);
-gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.None);
-Check("Mode rien : alliés non partagés", () => Screen().Contains("non partagées par l'orga"), 25);
-gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
+var alphaFaction = ws.Factions.Items.First(f => f.Model.Id == alpha.Model.FactionId);
+alphaFaction.Difficulty = alphaFaction.Difficulties.First(o => o.Value == HqDifficulty.Hard);
+Check("Difficile (niveau de la faction) : seulement la radio",
+    () => { Swipe(up: true); var s = Screen(); return s.Contains("Difficile") && s.Contains("RADIO") && !s.Contains("MESSAGES DU QG") && !s.Contains("MISSION"); }, 25);
+Check("Difficile : niveau notifié", () => Notifications().Contains("Niveau de difficulté : Difficile"), 10);
+alphaFaction.Difficulty = alphaFaction.Difficulties.First(o => o.Value is null);
+gps.Difficulty = DifficultyOption.Of(HqDifficulty.Extreme);
+Check("Extrême (niveau de l'OP) : niveau et explication seulement",
+    () => { Swipe(up: true); var s = Screen(); return s.Contains("Extrême") && s.Contains("Aucune information de jeu") && !s.Contains("RADIO"); }, 25);
+Tap("ORGA");
+Check("Extrême : onglet ORGA toujours disponible", () => Screen().Contains("Urgence orga"), 15);
+Tap("QG");
+gps.Difficulty = DifficultyOption.Of(HqDifficulty.Easy);
+Check("Retour en Facile : carte de nouveau affichée", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 25);
 
 // 7. Numéro d'urgence modifié
 ws.General.EmergencyPhone = "06 11 22 33 44";

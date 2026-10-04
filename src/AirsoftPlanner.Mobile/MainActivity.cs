@@ -42,6 +42,9 @@ public class MainActivity : Activity
     // Écran de suivi
     private TextView? _status;
     private Button? _toggle;
+    private TextView? _level;
+    private readonly List<View> _gameParts = [];
+    private View? _radioPart;
     private TextView? _mission;
     private LinearLayout? _messages;
     private string _messagesSignature = "";
@@ -255,11 +258,16 @@ public class MainActivity : Activity
         tabs.AddView(_orgaTab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
         _root.AddView(tabs, Spaced(16));
 
-        // ----- Onglet QG : le jeu -----
+        // ----- Onglet QG : le jeu (contenu limité par le niveau de difficulté choisi par l'orga) -----
         _qgPane = new LinearLayout(this) { Orientation = Orientation.Vertical };
         _root.AddView(_qgPane);
         _target = _qgPane;
 
+        Section(L.T("niveau_de_difficulte"));
+        _level = Text("", 14);
+
+        _gameParts.Clear();
+        _target = Part(_gameParts);
         Section(L.T("mission_2"));
         _mission = Text("", 15);
 
@@ -274,9 +282,13 @@ public class MainActivity : Activity
         };
         _target.AddView(_history, Spaced(4));
 
+        // Radio : seule partie conservée en Difficile.
+        _target = Part(null);
+        _radioPart = _target;
         Section(L.T("radio"));
         _comms = Text("", 15);
 
+        _target = Part(_gameParts);
         Section(L.T("points_d_interet"));
         _points = Text("", 15);
 
@@ -321,6 +333,31 @@ public class MainActivity : Activity
             StartTracking();
     }
 
+    /// <summary>Partie de l'onglet QG, masquable selon le niveau de difficulté.</summary>
+    private LinearLayout Part(List<View>? group)
+    {
+        var part = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        _qgPane!.AddView(part);
+        group?.Add(part);
+        return part;
+    }
+
+    /// <summary>
+    /// Niveau de difficulté rappelé en tête de l'onglet QG, avec ce qu'il permet ; les parties non autorisées sont masquées
+    /// (le PC ne les envoie d'ailleurs pas).
+    /// </summary>
+    private void RefreshLevel(TrackResponse? response)
+    {
+        var level = response?.Difficulty ?? HqDifficulty.Easy;
+        _level!.Text = response is null
+            ? L.T("en_attente_du_premier_echange_avec_le_pc_de_l_op")
+            : $"{HqDifficultyRules.Label(level)}\n{HqDifficultyRules.Explanation(level)}";
+        var game = response is null || HqDifficultyRules.SharesGame(level);
+        foreach (var part in _gameParts)
+            part.Visibility = game ? ViewStates.Visible : ViewStates.Gone;
+        _radioPart!.Visibility = response is null || HqDifficultyRules.SharesRadio(level) ? ViewStates.Visible : ViewStates.Gone;
+    }
+
     private void SelectTab(bool orga)
     {
         _orgaSelected = orga;
@@ -362,6 +399,7 @@ public class MainActivity : Activity
 
         var response = Prefs.LastResponse;
         var format = response?.CoordinateFormat ?? CoordinateFormat.Utm;
+        RefreshLevel(response);
         _status.Text = (Prefs.IsTracking ? L.T("suivi_actif") : L.T("suivi_arrete")) +
                        L.F("envoi_toutes_les_x_s_x", Prefs.IntervalSeconds, Prefs.Status);
         _toggle!.Text = Prefs.IsTracking ? "⏸" : "▶";
