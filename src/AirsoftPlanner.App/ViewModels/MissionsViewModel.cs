@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -67,6 +67,31 @@ public partial class MissionsViewModel : ViewModelBase
     public ObservableCollection<TeamViewModel> Columns { get; } = [];
 
     public ObservableCollection<ZoneViewModel> Zones => _terrain.Zones;
+
+    /// <summary>Terrain (fond de carte, zones) pour la carte de l'organisation.</summary>
+    public TerrainViewModel Terrain => _terrain;
+
+    /// <summary>Matériel de jeu affecté aux missions, placé sur la zone de chaque mission.</summary>
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private IReadOnlyList<ItemMarker> _planMarkers = [];
+
+    private void RefreshPlanMarkers()
+    {
+        // Un repère par zone : matériel de toutes ses missions, quantités additionnées.
+        PlanMarkers = Missions
+            .Where(m => m.Model.IsEnabled && m.Zone is { IsComplete: true } && m.ItemUses.Count > 0)
+            .GroupBy(m => m.Zone!)
+            .Select(g =>
+            {
+                var zone = g.Key;
+                var center = zone.IsArea ? Core.Geo.GeoMath.Centroid(zone.Points) : zone.Points[0];
+                var items = g.SelectMany(m => m.ItemUses).GroupBy(u => u.Item.Name).Select(i => $"{i.Sum(u => u.Quantity)} × {i.Key}");
+                // Légèrement au sud du point pour ne pas masquer son nom.
+                return new ItemMarker(new Core.Domain.GeoPoint(center.Latitude - 0.0004, center.Longitude), $"📦 {string.Join(", ", items)}",
+                    g.Contains(Selected));
+            })
+            .ToList();
+    }
 
     public ObservableCollection<GameItemViewModel> GameItems => _items.Items;
 
@@ -173,6 +198,7 @@ public partial class MissionsViewModel : ViewModelBase
 
     partial void OnSelectedChanged(MissionViewModel? value)
     {
+        RefreshPlanMarkers();
         RebuildChoices();
         AddItemCommand.NotifyCanExecuteChanged();
     }
@@ -273,6 +299,7 @@ public partial class MissionsViewModel : ViewModelBase
             item.SetShortage(shortages.Contains(item.Model.Id));
         }
 
+        RefreshPlanMarkers();
         ScheduleChanged?.Invoke();
         var count = Missions.Count(m => m.HasIssues);
         IssueSummary = count switch

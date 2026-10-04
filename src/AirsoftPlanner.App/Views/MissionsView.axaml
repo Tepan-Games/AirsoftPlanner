@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -6,7 +6,7 @@
              xmlns:views="using:AirsoftPlanner.App.Views"
              x:Class="AirsoftPlanner.App.Views.MissionsView"
              x:DataType="vm:MissionsViewModel">
-    <Grid ColumnDefinitions="*,360">
+    <Grid ColumnDefinitions="3*,6,2*,360">
         <DockPanel>
             <Border DockPanel.Dock="Top" Padding="10,6" BorderThickness="0,0,0,1"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
@@ -38,7 +38,32 @@
                                       CreateCommand="{Binding CreateAtCommand}" />
         </DockPanel>
 
-        <Border Grid.Column="1" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+        <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
+
+        <!-- Carte toujours visible : terrain, points d'intérêt, matériel des missions, zone de la mission sélectionnée -->
+        <controls:DetachableHost Grid.Column="2" Title="Carte de l'organisation">
+            <controls:DetachableHost.Panel>
+                <DockPanel>
+                    <Border DockPanel.Dock="Top" Padding="8,3">
+                        <StackPanel Orientation="Horizontal" Spacing="14">
+                            <CheckBox Content="Quadrillage" IsChecked="{Binding Terrain.ShowUtmGrid}" />
+                            <TextBlock Text="{Binding Selected.ZoneName, FallbackValue='', StringFormat='Zone de la mission : {0}'}"
+                                       VerticalAlignment="Center" FontSize="12" Opacity="0.8" IsVisible="{Binding HasSelection}" />
+                        </StackPanel>
+                    </Border>
+                    <controls:TerrainMapControl Layer="{Binding Terrain.SelectedLayer}"
+                                                ViewBounds="{Binding Terrain.ViewBounds}"
+                                                Area="{Binding Terrain.Area}"
+                                                Zones="{Binding Terrain.Zones}"
+                                                SelectedZone="{Binding Selected.Zone, Mode=OneWay, FallbackValue={x:Null}}"
+                                                ShowUtmGrid="{Binding Terrain.ShowUtmGrid}"
+                                                ItemMarkers="{Binding PlanMarkers}"
+                                                AllowEditing="False" />
+                </DockPanel>
+            </controls:DetachableHost.Panel>
+        </controls:DetachableHost>
+
+        <Border Grid.Column="3" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <Panel>
                 <TextBlock IsVisible="{Binding !HasSelection}" Margin="16" TextWrapping="Wrap" Opacity="0.7"
                            Text="Sélectionnez une mission sur la frise, ou double-cliquez dans la colonne d'une équipe pour en créer une." />
