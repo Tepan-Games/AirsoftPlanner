@@ -207,6 +207,10 @@ public partial class MissionsViewModel : ViewModelBase
 
     public void OnResultChanged() => ResultsChanged?.Invoke();
 
+    /// <summary>Ferme la fiche de la mission (suivi de l'OP).</summary>
+    [RelayCommand]
+    private void ClearSelection() => Selected = null;
+
     /// <summary>Missions dont le résultat peut décider de la mission sélectionnée.</summary>
     [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
     private IReadOnlyList<MissionViewModel> _conditionChoices = [];

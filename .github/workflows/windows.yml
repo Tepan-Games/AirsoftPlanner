@@ -1,0 +1,109 @@
+# Compilation du logiciel Windows sur GitHub : tests, version autonome et programme d'installation.
+# Sur une version (tag v*), l'exe puis l'installateur sont signés par SignPath Foundation quand le projet y est
+# configuré (variable SIGNPATH_ORGANIZATION_ID et secret SIGNPATH_API_TOKEN du dépôt) ; sinon ils restent non signés.
+# L'application Android est construite et signée sur le poste du mainteneur (clé de publication hors du dépôt).
+name: Windows
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      SIGN: ${{ startsWith(github.ref, 'refs/tags/v') && vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Tests
+        run: dotnet test tests/AirsoftPlanner.Core.Tests/AirsoftPlanner.Core.Tests.csproj -c Release
+
+      - name: Version autonome (win-x64)
+        shell: pwsh
+        run: ./scripts/publish.ps1
+
+      - name: Version
+        id: version
+        shell: pwsh
+        run: |
+          [xml]$csproj = Get-Content src/AirsoftPlanner.App/AirsoftPlanner.App.csproj
+          $version = $csproj.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      # ----- Signature de l'exe (SignPath), avant de l'intégrer à l'installateur -----
+      - name: Exe à signer
+        if: env.SIGN == 'true'
+        id: unsigned-exe
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-non-signe
+          path: artifacts/AirsoftPlanner-win-x64/AirsoftPlanner.exe
+
+      - name: Signature de l'exe
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'AirsoftPlanner' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: exe
+          github-artifact-id: ${{ steps.unsigned-exe.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts/AirsoftPlanner-win-x64
+
+      - name: Archive autonome avec l'exe signé
+        if: env.SIGN == 'true'
+        shell: pwsh
+        run: Compress-Archive -Path artifacts/AirsoftPlanner-win-x64/* -DestinationPath "artifacts/AirsoftPlanner-${{ steps.version.outputs.version }}-win-x64.zip" -Force
+
+      # ----- Programme d'installation -----
+      - name: Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Programme d'installation
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          & $iscc /Q "/DAppVersion=${{ steps.version.outputs.version }}" "/DSourceDir=$PWD\artifacts\AirsoftPlanner-win-x64" "/O$PWD\artifacts" scripts\AirsoftPlanner.iss
+          if ($LASTEXITCODE -ne 0) { throw "La création du programme d'installation a échoué." }
+
+      - name: Installateur à signer
+        if: env.SIGN == 'true'
+        id: unsigned-setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: installateur-non-signe
+          path: artifacts/AirsoftPlanner-${{ steps.version.outputs.version }}-Setup.exe
+
+      - name: Signature de l'installateur
+        if: env.SIGN == 'true'
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'AirsoftPlanner' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: artifacts
+
+      - name: Résultat
+        uses: actions/upload-artifact@v4
+        with:
+          name: AirsoftPlanner-${{ steps.version.outputs.version }}-windows
+          path: |
+            artifacts/AirsoftPlanner-${{ steps.version.outputs.version }}-Setup.exe
+            artifacts/AirsoftPlanner-${{ steps.version.outputs.version }}-win-x64.zip

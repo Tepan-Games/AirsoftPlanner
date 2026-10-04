@@ -99,7 +99,7 @@
                 </DockPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasComposePhoto}">
                     <TextBlock Text="{l:T photo_jointe_au_prochain_message}" VerticalAlignment="Center" FontSize="12" />
-                    <Button Content="{l:T retirer}" Command="{Binding RemovePhotoCommand}" Padding="6,1" FontSize="11" />
+                    <Button Content="✕" Classes="icon" ToolTip.Tip="{l:T retirer}" AutomationProperties.Name="{l:T retirer}" Command="{Binding RemovePhotoCommand}" Padding="6,1" FontSize="11" />
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
@@ -132,7 +132,7 @@
                                 <TextBlock Grid.Column="1" Text="{Binding Published}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
                                 <ComboBox Grid.Column="4" ItemsSource="{x:Static vm:MissionResultOption.All}" SelectedItem="{Binding Current.Result, FallbackValue={x:Null}}"
                                           IsVisible="{Binding HasCurrent}" Width="130" Margin="4,0,4,0" ToolTip.Tip="{l:T resultat_de_la_mission_terminee}" />
-                                <CheckBox Grid.Column="5" Content="{l:T annoncer}" IsChecked="{Binding AnnounceResult}"
+                                <CheckBox Grid.Column="5" Content="📣" IsChecked="{Binding AnnounceResult}" AutomationProperties.Name="{l:T annoncer}"
                                           IsVisible="{Binding Current.IsEvaluated, FallbackValue=False}" ToolTip.Tip="{l:T annoncer_aide}" />
                                 <ComboBox Grid.Column="2" ItemsSource="{Binding Missions}" SelectedItem="{Binding SelectedMission}" Width="190" Margin="0,0,4,0">
                                     <ComboBox.ItemTemplate>
@@ -141,10 +141,10 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <Button Grid.Column="3" Content="{l:T diffuser}" Margin="0,0,4,0"
+                                <Button Grid.Column="3" Content="📤" Classes="icon" ToolTip.Tip="{l:T diffuser}" AutomationProperties.Name="{l:T diffuser}" Margin="0,0,4,0"
                                         Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).PublishSelectedCommand}"
                                         CommandParameter="{Binding}" />
-                                <Button Grid.Column="6" Content="{l:T terminer}"
+                                <Button Grid.Column="6" Content="⏹" Classes="icon" ToolTip.Tip="{l:T terminer}" AutomationProperties.Name="{l:T terminer}"
                                         Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).EndPublishedCommand}"
                                         CommandParameter="{Binding}" />
                             </Grid>

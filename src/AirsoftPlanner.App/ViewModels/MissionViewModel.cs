@@ -127,6 +127,9 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
     public IReadOnlyList<Guid> TeamIds => mission.TeamIds;
 
+    /// <summary>Équipes engagées, dans l'ordre des colonnes de la frise.</summary>
+    public string TeamsText => string.Join(", ", owner.Columns.Where(t => mission.TeamIds.Contains(t.Model.Id)).Select(t => t.Name));
+
     public bool HasMaxPlayers
     {
         get => mission.MaxPlayers is not null;
@@ -330,6 +333,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
         mission.TeamIds = assigned ? [.. mission.TeamIds, teamId] : mission.TeamIds.Where(id => id != teamId).ToList();
         OnPropertyChanged(nameof(TeamIds));
+        OnPropertyChanged(nameof(TeamsText));
         OnPropertyChanged(nameof(PlayersText));
         owner.OnScheduleChanged();
     }
@@ -342,6 +346,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
         mission.TeamIds = mission.TeamIds.Select(id => id == oldTeamId ? newTeamId : id).ToList();
         OnPropertyChanged(nameof(TeamIds));
+        OnPropertyChanged(nameof(TeamsText));
         OnPropertyChanged(nameof(PlayersText));
         owner.OnScheduleChanged();
     }

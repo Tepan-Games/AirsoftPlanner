@@ -16,7 +16,7 @@
                 <Button Content="{l:T rediger}" Command="{Binding WriteRuleCommand}" />
                 <Button Content="▲" Command="{Binding MoveRuleUpCommand}" ToolTip.Tip="{l:T monter}" />
                 <Button Content="▼" Command="{Binding MoveRuleDownCommand}" ToolTip.Tip="{l:T descendre}" />
-                <Button Content="{l:T supprimer}" Command="{Binding RemoveRuleCommand}" />
+                <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveRuleCommand}" />
             </StackPanel>
             <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}" MaxHeight="180">
                 <ListBox.ItemTemplate>

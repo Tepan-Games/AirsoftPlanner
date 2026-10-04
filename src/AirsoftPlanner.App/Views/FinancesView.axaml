@@ -146,7 +146,7 @@
                         <TextBox Text="{Binding NewAdjustmentLabel}" Width="170" PlaceholderText="{l:T motif_ex_vehicule_en_jeu}" Margin="0,0,6,4" />
                         <TextBox Text="{Binding NewAdjustmentAmount}" Width="80" PlaceholderText="{l:T montant}" Margin="0,0,6,4" />
                         <Button Content="{l:T accorder}" Command="{Binding AddAdjustmentCommand}" Margin="0,0,6,4" />
-                        <Button Content="{l:T retirer}" Command="{Binding RemoveAdjustmentCommand}" Margin="0,0,6,4" />
+                        <Button Content="✕" Classes="icon" ToolTip.Tip="{l:T retirer}" AutomationProperties.Name="{l:T retirer}" Command="{Binding RemoveAdjustmentCommand}" Margin="0,0,6,4" />
                     </WrapPanel>
                     <ItemsControl ItemsSource="{Binding TeamPayments}">
                         <ItemsControl.ItemTemplate>
@@ -187,7 +187,7 @@
                 <DockPanel Margin="0,0,0,6">
                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="6">
                         <Button Content="{l:T depense}" Command="{Binding AddExpenseCommand}" />
-                        <Button Content="{l:T supprimer}" Command="{Binding RemoveExpenseCommand}" />
+                        <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveExpenseCommand}" />
                     </StackPanel>
                     <TextBlock Text="{l:T depenses_fournitures_prestataires}" Classes="h2" />
                 </DockPanel>
@@ -228,7 +228,7 @@
                     <TextBox Text="{Binding NewIncomeLabel}" Width="180" PlaceholderText="{l:T libelle_ex_sponsor}" Margin="0,0,6,4" />
                     <TextBox Text="{Binding NewIncomeAmount}" Width="90" PlaceholderText="{l:T montant}" Margin="0,0,6,4" />
                     <Button Content="{l:T ajouter_la_recette}" Command="{Binding AddIncomeCommand}" Margin="0,0,6,4" />
-                    <Button Content="{l:T supprimer}" Command="{Binding RemoveIncomeCommand}" Margin="0,0,6,4" />
+                    <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveIncomeCommand}" Margin="0,0,6,4" />
                 </WrapPanel>
             </Grid>
         </Grid>

@@ -12,6 +12,13 @@
     <Application.Styles>
         <FluentTheme />
         <StyleInclude Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml" />
+        <!-- Bouton à pictogramme : le texte est dans l'infobulle. -->
+        <Style Selector="Button.icon, ToggleButton.icon">
+            <Setter Property="MinWidth" Value="34" />
+            <Setter Property="Padding" Value="7,3" />
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
         <Style Selector="TextBlock.warning">
             <Setter Property="Foreground" Value="#C62828" />
             <Setter Property="Opacity" Value="1" />

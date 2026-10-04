@@ -11,7 +11,7 @@
         <!-- Horloge : heure réelle ou simulation -->
         <Border DockPanel.Dock="Top" Padding="10,6" BorderThickness="0,0,0,1"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-            <DockPanel>
+            <WrapPanel ItemSpacing="24" LineSpacing="6">
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <RadioButton Content="{l:T heure_reelle}" IsChecked="{Binding !IsSimulation}" GroupName="clock" />
                     <RadioButton Content="{l:T simulation}" IsChecked="{Binding IsSimulation}" GroupName="clock" />
@@ -30,15 +30,18 @@
                     </StackPanel>
                     <TextBlock Text="{Binding NowText}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" FontWeight="SemiBold" />
                     <Button Content="{Binding Gps.ServerStatus, FallbackValue='📡'}" Click="OnSettingsClick"
                             ToolTip.Tip="{l:T parametres_du_suivi_serveur_local_second_poste_m}" />
-                    <Button Content="{l:T mode_eclate}" Click="OnExplodeClick"
-                            ToolTip.Tip="{l:T carte_frise_et_etat_des_equipes_dans_des_fenetre}" />
-                    <Button Content="{l:T tout_rattacher}" Click="OnReattachClick" />
+                    <Button Content="⧉" Classes="icon" Click="OnExplodeClick" AutomationProperties.Name="{l:T mode_eclate}">
+                        <ToolTip.Tip>
+                            <TextBlock><Run Text="{l:T mode_eclate}" FontWeight="SemiBold" /><LineBreak /><Run Text="{l:T carte_frise_et_etat_des_equipes_dans_des_fenetre}" /></TextBlock>
+                        </ToolTip.Tip>
+                    </Button>
+                    <Button Content="⇱" Classes="icon" Click="OnReattachClick" ToolTip.Tip="{l:T tout_rattacher}" AutomationProperties.Name="{l:T tout_rattacher}" />
                 </StackPanel>
-            </DockPanel>
+            </WrapPanel>
         </Border>
 
         <!-- Plan radio, toujours visible -->

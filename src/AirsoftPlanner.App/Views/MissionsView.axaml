@@ -12,15 +12,21 @@
             <Border DockPanel.Dock="Top" Padding="10,6" BorderThickness="0,0,0,1"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                 <DockPanel>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
                         <Button Content="{l:T mission}" Command="{Binding AddCommand}" />
-                        <Button Content="{l:T dupliquer}" Command="{Binding DuplicateCommand}" />
-                        <Button Content="{l:T supprimer}" Command="{Binding RemoveCommand}" />
-                        <Button Content="{l:T tout_afficher}" Click="OnFitClick" />
-                        <Button Content="{l:T gerer_un_retard}" Command="{Binding OpenDelayCommand}"
-                                ToolTip.Tip="{l:T repercuter_le_retard_de_la_mission_selectionnee}" />
-                        <Button Content="{l:T annuler_le_dernier_decalage}" Command="{Binding Delay.UndoCommand}"
-                                ToolTip.Tip="{Binding Delay.LastApplied}" />
+                        <Button Content="❐" Classes="icon" ToolTip.Tip="{l:T dupliquer}" AutomationProperties.Name="{l:T dupliquer}" Command="{Binding DuplicateCommand}" />
+                        <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveCommand}" />
+                        <Button Content="⛶" Classes="icon" Click="OnFitClick" ToolTip.Tip="{l:T tout_afficher}" AutomationProperties.Name="{l:T tout_afficher}" />
+                        <Button Content="⏱" Classes="icon" Command="{Binding OpenDelayCommand}" AutomationProperties.Name="{l:T gerer_un_retard}">
+                            <ToolTip.Tip>
+                                <TextBlock><Run Text="{l:T gerer_un_retard}" FontWeight="SemiBold" /><LineBreak /><Run Text="{l:T repercuter_le_retard_de_la_mission_selectionnee}" /></TextBlock>
+                            </ToolTip.Tip>
+                        </Button>
+                        <Button Content="↶" Classes="icon" Command="{Binding Delay.UndoCommand}" AutomationProperties.Name="{l:T annuler_le_dernier_decalage}">
+                            <ToolTip.Tip>
+                                <TextBlock><Run Text="{l:T annuler_le_dernier_decalage}" FontWeight="SemiBold" /><LineBreak /><Run Text="{Binding Delay.LastApplied}" /></TextBlock>
+                            </ToolTip.Tip>
+                        </Button>
                     </StackPanel>
                     <TextBlock Text="{Binding IssueSummary}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                FontWeight="SemiBold" />
@@ -114,7 +120,7 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Content="{l:T retirer}" Command="{Binding ClearZoneCommand}" />
+                            <Button Content="✕" Classes="icon" ToolTip.Tip="{l:T retirer}" AutomationProperties.Name="{l:T retirer}" Command="{Binding ClearZoneCommand}" />
                         </StackPanel>
 
                         <TextBlock IsVisible="{Binding Selected.HasMissionPoints, FallbackValue=False}" TextWrapping="Wrap" FontSize="12"
@@ -194,11 +200,11 @@
                         </ItemsControl>
 
                         <TextBlock Text="{l:T condition_jouee_selon_le_resultat}" Classes="label" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Spacing="6">
                             <ComboBox ItemsSource="{x:Static vm:MissionConditionOption.All}" SelectedItem="{Binding Selected.Condition, FallbackValue={x:Null}}"
-                                      MinWidth="130" ToolTip.Tip="{l:T condition_aide}" />
+                                      MinWidth="160" ToolTip.Tip="{l:T condition_aide}" />
                             <ComboBox ItemsSource="{Binding ConditionChoices}" SelectedItem="{Binding Selected.ConditionMission, FallbackValue={x:Null}}"
-                                      IsEnabled="{Binding Selected.HasCondition, FallbackValue=False}" PlaceholderText="{l:T choisir_la_mission}" MinWidth="200">
+                                      IsEnabled="{Binding Selected.HasCondition, FallbackValue=False}" PlaceholderText="{l:T choisir_la_mission}" HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:MissionViewModel">
                                         <TextBlock>

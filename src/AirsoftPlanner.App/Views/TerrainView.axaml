@@ -16,12 +16,12 @@
                 <TextBlock Text="{l:T emprise_du_terrain}" Classes="h2" />
                 <TextBlock Text="{l:T centre_copie_depuis_google_maps_geoportail_un_gp}" Classes="label" TextWrapping="Wrap" />
                 <TextBox Text="{Binding CenterText}" PlaceholderText="{l:T ex_31t_448251_5411952_ou_48_8583_2_2944}" />
-                <StackPanel Orientation="Horizontal" Spacing="8">
+                <WrapPanel ItemSpacing="8" LineSpacing="6">
                     <NumericUpDown Value="{Binding AreaSizeKm}" Minimum="0.1" Maximum="20" Increment="0.5"
                                    FormatString="0.0" Width="130" />
                     <TextBlock Text="{l:T km_de_cote}" VerticalAlignment="Center" />
                     <Button Content="{l:T appliquer}" Command="{Binding ApplyCenterCommand}" />
-                </StackPanel>
+                </WrapPanel>
                 <Expander Header="{l:T ou_saisir_les_deux_coins}">
                     <StackPanel Spacing="6">
                         <TextBlock Text="{l:T coin_nord_ouest}" Classes="label" />
@@ -58,7 +58,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button Content="{l:T importer_une_image}" Command="{Binding ImportImageCommand}"
                             ToolTip.Tip="{l:T image_orientee_nord_en_haut_couvrant_exactement}" />
-                    <Button Content="{l:T supprimer_le_fond}" Command="{Binding RemoveLayerCommand}" />
+                    <Button Content="🗑" Classes="icon" Command="{Binding RemoveLayerCommand}" ToolTip.Tip="{l:T supprimer_le_fond}" AutomationProperties.Name="{l:T supprimer_le_fond}" />
                 </StackPanel>
 
                 <!-- Zones -->
@@ -66,7 +66,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <Button Content="{l:T zone_2}" Command="{Binding AddAreaCommand}" ToolTip.Tip="{l:T surface_base_secteur_zone_interdite}" />
                     <Button Content="{l:T point}" Command="{Binding AddPointCommand}" ToolTip.Tip="{l:T objectif_caisse_respawn}" />
-                    <Button Content="{l:T supprimer}" Command="{Binding RemoveZoneCommand}" />
+                    <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveZoneCommand}" />
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Zones}" SelectedItem="{Binding SelectedZone}" MaxHeight="220">
                     <ListBox.ItemTemplate>
@@ -98,7 +98,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <StackPanel Orientation="Horizontal" Spacing="8">
+                    <WrapPanel ItemSpacing="8" LineSpacing="6">
                         <StackPanel Spacing="6">
                             <TextBlock Text="{l:T faction_couleur_du_symbole}" Classes="label" />
                             <ComboBox ItemsSource="{Binding OwnerOptions}" SelectedItem="{Binding SelectedZoneOwner}" MinWidth="150" />
@@ -107,7 +107,7 @@
                             <TextBlock Text="{l:T taille_d_unite}" Classes="label" />
                             <ComboBox ItemsSource="{Binding Echelons}" SelectedItem="{Binding SelectedZone.Echelon, FallbackValue={x:Null}}" MinWidth="120" />
                         </StackPanel>
-                    </StackPanel>
+                    </WrapPanel>
                     <TextBlock Text="{l:T visible_par_telephones_des_equipes_ordres_de_mis}" Classes="label" />
                     <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding SelectedZoneVisibility}" MinWidth="240"
                               ToolTip.Tip="{l:T bivouac_d_une_faction_campement_respawn_affiche}" />
@@ -141,9 +141,9 @@
                              TextWrapping="Wrap" MinHeight="70" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <ToggleButton Content="{l:T placer_sur_la_carte}" IsChecked="{Binding IsDrawing}" />
-                        <Button Content="{l:T annuler_sommet}" Command="{Binding UndoPointCommand}"
-                                IsVisible="{Binding SelectedZone.IsArea, FallbackValue=False}" />
-                        <Button Content="{l:T effacer}" Command="{Binding ClearPointsCommand}" />
+                        <Button Content="↶" Classes="icon" Command="{Binding UndoPointCommand}" ToolTip.Tip="{l:T annuler_sommet}"
+                                AutomationProperties.Name="{l:T annuler_sommet}" IsVisible="{Binding SelectedZone.IsArea, FallbackValue=False}" />
+                        <Button Content="⌫" Classes="icon" Command="{Binding ClearPointsCommand}" ToolTip.Tip="{l:T effacer}" AutomationProperties.Name="{l:T effacer}" />
                     </StackPanel>
                 </StackPanel>
             </StackPanel>
