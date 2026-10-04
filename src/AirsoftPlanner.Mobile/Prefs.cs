@@ -57,6 +57,13 @@ internal static class Prefs
     public static void ApplyLanguage() =>
         AirsoftPlanner.Core.Localization.L.SetLanguage(Language.Length > 0 ? Language : AirsoftPlanner.Core.Localization.L.SystemLanguage());
 
+    /// <summary>Recherche d'une nouvelle version sur GitHub à l'affichage de l'écran (désactivable).</summary>
+    public static bool CheckUpdates
+    {
+        get => Store.GetBoolean(nameof(CheckUpdates), true);
+        set => Store.Edit()!.PutBoolean(nameof(CheckUpdates), value)!.Apply();
+    }
+
     public static bool NightMode
     {
         get => Store.GetBoolean(nameof(NightMode), false);
@@ -121,9 +128,11 @@ internal static class Prefs
         var device = DeviceName;
         var language = Language;
         var night = NightMode;
+        var updates = CheckUpdates;
         Store.Edit()!.Clear()!.Apply();
         Language = language;
         NightMode = night;
+        CheckUpdates = updates;
         var photos = System.IO.Path.Combine(Application.Context.FilesDir!.AbsolutePath, "photos");
         if (Directory.Exists(photos))
             Directory.Delete(photos, recursive: true);

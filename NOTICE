@@ -21,25 +21,6 @@ Il est distribué SANS AUCUNE GARANTIE. Le texte de la licence, qui seul fait
 foi, figure dans le fichier LICENSE.
 
 
-ADDITIONAL PERMISSION UNDER GNU GPL VERSION 3 SECTION 7
--------------------------------------------------------
-
-If you modify this program, or any covered work, by linking or combining it
-with the QuestPDF library (or a modified version of that library), distributed
-under the QuestPDF Community License or a QuestPDF commercial license, the
-licensors of this program grant you additional permission to convey the
-resulting work. Corresponding Source for a non-source form of such a
-combination shall include the source code for the parts of this program used,
-but need not include the source code of QuestPDF, which remains governed by its
-own license.
-
-Permission supplémentaire (section 7 de la GPL v3) : les auteurs autorisent la
-distribution de ce programme combiné à la bibliothèque QuestPDF, utilisée pour
-générer les documents PDF sous sa propre licence (QuestPDF Community License,
-gratuite pour les projets open source sous licence approuvée par l'OSI). Le code
-source de QuestPDF n'a pas à être fourni avec le programme.
-
-
 THIRD-PARTY COMPONENTS / COMPOSANTS TIERS
 -----------------------------------------
 
@@ -55,10 +36,7 @@ Airsoft Planner uses the following components, each under its own license:
 - SQLite ....................................... Public domain
 - MQTTnet ...................................... MIT License (.NET Foundation)
 - QRCoder ...................................... MIT License
-- QuestPDF ..................................... QuestPDF Community License
-  (and its bundled native libraries: Skia, HarfBuzz, FreeType, libpng,
-  libjpeg-turbo, libwebp, zlib, qpdf... under their respective permissive
-  licenses, listed in the QuestPDF package)
+- PDFsharp and MigraDoc (PDF documents) ......... MIT License (empira Software)
 - Windows installer built with Inno Setup ...... Inno Setup License
 
 Map data: base maps downloaded from the IGN Géoplateforme (orthophotos and Plan

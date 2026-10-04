@@ -656,7 +656,19 @@ public class MainActivity : Activity
             .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
         var update = PrimaryButton("", Color.Rgb(46, 125, 50));
         update.Visibility = ViewStates.Gone;
-        _ = ShowUpdateAsync(update, version);
+        // Seule communication engagée par l'application d'elle-même, hors échanges avec le PC de l'OP : désactivable.
+        var automatic = new CheckBox(this) { Text = L.T("verifier_automatiquement_les_mises_a_jour"), Checked = Prefs.CheckUpdates, TextSize = 12 };
+        automatic.CheckedChange += (_, e) =>
+        {
+            Prefs.CheckUpdates = e.IsChecked;
+            if (e.IsChecked)
+                _ = ShowUpdateAsync(update, version);
+            else
+                update.Visibility = ViewStates.Gone;
+        };
+        _target.AddView(automatic, Spaced(2));
+        if (Prefs.CheckUpdates)
+            _ = ShowUpdateAsync(update, version);
     }
 
     private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromSeconds(15) };

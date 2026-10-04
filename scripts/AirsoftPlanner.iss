@@ -38,11 +38,12 @@ ArchitecturesInstallIn64BitMode=x64compatible
 OutputBaseFilename=AirsoftPlanner-{#AppVersion}-Setup
 
 [Languages]
-Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
-Name: "en"; MessagesFile: "compiler:Default.isl"
-Name: "de"; MessagesFile: "compiler:Languages\German.isl"
-Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"
-Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"
+; Déclaration de confidentialité affichée avant l'installation.
+Name: "fr"; MessagesFile: "compiler:Languages\French.isl"; InfoBeforeFile: "confidentialite\fr.txt"
+Name: "en"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "confidentialite\en.txt"
+Name: "de"; MessagesFile: "compiler:Languages\German.isl"; InfoBeforeFile: "confidentialite\de.txt"
+Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; InfoBeforeFile: "confidentialite\es.txt"
+Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "confidentialite\it.txt"
 
 [CustomMessages]
 fr.AopFile=Opération Airsoft Planner

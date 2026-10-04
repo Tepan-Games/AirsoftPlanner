@@ -171,13 +171,43 @@ conservé par le mainteneur, jamais dans le dépôt) :
 la variable d'environnement `AIRSOFTPLANNER_KEYSTORE_PASS`). Sauvegarder ce fichier et son mot de passe hors du PC :
 sans eux, aucune mise à jour de l'application ne pourra plus être installée sur les téléphones existants.
 
+## Confidentialité
+
+Airsoft Planner ne transmet aucune information à d'autres systèmes en réseau, sauf à la demande de l'utilisateur
+ou de la personne qui l'installe ou l'utilise (*This program will not transfer any information to other networked
+systems unless specifically requested by the user or the person installing or operating it*) :
+
+- positions GPS et messages : uniquement entre les téléphones enrôlés et le PC de l'OP choisi par l'orga (réseau
+  local ou adresse DynDNS saisie) ;
+- fonds de carte IGN (Géoplateforme) et règlement ACP (acp-rules.org) : téléchargés quand l'orga le demande ;
+- services GPS (Traccar, Meshtastic MQTT), second poste, DynDNS : uniquement ceux que l'orga configure.
+
+Seule exception automatique : à chaque démarrage, le logiciel (et l'application Android à l'affichage de son écran)
+interroge l'API publique de GitHub pour savoir si une nouvelle version existe, sans envoyer de donnée personnelle ni
+de donnée d'OP. Cette vérification se désactive dans le menu « ⋯ » du logiciel et dans l'application. Ce texte est
+affiché par le programme d'installation. Services tiers concernés : [GitHub](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement),
+[IGN Géoplateforme](https://geoservices.ign.fr/cgu-licences), [acp-rules.org](https://www.acp-rules.org/).
+
+## Code signing policy
+
+Les binaires Windows publiés (programme et installateur) sont construits par GitHub Actions
+(`.github/workflows/windows.yml`) à partir de ce dépôt. Une fois le projet accepté par SignPath Foundation :
+*Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by
+[SignPath Foundation](https://signpath.org/)*. Les versions publiées jusqu'ici ne sont pas signées.
+
+- Auteurs et relecteurs (committers and reviewers) : [Tepan-Games](https://github.com/Tepan-Games)
+- Approbation de chaque signature (approvers) : [Tepan-Games](https://github.com/Tepan-Games)
+- Confidentialité : voir la section ci-dessus.
+
+L'application Android est signée par le mainteneur avec la clé de publication du projet.
+
 ## Licence
 
 Airsoft Planner est un logiciel libre distribué sous licence **GNU GPL v3.0 ou ultérieure** (voir [LICENSE](LICENSE)) :
 chacun peut l'utiliser, l'étudier, le modifier et le redistribuer, à condition que les versions redistribuées
-restent sous la même licence, avec leur code source. Une permission supplémentaire (section 7) autorise la
-combinaison avec QuestPDF, distribuée sous sa propre licence. Le copyright, cette permission, les composants
-tiers et l'attribution des fonds de carte IGN sont dans [NOTICE](NOTICE).
+restent sous la même licence, avec leur code source. Tous les composants utilisés sont eux aussi sous licence
+libre (MIT, BSD, Apache…). Le copyright, la liste des composants tiers et l'attribution des fonds de carte IGN sont
+dans [NOTICE](NOTICE).
 
 ## Structure
 

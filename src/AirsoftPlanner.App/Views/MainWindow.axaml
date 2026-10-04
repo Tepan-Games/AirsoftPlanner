@@ -49,6 +49,8 @@
                                     <MenuItem Header="Italiano" Command="{Binding ChangeLanguageCommand}" CommandParameter="it" />
                                 </MenuItem>
                                 <MenuItem Header="{l:T rechercher_une_mise_a_jour}" Command="{Binding Updates.CheckCommand}" />
+                                <MenuItem Header="{l:T verifier_automatiquement_les_mises_a_jour}" ToggleType="CheckBox"
+                                          IsChecked="{Binding Updates.AutoCheck}" ToolTip.Tip="{l:T verification_auto_aide}" />
                                 <MenuItem Header="{l:T site_du_projet_github}" Command="{Binding OpenProjectSiteCommand}" />
                                 <MenuItem Header="{l:T a_propos}" Command="{Binding AboutCommand}" />
                             </MenuFlyout>

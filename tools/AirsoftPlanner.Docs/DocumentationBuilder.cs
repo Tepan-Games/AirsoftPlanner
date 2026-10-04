@@ -1,7 +1,6 @@
 ﻿using System.Globalization;
-using QuestPDF.Fluent;
-using QuestPDF.Helpers;
-using QuestPDF.Infrastructure;
+using AirsoftPlanner.App.Services.Pdf;
+using MigraDoc.DocumentObjectModel;
 using SkiaSharp;
 
 namespace AirsoftPlanner.Docs;
@@ -14,55 +13,46 @@ public static class DocumentationBuilder
 
     public static void Write(string path, IReadOnlyDictionary<string, byte[]> shots, IReadOnlyDictionary<string, byte[]> android)
     {
-        QuestPDF.Settings.License = LicenseType.Community;
-        QuestPDF.Settings.UseSystemFonts = true;
         var images = shots.ToDictionary(s => s.Key, s => Jpeg(s.Value, 1500));
         var phone = android.ToDictionary(s => s.Key, s => Jpeg(s.Value, 720));
 
-        Document.Create(doc =>
-        {
-            Cover(doc, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "icone.png"));
-            doc.Page(page =>
-            {
-                Setup(page);
-                page.Content().Column(col =>
-                {
-                    col.Spacing(8);
-                    Contents(col);
-                    Introduction(col, images);
-                    Installation(col);
-                    Preparation(col, images);
-                    DuringOp(col, images);
-                    Gps(col, images);
-                    Android(col, phone);
-                    Documents(col);
-                    Retex(col, images);
-                    Annexes(col, images);
-                });
-            });
-        }).GeneratePdf(path);
+        var document = new PdfDoc(10, 1.05);
+        Cover(document, Path.Combine(Path.GetDirectoryName(Path.GetFullPath(path))!, "icone.png"));
+        var col = document.Section(marginCm: 1.6, header: ("Airsoft Planner — guide d'utilisation", "", Accent, 1), headerPageNumbers: true, headerSize: 9);
+        col.Spacing = 8;
+        Contents(col);
+        Introduction(col, images);
+        Installation(col);
+        Preparation(col, images);
+        DuringOp(col, images);
+        Gps(col, images);
+        Android(col, phone);
+        Documents(col);
+        Retex(col, images);
+        Annexes(col, images);
+        document.Save(path);
     }
 
     // ----- Chapitres -----
 
-    private static void Cover(IDocumentContainer doc, string iconPath) => doc.Page(page =>
+    private static void Cover(PdfDoc document, string iconPath)
     {
-        page.Size(PageSizes.A4);
-        page.Margin(0);
-        page.Content().Background(Accent).Padding(60).Column(col =>
+        var col = document.FullPage(Accent, 60);
+        var white = new TextStyle(Color: PdfColors.White);
+        if (File.Exists(iconPath))
         {
-            if (File.Exists(iconPath))
-                col.Item().PaddingTop(60).Width(4, Unit.Centimetre).Image(iconPath);
-            col.Item().PaddingTop(File.Exists(iconPath) ? 30 : 160).Text("Airsoft Planner").FontSize(44).Bold().FontColor(Colors.White);
-            col.Item().Text("Préparer, mener et analyser une opération d'airsoft").FontSize(18).FontColor(Colors.Grey.Lighten3);
-            col.Item().PaddingTop(30).Text("Guide d'utilisation — logiciel Windows et application Android").FontSize(14).FontColor(Colors.White);
-            col.Item().PaddingTop(200).Text(DateTime.Now.ToString("MMMM yyyy", French)).FontColor(Colors.Grey.Lighten2);
-            col.Item().Text("https://github.com/Tepan-Games/AirsoftPlanner").FontColor(Colors.Grey.Lighten2);
-            col.Item().Text("Tepan Games").FontColor(Colors.Grey.Lighten2);
-        });
-    });
+            col.Space(60);
+            col.Image(File.ReadAllBytes(iconPath), widthCm: 4);
+        }
+        col.Text("Airsoft Planner", new TextStyle(44, Bold: true, Color: PdfColors.White), spaceBefore: File.Exists(iconPath) ? 30 : 160);
+        col.Text("Préparer, mener et analyser une opération d'airsoft", new TextStyle(18, Color: PdfColors.GreyLighten3));
+        col.Text("Guide d'utilisation — logiciel Windows et application Android", new TextStyle(14, Color: PdfColors.White), spaceBefore: 30);
+        col.Text(DateTime.Now.ToString("MMMM yyyy", French), new TextStyle(Color: PdfColors.GreyLighten2), spaceBefore: 200);
+        col.Text("https://github.com/Tepan-Games/AirsoftPlanner", new TextStyle(Color: PdfColors.GreyLighten2));
+        col.Text("Tepan Games", new TextStyle(Color: PdfColors.GreyLighten2));
+    }
 
-    private static void Contents(ColumnDescriptor col)
+    private static void Contents(PdfFlow col)
     {
         H1(col, "Sommaire");
         foreach (var line in new[]
@@ -72,10 +62,10 @@ public static class DocumentationBuilder
                      "7. Documents imprimés et packages des équipes", "8. Après l'OP : le RETEX", "9. Annexes : symboles, formats, raccourcis",
                  })
             P(col, line);
-        col.Item().PageBreak();
+        col.PageBreak();
     }
 
-    private static void Introduction(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void Introduction(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "1. Présentation");
         P(col, "Airsoft Planner rassemble dans un seul logiciel tout ce qu'il faut pour organiser une OP : factions, équipes et inscriptions, terrain et cartes IGN, scénario et frise des missions, matériel de jeu, finances, documents à remettre aux équipes, puis le suivi en direct pendant la partie (positions GPS, retards, diffusion des missions, messages) et le retour d'expérience après.");
@@ -88,7 +78,7 @@ public static class DocumentationBuilder
         Shot(col, img, "accueil", "Écran d'accueil : créer une OP ou ouvrir un fichier .aop.");
     }
 
-    private static void Installation(ColumnDescriptor col)
+    private static void Installation(PdfFlow col)
     {
         H1(col, "2. Installation");
         H2(col, "Logiciel Windows");
@@ -106,13 +96,13 @@ public static class DocumentationBuilder
             "Android 8 ou plus récent ; Wi-Fi du terrain (ou réseau mobile si le PC est joignable par un nom DynDNS).");
         H2(col, "Mises à jour");
         Bullets(col,
-            "Le logiciel vérifie une fois par jour si une nouvelle version est publiée sur GitHub (et à la demande : menu « ⋯ » › Rechercher une mise à jour).",
-            "Un bandeau propose alors « Mettre à jour » : la nouvelle version est téléchargée, installée, et le logiciel redémarre (l'OP en cours est enregistrée d'abord). « Plus tard » ne signale plus cette version.",
+            "Le logiciel vérifie à chaque démarrage si une nouvelle version est publiée sur GitHub (et à la demande : menu « ⋯ » › Rechercher une mise à jour).",
+            "Un bandeau propose alors « Mettre à jour » : la nouvelle version est téléchargée, installée, et le logiciel redémarre (l'OP en cours est enregistrée d'abord). « Plus tard » masque la proposition jusqu'au prochain démarrage. La vérification automatique se désactive dans le menu « ⋯ ».",
             "L'application affiche un bouton de téléchargement de la nouvelle APK.",
             "Sans connexion Internet, ou tant que le dépôt du projet n'est pas public, aucune alerte n'est affichée.");
     }
 
-    private static void Preparation(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void Preparation(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "3. Préparer l'OP");
         H2(col, "Général");
@@ -149,7 +139,7 @@ public static class DocumentationBuilder
         Shot(col, img, "organisation-retard", "Gestion d'un retard.");
     }
 
-    private static void DuringOp(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void DuringOp(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "4. Pendant l'OP : le suivi");
         P(col, "Scénario › Suivi de l'OP rassemble la frise (ligne de l'heure), la carte avec la dernière position de chaque équipe (symbole aux couleurs de la faction, contour selon l'état : à l'heure, juste, en retard compte tenu de la distance à parcourir) et l'état des équipes. Le plan radio reste affiché en permanence ; il se replie sur quelques lignes avec une vingtaine d'équipes. Les fréquences saisies en double sont signalées (bandeau orange) et peuvent être déclarées normales.");
@@ -174,7 +164,7 @@ public static class DocumentationBuilder
         P(col, "« Mode éclaté » place la carte, la frise et l'état des équipes dans des fenêtres séparées à répartir sur plusieurs écrans (F11 : plein écran). « Tout rattacher » les remet dans la fenêtre principale.");
     }
 
-    private static void Gps(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void Gps(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "5. Collecte des positions GPS : toutes les interconnexions");
         P(col, "Les positions arrivent par plusieurs canaux, utilisables ensemble. Chaque position est attribuée à une équipe par son identifiant d'appareil (liste « Identifiants GPS » de l'équipe, ou nom de l'équipe), à un véhicule mis en jeu (ID GPS du véhicule) ou à un orga (téléphone enrôlé). Les réglages sont dans Scénario › Suivi de l'OP › bouton d'état du serveur (« Paramètres du suivi »).");
@@ -220,7 +210,7 @@ public static class DocumentationBuilder
         P(col, "Un véhicule « en jeu » avec un ID GPS (traceur, téléphone, nœud Meshtastic) apparaît sur la carte avec le symbole véhicule de sa faction ; ses positions alimentent son kilométrage sur l'OP (remboursement du carburant).");
     }
 
-    private static void Android(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> phone)
+    private static void Android(PdfFlow col, IReadOnlyDictionary<string, byte[]> phone)
     {
         H1(col, "6. L'application Android");
         P(col, "L'application est pensée pour le chef d'équipe : une icône ▶ / ⏸ en haut à gauche démarre ou arrête l'envoi de la position, le bouton de droite passe en mode nuit. Deux onglets séparent le jeu (QG) de l'organisation (ORGA), pour préserver le roleplay.");
@@ -235,7 +225,7 @@ public static class DocumentationBuilder
             "Révocation par l'orga : le téléphone revient à l'écran d'enrôlement avec un message.");
     }
 
-    private static void Documents(ColumnDescriptor col)
+    private static void Documents(PdfFlow col)
     {
         H1(col, "7. Documents imprimés et packages des équipes");
         Bullets(col,
@@ -245,7 +235,7 @@ public static class DocumentationBuilder
             "Package par équipe : dossier et archive ZIP (ordre de mission + règles), avec le suivi de l'envoi et de la réception (« reçu par… »), et l'alerte « à renvoyer » si le contenu a changé.");
     }
 
-    private static void Retex(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void Retex(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "8. Après l'OP : le RETEX");
         P(col, "Scénario › RETEX dresse le bilan à partir de tout ce qui a été enregistré : missions diffusées et terminées, retard moyen de diffusion, distance parcourue, sorties de jeu, messages reçus, et la chronologie de l'OP (ou d'une équipe).");
@@ -255,13 +245,13 @@ public static class DocumentationBuilder
             "RETEX par équipe (PDF) : missions prévues, diffusées et terminées avec leur durée et leur résultat, points gagnés, messages transmis (photos comprises), objets et effectif, carte du trajet.");
     }
 
-    private static void Annexes(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
+    private static void Annexes(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)
     {
         H1(col, "9. Annexes");
         H2(col, "Symboles militaires");
         P(col, "Symboles inspirés de l'APP-6 (cadre rempli de la couleur de la faction, pictogramme noir), avec l'indicateur de taille au-dessus du cadre.");
         if (img.TryGetValue("symboles", out var symbols))
-            col.Item().Image(symbols).FitWidth();
+            col.Image(symbols);
         H2(col, "Formats de coordonnées acceptés à la saisie");
         Bullets(col,
             "UTM : 31T 448251 5411952 (fuseau et bande, abscisse, ordonnée).",
@@ -280,87 +270,48 @@ public static class DocumentationBuilder
 
     // ----- Éléments de mise en page -----
 
-    private static void Setup(PageDescriptor page)
-    {
-        page.Size(PageSizes.A4);
-        page.Margin(1.6f, Unit.Centimetre);
-        page.DefaultTextStyle(t => t.FontSize(10).LineHeight(1.3f));
-        page.Header().BorderBottom(1).BorderColor(Accent).PaddingBottom(3).Row(row =>
-        {
-            row.RelativeItem().Text("Airsoft Planner — guide d'utilisation").FontSize(9).FontColor(Accent).SemiBold();
-            row.AutoItem().Text(t =>
-            {
-                t.DefaultTextStyle(s => s.FontSize(9).FontColor(Colors.Grey.Darken1));
-                t.CurrentPageNumber();
-                t.Span(" / ");
-                t.TotalPages();
-            });
-        });
-    }
+    private static void H1(PdfFlow col, string text) =>
+        col.Text(text, new TextStyle(20, Bold: true, Color: Accent), spaceBefore: 10).Format.KeepWithNext = true;
 
-    private static void H1(ColumnDescriptor col, string text) =>
-        col.Item().PaddingTop(10).Text(text).FontSize(20).Bold().FontColor(Accent);
+    private static void H2(PdfFlow col, string text) =>
+        col.Text(text, new TextStyle(13, Bold: true), spaceBefore: 6).Format.KeepWithNext = true;
 
-    private static void H2(ColumnDescriptor col, string text) =>
-        col.Item().PaddingTop(6).Text(text).FontSize(13).Bold();
+    private static void P(PdfFlow col, string text) => col.Text(text);
 
-    private static void P(ColumnDescriptor col, string text) => col.Item().Text(text);
-
-    private static void Bullets(ColumnDescriptor col, params string[] items)
+    private static void Bullets(PdfFlow col, params string[] items)
     {
         foreach (var item in items)
-            col.Item().PaddingLeft(10).Row(row =>
-            {
-                row.ConstantItem(12).Text("•").FontColor(Accent);
-                row.RelativeItem().Text(item);
-            });
+            col.Bullet(item, indentCm: 0.35, bulletColor: Accent);
     }
 
-    private static void Shot(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img, string key, string caption)
+    private static readonly TextStyle Caption = new(8.5, Italic: true, Color: PdfColors.GreyDarken2);
+
+    private static void Shot(PdfFlow col, IReadOnlyDictionary<string, byte[]> img, string key, string caption)
     {
         if (!img.TryGetValue(key, out var image))
             return;
-        col.Item().ShowEntire().Column(c =>
-        {
-            c.Item().Border(0.5f).BorderColor(Colors.Grey.Lighten1).Image(image).FitWidth();
-            c.Item().PaddingTop(2).Text(caption).FontSize(8.5f).Italic().FontColor(Colors.Grey.Darken2);
-        });
+        var picture = col.Image(image, border: PdfColors.GreyLighten1);
+        picture.Format.KeepWithNext = true;
+        picture.Format.SpaceAfter = 2;
+        col.Text(caption, Caption);
     }
 
-    private static void PhoneRow(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> phone, (string Key, string Caption)[] items)
+    private static void PhoneRow(PdfFlow col, IReadOnlyDictionary<string, byte[]> phone, (string Key, string Caption)[] items)
     {
         if (!items.Any(i => phone.ContainsKey(i.Key)))
             return;
-        col.Item().ShowEntire().Row(row =>
+        col.Columns(items.Select(_ => 1.0).ToArray(), 20, items.Select(item => (Action<PdfFlow>)(c =>
         {
-            row.Spacing(20);
-            foreach (var (key, caption) in items)
-                row.RelativeItem().Column(c =>
-                {
-                    if (phone.TryGetValue(key, out var image))
-                        c.Item().AlignCenter().Height(11, Unit.Centimetre).Image(image).FitHeight();
-                    c.Item().PaddingTop(2).AlignCenter().Text(caption).FontSize(8.5f).Italic().FontColor(Colors.Grey.Darken2);
-                });
-        });
+            c.Spacing = 2;
+            if (phone.TryGetValue(item.Key, out var image))
+                c.Image(image, maxHeightCm: 11, alignment: ParagraphAlignment.Center);
+            c.Text(item.Caption, Caption, alignment: ParagraphAlignment.Center);
+        })).ToArray());
     }
 
-    private static void Table(ColumnDescriptor col, string[] headers, string[][] rows) => col.Item().Table(table =>
-    {
-        table.ColumnsDefinition(c =>
-        {
-            c.RelativeColumn(2.2f);
-            c.RelativeColumn(4);
-            c.RelativeColumn(3.5f);
-        });
-        table.Header(h =>
-        {
-            foreach (var header in headers)
-                h.Cell().Background(Accent).Padding(4).Text(header).FontColor(Colors.White).SemiBold();
-        });
-        for (var i = 0; i < rows.Length; i++)
-            foreach (var cell in rows[i])
-                table.Cell().Background(i % 2 == 0 ? Colors.Grey.Lighten4 : Colors.White).Padding(4).Text(cell).FontSize(9);
-    });
+    private static void Table(PdfFlow col, string[] headers, string[][] rows) =>
+        col.Table([2.2, 4, 3.5], headers, rows.Select(r => (IReadOnlyList<(string, TextStyle)>)r.Select(c => (c, new TextStyle(9))).ToList()),
+            rowPadding: 4, headerLine: null, headerBackground: Accent, zebra: PdfColors.GreyLighten4);
 
     /// <summary>Captures converties en JPEG (documentation plus légère).</summary>
     private static byte[] Jpeg(byte[] png, int maxWidth)

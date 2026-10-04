@@ -1,0 +1,10 @@
+﻿Airsoft Planner — privacy
+
+Airsoft Planner non trasmette alcuna informazione ad altri sistemi in rete, salvo su richiesta esplicita dell'utente o della persona che lo installa o lo utilizza:
+- posizioni GPS e messaggi: solo tra i telefoni registrati e il PC dell'operazione scelto dall'organizzazione (rete locale o indirizzo DynDNS inserito);
+- mappe IGN e regolamento ACP: scaricati quando l'organizzazione lo richiede;
+- servizi GPS (Traccar, Meshtastic MQTT), secondo PC, DynDNS: solo quelli configurati dall'organizzazione.
+
+Unica eccezione automatica: a ogni avvio, il programma (e l'app Android quando ne viene mostrata la schermata) interroga l'API pubblica di GitHub per sapere se è disponibile una nuova versione. Non viene inviato alcun dato personale né dell'operazione. Questo controllo si disattiva nel menu «⋯» del programma e nell'app.
+
+I file delle operazioni (.aop) restano sul vostro computer e non vengono inviati da nessuna parte.

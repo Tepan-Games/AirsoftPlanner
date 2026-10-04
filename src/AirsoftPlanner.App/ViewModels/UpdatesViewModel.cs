@@ -14,7 +14,7 @@ using AirsoftPlanner.Core.Localization;
 namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>
-/// Mises à jour : recherche d'une nouvelle version sur GitHub (au démarrage, une fois par jour, ou à la demande),
+/// Mises à jour : recherche d'une nouvelle version sur GitHub (à chaque démarrage, une fois par jour, ou à la demande),
 /// puis téléchargement du programme d'installation et installation automatique (le logiciel redémarre).
 /// </summary>
 public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool>> confirmDiscardOrSave) : ViewModelBase
@@ -40,16 +40,33 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
     [ObservableProperty]
     private string _status = "";
 
-    /// <summary>Recherche discrète au démarrage (au plus une fois par jour).</summary>
+    /// <summary>
+    /// Recherche automatique au démarrage : seule communication que le logiciel engage de lui-même (une requête à l'API
+    /// publique de GitHub, sans donnée personnelle), à chaque démarrage, désactivable dans le menu « ⋯ ».
+    /// </summary>
+    public bool AutoCheck
+    {
+        get => AppSettings.Current.AutoCheckUpdates;
+        set
+        {
+            if (value == AppSettings.Current.AutoCheckUpdates)
+                return;
+            AppSettings.Current.AutoCheckUpdates = value;
+            AppSettings.Current.Save();
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Recherche au démarrage du logiciel (sauf si elle est désactivée) : une nouvelle version est proposée par le bandeau
+    /// « Mettre à jour », à chaque lancement tant qu'elle n'est pas installée.
+    /// </summary>
     public async Task CheckSilentlyAsync()
     {
-        var settings = AppSettings.Current;
-        if (DateTimeOffset.Now - settings.LastUpdateCheck < TimeSpan.FromHours(20))
+        if (!AppSettings.Current.AutoCheckUpdates)
             return;
-        settings.LastUpdateCheck = DateTimeOffset.Now;
-        settings.Save();
         var release = await UpdateChecker.GetLatestAsync(Http);
-        if (release is not null && UpdateChecker.IsNewer(release, CurrentVersion) && release.Tag != settings.SkippedUpdate)
+        if (release is not null && UpdateChecker.IsNewer(release, CurrentVersion))
             Available = release;
     }
 
@@ -82,18 +99,9 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
             Open(release.PageUrl);
     }
 
-    /// <summary>Ne plus signaler cette version (la suivante le sera).</summary>
+    /// <summary>Masque la proposition jusqu'au prochain démarrage du logiciel.</summary>
     [RelayCommand]
-    private void Later()
-    {
-        if (Available is { } release)
-        {
-            AppSettings.Current.SkippedUpdate = release.Tag;
-            AppSettings.Current.Save();
-        }
-
-        Available = null;
-    }
+    private void Later() => Available = null;
 
     /// <summary>Télécharge le programme d'installation de la nouvelle version et le lance (le logiciel se ferme puis redémarre).</summary>
     [RelayCommand(CanExecute = nameof(CanInstall))]

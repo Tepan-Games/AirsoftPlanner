@@ -49,11 +49,8 @@ public class AppSettings
     /// <summary>Langue du logiciel (« fr », « en »...) ; vide : langue de Windows.</summary>
     public string Language { get; set; } = "";
 
-    /// <summary>Dernière recherche automatique d'une mise à jour.</summary>
-    public DateTimeOffset LastUpdateCheck { get; set; }
-
-    /// <summary>Version dont la mise à jour a été repoussée (« Plus tard »).</summary>
-    public string SkippedUpdate { get; set; } = "";
+    /// <summary>Recherche d'une nouvelle version sur GitHub à chaque démarrage ; désactivable.</summary>
+    public bool AutoCheckUpdates { get; set; } = true;
 
     /// <summary>Tests automatiques : ne pas ouvrir les documents générés ni chercher de mise à jour.</summary>
     public static bool SuppressOpening { get; set; }
