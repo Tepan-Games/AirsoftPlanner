@@ -593,12 +593,29 @@ public class MainActivity : Activity
     private void Section(string text) =>
         _target.AddView(new TextView(this) { Text = text.ToUpperInvariant(), TextSize = 13, Typeface = Typeface.DefaultBold, LetterSpacing = 0.08f }, Spaced(20));
 
-    /// <summary>À propos : version et adresse du projet.</summary>
+    /// <summary>À propos : version et adresse du projet, nouvelle version disponible sur GitHub.</summary>
     private void About()
     {
         var version = PackageManager?.GetPackageInfo(PackageName!, 0)?.VersionName ?? "";
-        Text($"À propos — Airsoft Planner {version}, Tepan Games\nCode source et nouvelles versions : https://github.com/Tepan-Games/AirsoftPlanner", 12, secondary: true)
+        Text($"À propos — Airsoft Planner {version}, Tepan Games\nCode source et nouvelles versions : {AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl}", 12, secondary: true)
             .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
+        var update = PrimaryButton("", Color.Rgb(46, 125, 50));
+        update.Visibility = ViewStates.Gone;
+        _ = ShowUpdateAsync(update, version);
+    }
+
+    private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    private async Task ShowUpdateAsync(Button button, string installed)
+    {
+        // Dépôt privé ou hors ligne : rien n'est affiché.
+        var release = await AirsoftPlanner.Core.Updates.UpdateChecker.GetLatestAsync(UpdateHttp);
+        var current = AirsoftPlanner.Core.Updates.UpdateChecker.ParseVersion(installed);
+        if (release is null || current is null || !AirsoftPlanner.Core.Updates.UpdateChecker.IsNewer(release, current))
+            return;
+        button.Text = $"⬇ Nouvelle version {release.Version.ToString(3)} disponible : télécharger";
+        button.Visibility = ViewStates.Visible;
+        button.Click += (_, _) => StartActivity(new Intent(Intent.ActionView, Android.Net.Uri.Parse(release.ApkUrl ?? release.PageUrl)));
     }
 
     private void Label(string text) => _target.AddView(new TextView(this) { Text = text, TextSize = 13 }, Spaced(12));

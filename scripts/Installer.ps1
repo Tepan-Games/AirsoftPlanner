@@ -3,7 +3,7 @@
 #
 #   Installer.cmd              installe (ou met à jour)
 #   Installer.cmd -Desinstaller  supprime le logiciel, les raccourcis et l'association
-param([switch]$Desinstaller)
+param([switch]$Desinstaller, [switch]$Relancer)
 
 $ErrorActionPreference = "Stop"
 $source = $PSScriptRoot
@@ -31,7 +31,8 @@ if (-not (Test-Path (Join-Path $source "AirsoftPlanner.exe"))) {
     throw "AirsoftPlanner.exe introuvable à côté de ce script."
 }
 
-# Mise à jour : le logiciel ne doit pas être ouvert pendant la copie.
+# Mise à jour : le logiciel ne doit pas être ouvert pendant la copie (il se ferme de lui-même s'il l'a lancée).
+Start-Sleep -Seconds 2
 Get-Process AirsoftPlanner -ErrorAction SilentlyContinue | Stop-Process -Force
 New-Item -ItemType Directory -Force $target | Out-Null
 Get-ChildItem $source -Exclude "Installer.ps1", "Installer.cmd" | Copy-Item -Destination $target -Recurse -Force
@@ -55,4 +56,9 @@ New-Item "$classes\AirsoftPlanner.Operation\DefaultIcon" -Force | Set-ItemProper
 New-Item "$classes\AirsoftPlanner.Operation\shell\open\command" -Force | Set-ItemProperty -Name "(default)" -Value "`"$exe`" `"%1`""
 
 Write-Host "Airsoft Planner est installé : menu Démarrer et bureau. Les fichiers .aop s'ouvrent par double-clic."
+if ($Relancer) {
+    # Mise à jour lancée depuis le logiciel : il redémarre dans sa nouvelle version.
+    Start-Process $exe
+    return
+}
 Write-Host "Pour le désinstaller : powershell -ExecutionPolicy Bypass -File `"$target\Desinstaller.ps1`" -Desinstaller"

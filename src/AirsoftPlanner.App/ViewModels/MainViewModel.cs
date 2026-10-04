@@ -24,7 +24,13 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     {
         this.dialogs = dialogs;
         _syncTimer = new DispatcherTimer(SyncInterval, DispatcherPriority.Background, async (_, _) => await SyncSilentlyAsync());
+        Updates = new UpdatesViewModel(dialogs, ConfirmDiscardOrSaveAsync);
+        if (!AppSettings.SuppressOpening)
+            Dispatcher.UIThread.Post(async () => await Updates.CheckSilentlyAsync(), DispatcherPriority.Background);
     }
+
+    /// <summary>Nouvelle version disponible sur GitHub, installation.</summary>
+    public UpdatesViewModel Updates { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOperation), nameof(WindowTitle))]

@@ -45,7 +45,13 @@ public class AppSettings
     /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
     public static bool StartGpsServerOnce { get; set; }
 
-    /// <summary>Tests automatiques : ne pas ouvrir les documents générés.</summary>
+    /// <summary>Dernière recherche automatique d'une mise à jour.</summary>
+    public DateTimeOffset LastUpdateCheck { get; set; }
+
+    /// <summary>Version dont la mise à jour a été repoussée (« Plus tard »).</summary>
+    public string SkippedUpdate { get; set; } = "";
+
+    /// <summary>Tests automatiques : ne pas ouvrir les documents générés ni chercher de mise à jour.</summary>
     public static bool SuppressOpening { get; set; }
 
     /// <summary>

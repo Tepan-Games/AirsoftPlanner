@@ -6,7 +6,9 @@
 # Résultat : artifacts\AirsoftPlanner-<version>.zip
 param(
     [Parameter(Mandatory = $true)][string]$Exemple,
-    [string]$Documentation = ""
+    [string]$Documentation = "",
+    # Publie la version sur GitHub (release v<version> avec l'archive et l'APK) : nécessite l'outil gh connecté.
+    [switch]$Publier
 )
 
 $ErrorActionPreference = "Stop"
@@ -42,3 +44,12 @@ $zip = Join-Path $root "artifacts\$name.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
 Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip
 Write-Host "Archive prête : $zip"
+
+if ($Publier) {
+    # Les logiciels installés trouvent cette version (« Rechercher une mise à jour ») dès que le dépôt est public.
+    $apkRelease = Join-Path $root "artifacts\AirsoftPlanner-$version.apk"
+    Copy-Item $apk $apkRelease -Force
+    gh release create "v$version" $zip $apkRelease --repo Tepan-Games/AirsoftPlanner --title "Airsoft Planner $version" --notes "Airsoft Planner $version"
+    if ($LASTEXITCODE -ne 0) { throw "La publication sur GitHub a échoué." }
+    Write-Host "Version v$version publiée sur GitHub."
+}
