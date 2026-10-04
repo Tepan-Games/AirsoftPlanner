@@ -40,6 +40,9 @@ public record TeamRetex(
 
     public int MissionsCompleted => Missions.Count(m => m.Completed);
 
+    /// <summary>Points gagnés par l'équipe d'après le résultat de ses missions.</summary>
+    public int Points => Missions.Where(m => m.Mission.Result != MissionResult.NotEvaluated).Sum(m => MissionResults.Points(m.Mission));
+
     public IReadOnlyList<GeoPoint> Trail { get; init; } = [];
 }
 

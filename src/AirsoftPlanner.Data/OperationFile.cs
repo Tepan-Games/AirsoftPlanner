@@ -21,7 +21,7 @@ public sealed class OperationFile : IDisposable
     /// 12 = enrôlement de l'application Android.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 21;
+    public const int CurrentFormatVersion = 22;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -84,6 +84,12 @@ public sealed class OperationFile : IDisposable
                 {
                     // Niveaux de difficulté : repris de l'ancien partage des positions (carte → Facile, sinon Moyen).
                     context.Database.ExecuteSql($"UPDATE Operations SET HqDifficulty = CASE AllyShareMode WHEN 'Map' THEN 'Easy' ELSE 'Medium' END");
+                }
+
+                if (info.FormatVersion < 22)
+                {
+                    // Résultat des missions : barème par défaut (pas de HasDefaultValue, qui remplacerait un 0 choisi par l'orga).
+                    context.Database.ExecuteSql($"UPDATE Missions SET SuccessPoints = 10, PartialPoints = 5");
                 }
                 context.Database.ExecuteSql($"UPDATE DocumentInfo SET FormatVersion = {CurrentFormatVersion}");
             }

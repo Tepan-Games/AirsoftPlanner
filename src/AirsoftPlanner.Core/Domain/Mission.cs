@@ -32,4 +32,22 @@ public class Mission : Entity
 
     /// <summary>Matériel de jeu utilisé par la mission.</summary>
     public List<MissionItemUse> Items { get; set; } = [];
+
+    /// <summary>Résultat saisi par l'orga (le même pour toutes les équipes de la mission).</summary>
+    public MissionResult Result { get; set; }
+
+    /// <summary>Commentaire sur le résultat (« otage récupéré, documents perdus »...).</summary>
+    public string ResultNotes { get; set; } = "";
+
+    /// <summary>Points rapportés à chaque équipe engagée (et à sa faction) si la mission est réussie.</summary>
+    public int SuccessPoints { get; set; } = 10;
+
+    public int PartialPoints { get; set; } = 5;
+
+    public int FailurePoints { get; set; }
+
+    /// <summary>Mission dont le résultat décide si celle-ci est jouée (voir <see cref="Condition"/>).</summary>
+    public Guid? ConditionMissionId { get; set; }
+
+    public MissionCondition Condition { get; set; }
 }

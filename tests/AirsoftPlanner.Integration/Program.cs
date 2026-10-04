@@ -149,9 +149,14 @@ Tap("QG");
 Check("Message de l'orga notifié comme tel", () => Notifications().Contains("Message de l'orga"), 10);
 dispatch.ComposeAsHq = true;
 
-// Fin de mission décidée par l'orga
+// Fin de mission décidée par l'orga, avec son résultat annoncé à l'équipe
+var endedMission = ws.Missions.Missions.First(m => m.Model.Id == alpha.Model.PublishedMissionId);
+endedMission.Result = MissionResultOption.Of(MissionResult.Success);
+Check("Résultat saisi : score de la faction mis à jour",
+    () => dispatch.FactionScores.Any(f => f.Id == alpha.Model.FactionId && f.Points == endedMission.Model.SuccessPoints), 5);
 dispatch.End(alpha);
 Check("Mission terminée : le téléphone attend les ordres", () => Screen().Contains("Aucune mission diffusée par l'orga"), 25);
+Check("Résultat annoncé dans le message de fin de mission", () => { Swipe(up: true); return Screen().Contains("terminée : réussie"); }, 25);
 Check("Point de mission retiré après la mission", () => !Screen().Contains("Dépôt d'armes"), 25);
 Check("Notification « Mission terminée »", () => Notifications().Contains("Mission terminée"), 10);
 

@@ -154,6 +154,11 @@ public partial class MissionsViewModel : ViewModelBase
             StartMinutes = source.EndMinutes,
             DurationMinutes = source.DurationMinutes,
             IsEssential = source.IsEssential,
+            SuccessPoints = source.SuccessPoints,
+            PartialPoints = source.PartialPoints,
+            FailurePoints = source.FailurePoints,
+            ConditionMissionId = source.ConditionMissionId,
+            Condition = source.Condition,
         };
         AddMission(copy);
     }
@@ -196,6 +201,15 @@ public partial class MissionsViewModel : ViewModelBase
 
     /// <summary>Appelé par une mission dont l'horaire, les équipes ou les prérequis changent.</summary>
     public void OnScheduleChanged() => Analyze();
+
+    /// <summary>Résultat, barème ou condition d'une mission modifié : score et missions à proposer recalculés.</summary>
+    public event Action? ResultsChanged;
+
+    public void OnResultChanged() => ResultsChanged?.Invoke();
+
+    /// <summary>Missions dont le résultat peut décider de la mission sélectionnée.</summary>
+    [CommunityToolkit.Mvvm.ComponentModel.ObservableProperty]
+    private IReadOnlyList<MissionViewModel> _conditionChoices = [];
 
     partial void OnSelectedChanged(MissionViewModel? value)
     {
@@ -247,8 +261,11 @@ public partial class MissionsViewModel : ViewModelBase
         {
             TeamChoices = [];
             PredecessorChoices = [];
+            ConditionChoices = [];
             return;
         }
+
+        ConditionChoices = Missions.Where(m => m != mission).OrderBy(m => m.StartMinutes).ToList();
 
         var models = Missions.Select(m => m.Model).ToList();
         TeamChoices = Columns.Select(t => new TeamChoiceViewModel(t, mission)).ToList();
@@ -321,6 +338,7 @@ public partial class MissionsViewModel : ViewModelBase
             ScheduleIssueKind.NoTeam => L.T("aucune_equipe_n_est_affectee"),
             ScheduleIssueKind.TeamOverlap => L.F("x_est_deja_sur_x_a_ce_moment", team, other),
             ScheduleIssueKind.PredecessorNotFinished => L.F("commence_avant_la_fin_de_x", other),
+            ScheduleIssueKind.ConditionNotFinished => L.F("commence_avant_le_resultat_de_x", other),
             ScheduleIssueKind.PredecessorDisabled => L.F("le_prerequis_x_est_desactive", other),
             ScheduleIssueKind.DependencyCycle => L.T("les_prerequis_forment_une_boucle"),
             ScheduleIssueKind.OutsideOperation => L.T("deborde_des_horaires_de_l_op"),

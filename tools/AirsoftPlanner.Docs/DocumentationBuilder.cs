@@ -141,6 +141,11 @@ public static class DocumentationBuilder
         P(col, "Frise verticale des missions par équipe (glisser pour déplacer, bord bas pour la durée, double-clic pour créer), zone, matériel, missions essentielles ou optionnelles, enchaînements et effectif maximum. La carte de droite reste visible (détachable sur un autre écran) : points d'intérêt, matériel des missions regroupé par zone, zone de la mission sélectionnée.");
         Shot(col, img, "organisation", "Scénario › Organisation : frise, carte et fiche de la mission.");
         P(col, "« Gérer un retard » répercute un retard sur la suite du planning (décalage en cascade) et propose les missions optionnelles à désactiver pour rattraper le temps.");
+        H2(col, "Résultat des missions, points et missions conditionnelles");
+        Bullets(col,
+            "Chaque mission a un résultat saisi par l'orga, le même pour toutes ses équipes : non évaluée, réussie (✔), partielle (◐) ou échouée (✘), avec un commentaire (« documents récupérés, otage perdu »). Il apparaît sur la frise.",
+            "Barème par mission : points si réussie (10 par défaut), partielle (5) ou échouée (0, ou négatif pour une pénalité). Chaque équipe engagée gagne ces points, et sa faction les gagne une fois par mission.",
+            "Condition : une mission peut être jouée seulement « si réussie » (même partiellement) ou « si échouée » une autre mission, pour prévoir la suite d'un succès et un plan de repli. Les deux branches peuvent occuper le même créneau sans être signalées en chevauchement ; une mission conditionnelle qui commence avant la fin de la mission dont elle dépend est signalée.");
         Shot(col, img, "organisation-retard", "Gestion d'un retard.");
     }
 
@@ -151,6 +156,7 @@ public static class DocumentationBuilder
         Shot(col, img, "suivi", "Suivi de l'OP : plan radio, bandeau « À diffuser », frise et carte.");
         H2(col, "Diffusion des missions : toujours sur décision de l'orga");
         P(col, "Rien n'est envoyé automatiquement aux téléphones. Le bandeau « À diffuser » pose la question au bon moment : mission qui approche, mission dont l'heure de fin est dépassée (« terminer et diffuser la suivante ? »), mission urgente créée pendant la partie. Réponses : Diffuser, Terminer seulement, Plus tard (la question revient 10 minutes après). Le tableau « Missions diffusées » permet aussi de diffuser n'importe quelle mission ou de terminer celle en cours.");
+        P(col, "En terminant une mission, l'orga saisit son résultat directement dans la question (ou dans le tableau). La suite proposée en tient compte : après un échec, c'est le plan de repli qui est proposé, pas l'exploitation. « Annoncer » (coché par défaut) ajoute le résultat au message QG de fin de mission (« Mission « Pont » terminée : réussie ») ; décoché, seul l'orga le connaît. L'onglet « Score » affiche en direct les points de chaque faction et de chaque équipe.");
         H2(col, "Messages QG et Orga, photos");
         P(col, "Onglet « Messages et missions » : message à toutes les équipes, à une faction ou à une équipe, envoyé par le QG (ordre en jeu, pour le roleplay : affiché dans l'onglet QG de l'application) ou par l'orga (organisation, sécurité : onglet ORGA). Une photo peut être jointe ; elle est réduite automatiquement. L'historique indique quelles équipes ont reçu chaque message.");
         Shot(col, img, "suivi-messages", "Messages et missions : envoi, historique avec réception, diffusion des missions.");
@@ -244,8 +250,8 @@ public static class DocumentationBuilder
         P(col, "Scénario › RETEX dresse le bilan à partir de tout ce qui a été enregistré : missions diffusées et terminées, retard moyen de diffusion, distance parcourue, sorties de jeu, messages reçus, et la chronologie de l'OP (ou d'une équipe).");
         Shot(col, img, "retex", "RETEX : bilan par équipe et chronologie.");
         Bullets(col,
-            "RETEX global (PDF) : chiffres clés, tableau des équipes, chronologie complète, carte de tous les trajets aux couleurs des factions.",
-            "RETEX par équipe (PDF) : missions prévues, diffusées et terminées avec leur durée, messages transmis (photos comprises), objets et effectif, carte du trajet.");
+            "RETEX global (PDF) : chiffres clés, score par faction, résultat et commentaire de chaque mission, tableau des équipes (avec leurs points), chronologie complète, carte de tous les trajets aux couleurs des factions.",
+            "RETEX par équipe (PDF) : missions prévues, diffusées et terminées avec leur durée et leur résultat, points gagnés, messages transmis (photos comprises), objets et effectif, carte du trajet.");
     }
 
     private static void Annexes(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)

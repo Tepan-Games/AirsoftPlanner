@@ -93,6 +93,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         mission.Property(m => m.TeamIds).HasJsonListConversion();
         mission.Property(m => m.PredecessorIds).HasJsonListConversion();
         mission.Property(m => m.Items).HasJsonListConversion();
+        mission.Property(m => m.Result).HasConversion<string>();
+        mission.Property(m => m.Condition).HasConversion<string>();
 
         modelBuilder.Entity<TeamMember>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<TeamVehicle>().HasQueryFilter(e => !e.IsDeleted);

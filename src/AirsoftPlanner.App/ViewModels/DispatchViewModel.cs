@@ -48,9 +48,18 @@ public partial class MessageRowViewModel(OrgaMessage message, string audience) :
 }
 
 /// <summary>Question posée à l'orga : terminer une mission, en diffuser une nouvelle.</summary>
-public class DiffusionPromptViewModel(TeamViewModel team, DiffusionSuggestion suggestion, string question) : ViewModelBase
+/// <param name="current">Mission en cours (son résultat se saisit dans la question), ou null.</param>
+/// <param name="row">Ligne de l'équipe : choix d'annoncer ou non le résultat.</param>
+public class DiffusionPromptViewModel(TeamViewModel team, DiffusionSuggestion suggestion, string question, MissionViewModel? current,
+    TeamDispatchViewModel? row) : ViewModelBase
 {
     public TeamViewModel Team => team;
+
+    public MissionViewModel? Current => current;
+
+    public TeamDispatchViewModel? Row => row;
+
+    public bool HasCurrent => current is not null;
 
     public DiffusionSuggestion Suggestion => suggestion;
 
@@ -66,6 +75,17 @@ public class DiffusionPromptViewModel(TeamViewModel team, DiffusionSuggestion su
 public partial class TeamDispatchViewModel(TeamViewModel team) : ViewModelBase
 {
     public TeamViewModel Team => team;
+
+    /// <summary>Mission diffusée (son résultat peut être saisi avant de la terminer).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCurrent))]
+    private MissionViewModel? _current;
+
+    public bool HasCurrent => Current is not null;
+
+    /// <summary>Le message de fin de mission annonce son résultat à l'équipe (choix de l'orga).</summary>
+    [ObservableProperty]
+    private bool _announceResult = true;
 
     [ObservableProperty]
     private string _published = "";
@@ -116,6 +136,7 @@ public partial class DispatchViewModel : ViewModelBase
         _terrain = terrain;
         _items = items;
         _messages = file.LoadMessages().ToList();
+        missions.ResultsChanged += () => Refresh(_now);
         teams.Items.CollectionChanged += (_, _) => RefreshTargets();
         factions.Items.CollectionChanged += (_, _) => RefreshTargets();
         RefreshTargets();
@@ -285,7 +306,9 @@ public partial class DispatchViewModel : ViewModelBase
             model.CompletedMissionIds = [.. model.CompletedMissionIds, previous.Id];
         model.PublishedMissionId = mission.Id;
         var zone = _terrain.Zones.FirstOrDefault(z => z.Model.Id == mission.ZoneId)?.Name;
-        var text = (previous is not null && previous.Id != mission.Id ? L.F("mission_x_terminee", previous.Name) : "")
+        var text = (previous is not null && previous.Id != mission.Id
+                       ? Announced(team, previous) is { } result ? L.F("mission_x_terminee_x", previous.Name, result) : L.F("mission_x_terminee", previous.Name)
+                       : "")
                    + L.F("nouvelle_mission_x_x_x", mission.Name, MissionTime.Format(mission.StartMinutes), MissionTime.Format(mission.EndMinutes))
                    + (zone is null ? ")" : $", {zone})");
         AddMessage(text, MessageTarget.Team, model.Id, MessageKind.MissionAssigned, mission.Id, MessageSender.Hq);
@@ -300,8 +323,46 @@ public partial class DispatchViewModel : ViewModelBase
         if (!model.CompletedMissionIds.Contains(current.Id))
             model.CompletedMissionIds = [.. model.CompletedMissionIds, current.Id];
         model.PublishedMissionId = null;
-        AddMessage(L.F("mission_x_terminee_attendez_les_ordres", current.Name), MessageTarget.Team, model.Id,
-            MessageKind.MissionEnded, current.Id, MessageSender.Hq);
+        var text = Announced(team, current) is { } result
+            ? L.F("mission_x_terminee_x_attendez_les_ordres", current.Name, result)
+            : L.F("mission_x_terminee_attendez_les_ordres", current.Name);
+        AddMessage(text, MessageTarget.Team, model.Id, MessageKind.MissionEnded, current.Id, MessageSender.Hq);
+    }
+
+    /// <summary>Résultat à annoncer dans le message de fin (« réussie »), si l'orga l'a saisi et choisi de l'annoncer.</summary>
+    private string? Announced(TeamViewModel team, Mission mission) =>
+        mission.Result != MissionResult.NotEvaluated && Teams.FirstOrDefault(r => r.Team == team) is not { AnnounceResult: false }
+            ? MissionResults.Label(mission.Result).ToLower(L.Culture)
+            : null;
+
+    // ----- Score -----
+
+    /// <summary>Points des factions d'après le résultat des missions (une fois par mission et par faction).</summary>
+    public ObservableCollection<ScoreLine> FactionScores { get; } = [];
+
+    /// <summary>Points des équipes (chaque équipe engagée reçoit les points de la mission).</summary>
+    public ObservableCollection<ScoreLine> TeamScores { get; } = [];
+
+    [ObservableProperty]
+    private string _scoreSummary = "";
+
+    private void RefreshScores()
+    {
+        var missions = _missions.Missions.Select(m => m.Model).ToList();
+        var teams = _teams.Items.Where(t => t.IsPlaying).Select(t => t.Model).ToList();
+        Replace(FactionScores, Scoreboard.ByFaction(missions, _factions.Items.Select(f => f.Model), teams));
+        Replace(TeamScores, Scoreboard.ByTeam(missions, teams, t => _factions.Items.FirstOrDefault(f => f.Model.Id == t.FactionId)?.Color ?? "#607D8B"));
+        var evaluated = missions.Count(m => m.IsEnabled && m.Result != MissionResult.NotEvaluated);
+        ScoreSummary = L.F("x_mission_s_evaluee_s_sur_x", evaluated, missions.Count(m => m.IsEnabled));
+    }
+
+    private static void Replace(ObservableCollection<ScoreLine> target, IReadOnlyList<ScoreLine> lines)
+    {
+        if (target.SequenceEqual(lines))
+            return;
+        target.Clear();
+        foreach (var line in lines)
+            target.Add(line);
     }
 
     /// <summary>Mission diffusée à une équipe, pour son téléphone.</summary>
@@ -345,7 +406,9 @@ public partial class DispatchViewModel : ViewModelBase
                 continue;
             if (_snoozed.TryGetValue((model.Id, suggestion.Current?.Id, suggestion.Next?.Id), out var until) && nowMinutes < until)
                 continue;
-            prompts.Add(new DiffusionPromptViewModel(team, suggestion, Question(team, suggestion, nowMinutes)));
+            var current = suggestion.Current is { } c ? _missions.Missions.FirstOrDefault(m => m.Model == c) : null;
+            prompts.Add(new DiffusionPromptViewModel(team, suggestion, Question(team, suggestion, nowMinutes), current,
+                Teams.FirstOrDefault(r => r.Team == team)));
         }
 
         // Liste remplacée seulement si elle change : les boutons ne clignotent pas à chaque rafraîchissement.
@@ -358,6 +421,7 @@ public partial class DispatchViewModel : ViewModelBase
 
         HasPrompts = Prompts.Count > 0;
         RefreshTeams();
+        RefreshScores();
     }
 
     // ----- Interne -----
@@ -453,6 +517,7 @@ public partial class DispatchViewModel : ViewModelBase
         foreach (var row in Teams)
         {
             var current = CurrentOf(row.Team);
+            row.Current = current is null ? null : _missions.Missions.FirstOrDefault(m => m.Model == current);
             row.Published = current is null ? L.T("aucune_mission_diffusee")
                 : $"{current.Name} ({MissionTime.Format(current.StartMinutes)}–{MissionTime.Format(current.EndMinutes)})";
             var missions = _missions.Missions

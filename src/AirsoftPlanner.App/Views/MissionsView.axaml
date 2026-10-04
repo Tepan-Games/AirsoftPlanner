@@ -193,6 +193,42 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
+                        <TextBlock Text="{l:T condition_jouee_selon_le_resultat}" Classes="label" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <ComboBox ItemsSource="{x:Static vm:MissionConditionOption.All}" SelectedItem="{Binding Selected.Condition, FallbackValue={x:Null}}"
+                                      MinWidth="130" ToolTip.Tip="{l:T condition_aide}" />
+                            <ComboBox ItemsSource="{Binding ConditionChoices}" SelectedItem="{Binding Selected.ConditionMission, FallbackValue={x:Null}}"
+                                      IsEnabled="{Binding Selected.HasCondition, FallbackValue=False}" PlaceholderText="{l:T choisir_la_mission}" MinWidth="200">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MissionViewModel">
+                                        <TextBlock>
+                                            <Run Text="{Binding StartText}" FontWeight="SemiBold" />
+                                            <Run Text="{Binding Name}" />
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <TextBlock Text="{l:T resultat_et_points}" Classes="h2" Margin="0,8,0,0" />
+                        <ComboBox ItemsSource="{x:Static vm:MissionResultOption.All}" SelectedItem="{Binding Selected.Result, FallbackValue={x:Null}}" MinWidth="200" />
+                        <TextBox Text="{Binding Selected.ResultNotes, FallbackValue=''}" PlaceholderText="{l:T commentaire_sur_le_resultat}" AcceptsReturn="True" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,8,*,8,*">
+                            <StackPanel Spacing="4">
+                                <TextBlock Text="{l:T resultat_reussie}" FontSize="12" />
+                                <NumericUpDown Value="{Binding Selected.SuccessPoints, FallbackValue=10}" Minimum="-1000" Maximum="1000" Increment="1" FormatString="0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="4">
+                                <TextBlock Text="{l:T resultat_partielle}" FontSize="12" />
+                                <NumericUpDown Value="{Binding Selected.PartialPoints, FallbackValue=5}" Minimum="-1000" Maximum="1000" Increment="1" FormatString="0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="4">
+                                <TextBlock Text="{l:T resultat_echouee}" FontSize="12" />
+                                <NumericUpDown Value="{Binding Selected.FailurePoints, FallbackValue=0}" Minimum="-1000" Maximum="1000" Increment="1" FormatString="0" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="{l:T points_aide}" FontSize="11" Opacity="0.7" TextWrapping="Wrap" />
+
                         <TextBlock Text="{l:T briefing_objectif_consignes_conditions_de_reussi}" Classes="label" />
                         <TextBox Text="{Binding Selected.Description, FallbackValue=''}" AcceptsReturn="True"
                                  TextWrapping="Wrap" MinHeight="140" />

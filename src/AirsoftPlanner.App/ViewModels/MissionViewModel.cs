@@ -7,6 +7,28 @@ using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
+/// <summary>Résultat de mission proposé dans une liste.</summary>
+public record MissionResultOption(MissionResult Value, string Label)
+{
+    public static IReadOnlyList<MissionResultOption> All { get; } =
+        MissionResults.All.Select(r => new MissionResultOption(r, $"{MissionResults.Symbol(r)} {MissionResults.Label(r)}".Trim())).ToList();
+
+    public static MissionResultOption Of(MissionResult result) => All.First(o => o.Value == result);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Condition de mission proposée dans une liste.</summary>
+public record MissionConditionOption(MissionCondition Value, string Label)
+{
+    public static IReadOnlyList<MissionConditionOption> All { get; } =
+        MissionResults.Conditions.Select(c => new MissionConditionOption(c, MissionResults.ConditionLabel(c))).ToList();
+
+    public static MissionConditionOption Of(MissionCondition condition) => All.First(o => o.Value == condition);
+
+    public override string ToString() => Label;
+}
+
 public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewModelBase
 {
     private const string DefaultColor = "#607D8B";
@@ -177,6 +199,110 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
     }
 
     public IReadOnlyList<Guid> PredecessorIds => mission.PredecessorIds;
+
+    // ----- Résultat (saisi par l'orga, un seul pour toutes les équipes) et score -----
+
+    public MissionResultOption Result
+    {
+        get => MissionResultOption.Of(mission.Result);
+        set
+        {
+            if (value is null || value.Value == mission.Result)
+                return;
+            mission.Result = value.Value;
+            OnResultChanged();
+        }
+    }
+
+    /// <summary>✔, ◐, ✘ ou rien (non évaluée).</summary>
+    public string ResultSymbol => MissionResults.Symbol(mission.Result);
+
+    public bool IsEvaluated => mission.Result != MissionResult.NotEvaluated;
+
+    public string ResultNotes
+    {
+        get => mission.ResultNotes;
+        set => SetProperty(mission.ResultNotes, value, mission, (m, v) => m.ResultNotes = v);
+    }
+
+    public decimal? SuccessPoints
+    {
+        get => mission.SuccessPoints;
+        set => SetPoints(mission.SuccessPoints, value, v => mission.SuccessPoints = v);
+    }
+
+    public decimal? PartialPoints
+    {
+        get => mission.PartialPoints;
+        set => SetPoints(mission.PartialPoints, value, v => mission.PartialPoints = v);
+    }
+
+    public decimal? FailurePoints
+    {
+        get => mission.FailurePoints;
+        set => SetPoints(mission.FailurePoints, value, v => mission.FailurePoints = v);
+    }
+
+    private void SetPoints(int current, decimal? value, Action<int> apply, [System.Runtime.CompilerServices.CallerMemberName] string? name = null)
+    {
+        var points = (int)(value ?? 0);
+        if (points == current)
+            return;
+        apply(points);
+        OnPropertyChanged(name);
+        owner.OnResultChanged();
+    }
+
+    private void OnResultChanged()
+    {
+        OnPropertyChanged(nameof(Result));
+        OnPropertyChanged(nameof(ResultSymbol));
+        OnPropertyChanged(nameof(IsEvaluated));
+        owner.OnResultChanged();
+    }
+
+    // ----- Condition : mission jouée selon le résultat d'une autre -----
+
+    public MissionConditionOption Condition
+    {
+        get => MissionConditionOption.Of(mission.Condition);
+        set
+        {
+            if (value is null || value.Value == mission.Condition)
+                return;
+            mission.Condition = value.Value;
+            OnConditionChanged();
+        }
+    }
+
+    public MissionViewModel? ConditionMission
+    {
+        get => owner.Missions.FirstOrDefault(m => m.Model.Id == mission.ConditionMissionId);
+        set
+        {
+            if (value?.Model.Id == mission.ConditionMissionId || value == this)
+                return;
+            mission.ConditionMissionId = value?.Model.Id;
+            OnConditionChanged();
+        }
+    }
+
+    public bool HasCondition => mission.Condition != MissionCondition.None;
+
+    /// <summary>« Si « Assaut du pont » réussie » : affiché sur la frise.</summary>
+    public string ConditionText => HasCondition && ConditionMission is { } other
+        ? L.F("si_x_x", other.Name, MissionResults.ConditionLabel(mission.Condition).ToLower(L.Culture))
+        : "";
+
+    private void OnConditionChanged()
+    {
+        OnPropertyChanged(nameof(Condition));
+        OnPropertyChanged(nameof(ConditionMission));
+        OnPropertyChanged(nameof(HasCondition));
+        OnPropertyChanged(nameof(ConditionText));
+        owner.OnScheduleChanged();
+        owner.OnResultChanged();
+    }
 
     public IReadOnlyList<string> Issues
     {

@@ -13,6 +13,9 @@ public enum ScheduleIssueKind
     /// <summary>La mission commence avant la fin d'un de ses prérequis.</summary>
     PredecessorNotFinished,
 
+    /// <summary>Mission conditionnelle qui commence avant la fin de la mission dont le résultat décide.</summary>
+    ConditionNotFinished,
+
     /// <summary>Un prérequis est désactivé : la mission ne pourra pas s'enchaîner comme prévu.</summary>
     PredecessorDisabled,
 
@@ -63,6 +66,11 @@ public static class ScheduleAnalyzer
             if (mission.MaxPlayers is { } max && mission.TeamIds.Distinct().Sum(t => resources.TeamSizes.GetValueOrDefault(t)) > max)
                 issues.Add(new ScheduleIssue(mission.Id, ScheduleIssueKind.TooManyPlayers));
 
+            // La mission dont dépend une mission conditionnelle doit être finie avant (son résultat décide).
+            if (mission.Condition != MissionCondition.None && mission.ConditionMissionId is { } conditionId
+                && byId.TryGetValue(conditionId, out var condition) && mission.StartMinutes < condition.EndMinutes)
+                issues.Add(new ScheduleIssue(mission.Id, ScheduleIssueKind.ConditionNotFinished, condition.Id));
+
             foreach (var predecessorId in mission.PredecessorIds)
             {
                 if (!byId.TryGetValue(predecessorId, out var predecessor))
@@ -80,6 +88,9 @@ public static class ScheduleAnalyzer
             for (var i = 0; i < ordered.Count; i++)
             for (var j = i + 1; j < ordered.Count && ordered[j].StartMinutes < ordered[i].EndMinutes; j++)
             {
+                // Missions alternatives (si réussite / si échec) : une seule sera jouée.
+                if (MissionResults.AreAlternatives(ordered[i], ordered[j]))
+                    continue;
                 issues.Add(new ScheduleIssue(ordered[i].Id, ScheduleIssueKind.TeamOverlap, ordered[j].Id, group.Key));
                 issues.Add(new ScheduleIssue(ordered[j].Id, ScheduleIssueKind.TeamOverlap, ordered[i].Id, group.Key));
             }

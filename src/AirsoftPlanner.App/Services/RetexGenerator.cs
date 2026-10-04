@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
+using AirsoftPlanner.Core.Planning;
 using AirsoftPlanner.Core.Retex;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
@@ -54,16 +55,62 @@ public static class RetexGenerator
                     Figure(row, L.T("sorties_de_jeu"), totals.Out.ToString(French));
                 });
 
+                // Score et résultats : chaque mission compte une fois (elle peut être commune à plusieurs équipes).
+                var missions = retex.Teams.SelectMany(t => t.Missions.Select(m => m.Mission)).Distinct().OrderBy(m => m.StartMinutes).ToList();
+                if (missions.Any(m => m.Result != MissionResult.NotEvaluated))
+                {
+                    col.Item().Text(L.T("score_par_faction")).FontSize(14).Bold();
+                    var factions = context.FactionNames.Select(f => (f.Key, f.Value, context.FactionColors.GetValueOrDefault(f.Key, "#607D8B")));
+                    col.Item().Table(table =>
+                    {
+                        table.ColumnsDefinition(c => { c.RelativeColumn(4); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); });
+                        table.Header(h =>
+                        {
+                            foreach (var title in new[] { L.T("faction"), L.T("points"), L.T("resultat_reussie"), L.T("resultat_partielle"), L.T("resultat_echouee") })
+                                h.Cell().BorderBottom(1).PaddingBottom(2).Text(title).SemiBold();
+                        });
+                        foreach (var line in Scoreboard.ByFaction(missions, factions, retex.Teams.Select(t => t.Team)))
+                        {
+                            table.Cell().PaddingVertical(2).Text(line.Name).SemiBold().FontColor(line.Color);
+                            table.Cell().PaddingVertical(2).Text(line.Points.ToString(French)).Bold();
+                            table.Cell().PaddingVertical(2).Text(line.Success.ToString(French));
+                            table.Cell().PaddingVertical(2).Text(line.Partial.ToString(French));
+                            table.Cell().PaddingVertical(2).Text(line.Failure.ToString(French));
+                        }
+                    });
+                }
+
+                col.Item().Text(L.T("resultats_des_missions")).FontSize(14).Bold();
+                col.Item().Table(table =>
+                {
+                    table.ColumnsDefinition(c => { c.ConstantColumn(70); c.RelativeColumn(4); c.RelativeColumn(4); c.RelativeColumn(3); c.RelativeColumn(5); });
+                    table.Header(h =>
+                    {
+                        foreach (var title in new[] { L.T("prevue"), L.T("mission_2"), L.T("equipes"), L.T("resultat"), L.T("commentaire") })
+                            h.Cell().BorderBottom(1).PaddingBottom(2).Text(title).SemiBold();
+                    });
+                    foreach (var mission in missions)
+                    {
+                        var teams = retex.Teams.Where(t => mission.TeamIds.Contains(t.Team.Id)).Select(t => t.Team.Name);
+                        table.Cell().PaddingVertical(2).Text(retex.Teams.SelectMany(t => t.Missions).First(m => m.Mission == mission).PlannedStart.LocalDateTime.ToString("ddd HH:mm", French))
+                            .FontColor(Colors.Grey.Darken2);
+                        table.Cell().PaddingVertical(2).Text(mission.Name).SemiBold();
+                        table.Cell().PaddingVertical(2).Text(string.Join(", ", teams));
+                        table.Cell().PaddingVertical(2).Text(ResultText(mission)).FontColor(ResultColor(mission.Result));
+                        table.Cell().PaddingVertical(2).Text(mission.ResultNotes);
+                    }
+                });
+
                 col.Item().Text(L.T("bilan_par_equipe")).FontSize(14).Bold();
                 col.Item().Table(table =>
                 {
                     table.ColumnsDefinition(c =>
                     {
-                        c.RelativeColumn(3); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2);
+                        c.RelativeColumn(3); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2); c.RelativeColumn(2);
                     });
                     table.Header(h =>
                     {
-                        foreach (var title in new[] { L.T("equipe"), L.T("diffusees"), L.T("terminees"), L.T("retard_moyen"), L.T("distance"), L.T("hors_jeu"), L.T("messages") })
+                        foreach (var title in new[] { L.T("equipe"), L.T("diffusees"), L.T("terminees"), L.T("points"), L.T("retard_moyen"), L.T("distance"), L.T("hors_jeu"), L.T("messages") })
                             h.Cell().BorderBottom(1).PaddingBottom(2).Text(title).SemiBold();
                     });
                     foreach (var team in retex.Teams)
@@ -76,6 +123,7 @@ public static class RetexGenerator
                         });
                         table.Cell().PaddingVertical(2).Text($"{team.MissionsPublished}/{team.MissionsPlanned}");
                         table.Cell().PaddingVertical(2).Text(team.MissionsCompleted.ToString(French));
+                        table.Cell().PaddingVertical(2).Text(team.Points.ToString(French));
                         table.Cell().PaddingVertical(2).Text(AverageDelay(team));
                         table.Cell().PaddingVertical(2).Text($"{team.DistanceKm:0.0} km");
                         table.Cell().PaddingVertical(2).Text(team.PlayersOut.ToString(French));
@@ -126,6 +174,7 @@ public static class RetexGenerator
                 {
                     Figure(row, L.T("missions_diffusees"), $"{team.MissionsPublished}/{team.MissionsPlanned}");
                     Figure(row, L.T("terminees"), team.MissionsCompleted.ToString(French));
+                    Figure(row, L.T("points"), team.Points.ToString(French));
                     Figure(row, L.T("distance"), $"{team.DistanceKm:0.0} km");
                     Figure(row, L.T("positions_recues"), team.PositionCount.ToString(French));
                     Figure(row, L.T("sorties_de_jeu"), team.PlayersOut.ToString(French));
@@ -136,10 +185,10 @@ public static class RetexGenerator
                     col.Item().Text(L.T("aucune_mission_au_programme")).Italic();
                 col.Item().Table(table =>
                 {
-                    table.ColumnsDefinition(c => { c.RelativeColumn(4); c.RelativeColumn(3); c.RelativeColumn(3); c.RelativeColumn(3); c.RelativeColumn(2); });
+                    table.ColumnsDefinition(c => { c.RelativeColumn(4); c.RelativeColumn(3); c.RelativeColumn(3); c.RelativeColumn(3); c.RelativeColumn(2); c.RelativeColumn(3); });
                     table.Header(h =>
                     {
-                        foreach (var title in new[] { L.T("mission_2"), L.T("prevue"), L.T("diffusee"), L.T("terminee"), L.T("duree") })
+                        foreach (var title in new[] { L.T("mission_2"), L.T("prevue"), L.T("diffusee"), L.T("terminee"), L.T("duree"), L.T("resultat") })
                             h.Cell().BorderBottom(1).PaddingBottom(2).Text(title).SemiBold();
                     });
                     foreach (var m in team.Missions)
@@ -151,6 +200,9 @@ public static class RetexGenerator
                             : L.T("non_diffusee")).FontColor(m.PublishedAt is null ? Colors.Grey.Darken1 : Colors.Black);
                         table.Cell().PaddingVertical(2).Text(m.EndedAt is { } e ? e.LocalDateTime.ToString("HH:mm") : m.Completed ? "oui" : "—");
                         table.Cell().PaddingVertical(2).Text(m.ActualMinutes is { } d ? $"{d:0} min" : "—");
+                        table.Cell().PaddingVertical(2).Text(ResultText(m.Mission)).FontColor(ResultColor(m.Mission.Result));
+                        if (m.Mission.ResultNotes.Length > 0)
+                            table.Cell().ColumnSpan(6).PaddingBottom(3).PaddingLeft(10).Text(m.Mission.ResultNotes).Italic().FontColor(Colors.Grey.Darken2);
                     }
                 });
 
@@ -231,6 +283,19 @@ public static class RetexGenerator
         c.Item().Text(value).FontSize(16).Bold();
         c.Item().Text(label).FontSize(8).FontColor(Colors.Grey.Darken2);
     });
+
+    /// <summary>« ✔ Réussie (+10) », « Non évaluée ».</summary>
+    private static string ResultText(Mission mission) => mission.Result == MissionResult.NotEvaluated
+        ? MissionResults.Label(mission.Result)
+        : $"{MissionResults.Symbol(mission.Result)} {MissionResults.Label(mission.Result)} ({MissionResults.Points(mission):+0;-0;0})";
+
+    private static string ResultColor(MissionResult result) => result switch
+    {
+        MissionResult.Success => Colors.Green.Darken2,
+        MissionResult.Partial => Colors.Orange.Darken2,
+        MissionResult.Failure => Colors.Red.Darken2,
+        _ => Colors.Grey.Darken1,
+    };
 
     private static string Color(RetexContext context, Team team) =>
         team.FactionId is { } f && context.FactionColors.TryGetValue(f, out var color) ? color : "#607D8B";

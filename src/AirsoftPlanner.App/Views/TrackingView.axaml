@@ -118,6 +118,10 @@
                             <DataTemplate x:DataType="vm:DiffusionPromptViewModel">
                                 <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,1">
                                     <TextBlock Text="{Binding Question}" VerticalAlignment="Center" TextWrapping="Wrap" MaxWidth="820" />
+                                    <ComboBox ItemsSource="{x:Static vm:MissionResultOption.All}" SelectedItem="{Binding Current.Result, FallbackValue={x:Null}}"
+                                              IsVisible="{Binding HasCurrent}" MinWidth="130" Padding="6,1" ToolTip.Tip="{l:T resultat_de_la_mission_terminee}" />
+                                    <CheckBox Content="{l:T annoncer}" IsChecked="{Binding Row.AnnounceResult, FallbackValue=True}"
+                                              IsVisible="{Binding Current.IsEvaluated, FallbackValue=False}" ToolTip.Tip="{l:T annoncer_aide}" />
                                     <Button Content="{Binding AcceptLabel}" Padding="8,1" Classes="accent"
                                             Command="{Binding $parent[ItemsControl].((vm:TrackingViewModel)DataContext).Dispatch.AcceptCommand}"
                                             CommandParameter="{Binding}" />

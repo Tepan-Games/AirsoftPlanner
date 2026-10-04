@@ -145,6 +145,17 @@ void Prepare(WorkspaceViewModel w)
     var tracking = w.Tracking;
     tracking.IsSimulation = true;
     tracking.SimulatedMinutes = tracking.SimulationStart + 80;
+
+    // Résultats des premières missions finies (score et RETEX).
+    var finished = w.Missions.Missions.Where(m => m.Model.IsEnabled && m.EndMinutes <= tracking.SimulatedMinutes).OrderBy(m => m.StartMinutes).Take(3).ToList();
+    if (finished.All(m => !m.IsEvaluated))
+        foreach (var (mission, result, notes) in finished.Zip(
+                     new[] { MissionResult.Success, MissionResult.Partial, MissionResult.Failure },
+                     new[] { "Objectif tenu sans perte", "Documents récupérés, otage perdu", "Convoi intercepté avant le point de rendez-vous" }))
+        {
+            mission.Result = MissionResultOption.Of(result);
+            mission.ResultNotes = notes;
+        }
     var dispatch = tracking.Dispatch!;
     foreach (var team in w.Missions.Columns.Take(2))
     {

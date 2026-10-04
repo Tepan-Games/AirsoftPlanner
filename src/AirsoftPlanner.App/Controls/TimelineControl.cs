@@ -358,13 +358,15 @@ public class TimelineControl : Control
             var rect = BlockRect(mission, index, width, rangeStart, lanes);
             context.DrawRectangle(fill, border, rect, 4, 4);
 
-            var title = (mission.HasIssues && mission.IsEnabled ? "⚠ " : "") + mission.Name
+            var title = (mission.HasIssues && mission.IsEnabled ? "⚠ " : "") + (mission.IsEvaluated ? mission.ResultSymbol + " " : "") + mission.Name
                         + (mission.IsEssential ? "" : L.T("optionnelle")) + (mission.IsEnabled ? "" : L.T("desactivee"));
             var lines = new List<(string Text, double Size, Typeface Face)>
             {
                 ($"{MissionTime.Format(mission.StartMinutes)} – {MissionTime.Format(mission.EndMinutes)}", 10, Typeface.Default),
                 (title, 12, Bold),
             };
+            if (mission.ConditionText.Length > 0)
+                lines.Add(("↳ " + mission.ConditionText, 11, Typeface.Default));
             if (mission.ZoneName.Length > 0)
                 lines.Add(("📍 " + mission.ZoneName, 11, Typeface.Default));
             if (mission.ItemsSummary.Length > 0)

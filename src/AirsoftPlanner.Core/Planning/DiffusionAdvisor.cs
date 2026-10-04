@@ -30,12 +30,14 @@ public static class DiffusionAdvisor
     public static DiffusionSuggestion? Advise(Guid teamId, IEnumerable<Mission> missions, Guid? published, IReadOnlyCollection<Guid> completed,
         double nowMinutes, double leadMinutes = LeadMinutes)
     {
-        var program = missions
-            .Where(m => m.IsEnabled && m.TeamIds.Contains(teamId) && !completed.Contains(m.Id))
+        var all = missions as IReadOnlyCollection<Mission> ?? missions.ToList();
+        // Mission conditionnelle : proposée seulement quand le résultat de la mission dont elle dépend la rend jouable.
+        var program = all
+            .Where(m => m.IsEnabled && m.TeamIds.Contains(teamId) && !completed.Contains(m.Id) && MissionResults.IsConditionMet(m, all) == true)
             .OrderBy(m => m.StartMinutes)
             .ThenBy(m => m.Name, StringComparer.CurrentCulture)
             .ToList();
-        var current = published is { } id ? missions.FirstOrDefault(m => m.Id == id) : null;
+        var current = published is { } id ? all.FirstOrDefault(m => m.Id == id) : null;
 
         if (current is not null)
         {

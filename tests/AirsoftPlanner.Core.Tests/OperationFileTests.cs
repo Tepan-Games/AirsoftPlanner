@@ -283,6 +283,45 @@ public sealed class OperationFileTests : IDisposable
     }
 
     [Fact]
+    public void Files_from_format_21_get_the_default_mission_points()
+    {
+        var path = Path.Combine(_directory, "v21" + OperationFile.Extension);
+        using (var file = OperationFile.Create(path, "OP v21", "Orga"))
+        {
+            file.Add(new Mission { Name = "Ancienne" });
+            file.Save();
+            foreach (var column in new[] { "Result", "ResultNotes", "SuccessPoints", "PartialPoints", "FailurePoints", "ConditionMissionId", "Condition" })
+                file.Context.Database.ExecuteSqlRaw($"ALTER TABLE Missions DROP COLUMN {column}");
+            file.Context.Database.ExecuteSqlRaw("UPDATE DocumentInfo SET FormatVersion = 21");
+        }
+
+        using var upgraded = OperationFile.Open(path);
+        var mission = Assert.Single(upgraded.LoadMissions());
+        Assert.Equal((MissionResult.NotEvaluated, 10, 5, 0, MissionCondition.None, (Guid?)null),
+            (mission.Result, mission.SuccessPoints, mission.PartialPoints, mission.FailurePoints, mission.Condition, mission.ConditionMissionId));
+    }
+
+    [Fact]
+    public void Mission_result_points_and_condition_survive_reopening()
+    {
+        var path = Path.Combine(_directory, "resultats" + OperationFile.Extension);
+        var assault = new Mission { Name = "Assaut", Result = MissionResult.Partial, ResultNotes = "Pont tenu, otage perdu", SuccessPoints = 0, FailurePoints = -3 };
+        using (var file = OperationFile.Create(path, "OP", "Orga"))
+        {
+            file.Add(assault);
+            file.Add(new Mission { Name = "Repli", ConditionMissionId = assault.Id, Condition = MissionCondition.IfFailure });
+            file.Save();
+        }
+
+        using var reopened = OperationFile.Open(path);
+        var missions = reopened.LoadMissions().ToList();
+        var saved = missions.Single(m => m.Name == "Assaut");
+        Assert.Equal((MissionResult.Partial, "Pont tenu, otage perdu", 0, -3), (saved.Result, saved.ResultNotes, saved.SuccessPoints, saved.FailurePoints));
+        var fallback = missions.Single(m => m.Name == "Repli");
+        Assert.Equal((assault.Id, MissionCondition.IfFailure), (fallback.ConditionMissionId!.Value, fallback.Condition));
+    }
+
+    [Fact]
     public void Faction_difficulty_survives_reopening()
     {
         var path = Path.Combine(_directory, "difficulte" + OperationFile.Extension);
