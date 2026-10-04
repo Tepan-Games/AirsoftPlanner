@@ -4,6 +4,7 @@ using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -90,7 +91,7 @@ public partial class OrganizersViewModel : ViewModelBase
     {
         var organizer = new Organizer
         {
-            Name = "Nouvel orga",
+            Name = L.T("nouvel_orga"),
             SortOrder = Items.Count == 0 ? 0 : Items.Max(o => o.Model.SortOrder) + 1,
         };
         _file.Add(organizer);

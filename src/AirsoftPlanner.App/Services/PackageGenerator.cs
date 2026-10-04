@@ -10,6 +10,7 @@ using AirsoftPlanner.Core.Planning;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services;
 
@@ -36,7 +37,7 @@ public record PackageInput(
 /// </summary>
 public static class PackageGenerator
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     static PackageGenerator()
     {
@@ -55,12 +56,12 @@ public static class PackageGenerator
             Directory.Delete(folder, recursive: true);
         Directory.CreateDirectory(folder);
 
-        MissionOrder(input).GeneratePdf(Path.Combine(folder, SafeFileName($"Ordre de mission - {input.Team.Name}.pdf")));
+        MissionOrder(input).GeneratePdf(Path.Combine(folder, SafeFileName(L.F("ordre_de_mission_x_pdf", input.Team.Name))));
 
         var index = 1;
         foreach (var rule in input.Rules)
         {
-            var prefix = $"Règles {index++:00} - {rule.Title}";
+            var prefix = L.F("regles_x_x", index++, rule.Title);
             if (rule.IsImported)
                 File.WriteAllBytes(Path.Combine(folder, SafeFileName(prefix + Path.GetExtension(rule.FileName))), rule.FileContent);
             else
@@ -117,50 +118,50 @@ public static class PackageGenerator
                     col.Item().Row(row =>
                     {
                         row.Spacing(10);
-                        row.RelativeItem().Element(c => Box(c, "Identification", b =>
+                        row.RelativeItem().Element(c => Box(c, L.T("identification"), b =>
                         {
-                            b.Item().Text(t => { t.Span("Brassard : ").SemiBold(); t.Span(ArmbandText(input.Faction)); });
-                            b.Item().Text(t => { t.Span("Tenue : ").SemiBold(); t.Span(Blank(input.Faction?.Uniform, "libre")); });
-                            b.Item().Text(t => { t.Span("Chef d'équipe : ").SemiBold(); t.Span(leader is null ? "non désigné" : $"{MemberName(leader)} {leader.Phone}"); });
+                            b.Item().Text(t => { t.Span(L.T("brassard_2")).SemiBold(); t.Span(ArmbandText(input.Faction)); });
+                            b.Item().Text(t => { t.Span(L.T("tenue")).SemiBold(); t.Span(Blank(input.Faction?.Uniform, "libre")); });
+                            b.Item().Text(t => { t.Span(L.T("chef_d_equipe")).SemiBold(); t.Span(leader is null ? L.T("non_designe") : $"{MemberName(leader)} {leader.Phone}"); });
                         }));
-                        row.RelativeItem().Element(c => Box(c, "Transmissions", b =>
+                        row.RelativeItem().Element(c => Box(c, L.T("transmissions"), b =>
                         {
-                            b.Item().Text(t => { t.Span("Fréquence équipe : ").SemiBold(); t.Span(Blank(input.Team.RadioFrequency, "à définir")); });
-                            b.Item().Text(t => { t.Span("Fréquence faction : ").SemiBold(); t.Span(Blank(input.Faction?.RadioFrequency, "à définir")); });
-                            var command = input.CommandTeam is null ? "non désigné"
-                                : input.CommandTeam.Id == input.Team.Id ? "votre équipe"
+                            b.Item().Text(t => { t.Span(L.T("frequence_equipe")).SemiBold(); t.Span(Blank(input.Team.RadioFrequency, L.T("a_definir"))); });
+                            b.Item().Text(t => { t.Span(L.T("frequence_faction")).SemiBold(); t.Span(Blank(input.Faction?.RadioFrequency, L.T("a_definir"))); });
+                            var command = input.CommandTeam is null ? L.T("non_designe")
+                                : input.CommandTeam.Id == input.Team.Id ? L.T("votre_equipe")
                                 : $"{input.CommandTeam.Name}{(input.CommandLeader is { } cl ? $" — {MemberName(cl)} {cl.Phone}" : "")}";
-                            b.Item().Text(t => { t.Span("Chef de faction : ").SemiBold(); t.Span(command); });
+                            b.Item().Text(t => { t.Span(L.T("chef_de_faction")).SemiBold(); t.Span(command); });
                             if (op.OrgaRadioFrequency.Length > 0)
-                                b.Item().Text(t => { t.Span("Fréquence orga : ").SemiBold(); t.Span(op.OrgaRadioFrequency); });
+                                b.Item().Text(t => { t.Span(L.T("frequence_orga")).SemiBold(); t.Span(op.OrgaRadioFrequency); });
                             if (op.EmergencyPhone.Length > 0)
-                                b.Item().Text(t => { t.Span("Urgence orga : ").SemiBold().FontColor(Colors.Red.Darken2); t.Span(op.EmergencyPhone).Bold(); });
+                                b.Item().Text(t => { t.Span(L.T("urgence_orga")).SemiBold().FontColor(Colors.Red.Darken2); t.Span(op.EmergencyPhone).Bold(); });
                         }));
                     });
 
-                    col.Item().Element(c => Box(c, "Opération", b =>
+                    col.Item().Element(c => Box(c, L.T("operation"), b =>
                     {
-                        b.Item().Text($"Du {op.StartsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French)} au {op.EndsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French)}");
+                        b.Item().Text(L.F("du_x_au_x", op.StartsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French), op.EndsAt.LocalDateTime.ToString("dddd d MMMM yyyy HH:mm", French)));
                         if (op.OrganizerName.Length > 0)
-                            b.Item().Text(t => { t.Span("Organisé par : ").SemiBold(); t.Span(op.OrganizerName); });
+                            b.Item().Text(t => { t.Span(L.T("organise_par")).SemiBold(); t.Span(op.OrganizerName); });
                         if (op.Location.Length > 0)
-                            b.Item().Text(t => { t.Span("Lieu : ").SemiBold(); t.Span(op.Location); });
+                            b.Item().Text(t => { t.Span(L.T("lieu")).SemiBold(); t.Span(op.Location); });
                         if (op.Description.Length > 0)
                             b.Item().PaddingTop(4).Text(op.Description);
                     }));
 
                     if (input.Members.Count > 0)
-                        col.Item().Element(c => Box(c, $"Effectif ({input.Members.Count})", b => b.Item().Table(table =>
+                        col.Item().Element(c => Box(c, L.F("effectif_x", input.Members.Count), b => b.Item().Table(table =>
                         {
                             table.ColumnsDefinition(cols => { cols.RelativeColumn(3); cols.RelativeColumn(2); cols.RelativeColumn(2); cols.RelativeColumn(2); });
                             table.Header(h =>
                             {
-                                foreach (var header in new[] { "Nom", "Indicatif", "Rôle", "Portable" })
+                                foreach (var header in new[] { L.T("nom"), L.T("indicatif"), L.T("role"), L.T("portable") })
                                     h.Cell().Text(header).SemiBold();
                             });
                             foreach (var member in input.Members)
                             {
-                                table.Cell().Text($"{member.FirstName} {member.LastName}{(member.IsLeader ? " (chef)" : "")}");
+                                table.Cell().Text($"{member.FirstName} {member.LastName}{(member.IsLeader ? L.T("chef_2") : "")}");
                                 table.Cell().Text(member.Callsign);
                                 table.Cell().Text(member.Role);
                                 table.Cell().Text(member.Phone);
@@ -173,7 +174,7 @@ public static class PackageGenerator
                     var points = input.Zones.Values.Where(z => z.Points.Count > 0 && z.Visibility != ZoneVisibility.DuringMission && z.IsVisibleTo(input.Team))
                         .OrderBy(z => z.Category).ThenBy(z => z.Name, StringComparer.CurrentCulture).ToList();
                     if (points.Count > 0)
-                        col.Item().Element(c => Box(c, "Points d'intérêt", b =>
+                        col.Item().Element(c => Box(c, L.T("points_d_interet"), b =>
                         {
                             foreach (var point in points)
                                 b.Item().Text(t =>
@@ -188,7 +189,7 @@ public static class PackageGenerator
 
                     col.Item().PaddingTop(6).Text("Missions").FontSize(14).Bold();
                     if (input.Missions.Count == 0)
-                        col.Item().Text("Aucune mission assignée pour le moment.").Italic();
+                        col.Item().Text(L.T("aucune_mission_assignee_pour_le_moment")).Italic();
 
                     foreach (var mission in input.Missions)
                         col.Item().Element(c => MissionBlock(c, mission, input, format, day));
@@ -210,7 +211,7 @@ public static class PackageGenerator
                     page.Header().Element(h => Header(h, op, $"CARTE — {input.Team.Name}", factionColor));
                     page.Footer().Column(col =>
                     {
-                        col.Item().Text($"Zones de vos missions en trait épais. © {map.Attribution}").FontSize(8).FontColor(Colors.Grey.Darken1);
+                        col.Item().Text(L.F("zones_de_vos_missions_en_trait_epais_x", map.Attribution)).FontSize(8).FontColor(Colors.Grey.Darken1);
                         col.Item().Element(Footer);
                     });
                     page.Content().PaddingVertical(6).AlignCenter().Image(image).FitArea();
@@ -225,16 +226,16 @@ public static class PackageGenerator
         using var generator = new QRCoder.QRCodeGenerator();
         using var data = generator.CreateQrCode(Core.Gps.EnrollmentLink.Create(server, code), QRCoder.QRCodeGenerator.ECCLevel.M);
         var png = new QRCoder.PngByteQRCode(data).GetGraphic(8);
-        container.Element(c => Box(c, "Application Android — suivi de l'équipe", b => b.Item().Row(row =>
+        container.Element(c => Box(c, L.T("application_android_suivi_de_l_equipe"), b => b.Item().Row(row =>
         {
             row.ConstantItem(3.2f, Unit.Centimetre).Image(png);
             row.RelativeItem().PaddingLeft(10).Column(text =>
             {
                 text.Spacing(2);
-                text.Item().Text("Chef d'équipe : installez l'application Airsoft Planner, puis scannez ce QR code avec l'appareil photo (ou « Scanner le QR code » dans l'application).");
-                text.Item().Text(t => { t.Span("Ou saisissez — serveur : ").SemiBold(); t.Span(server).FontFamily("Consolas"); });
-                text.Item().Text(t => { t.Span("Code d'équipe : ").SemiBold(); t.Span(Core.Gps.EnrollmentCodes.Format(code)).FontSize(14).Bold().FontFamily("Consolas"); });
-                text.Item().Text("Le jour de l'OP, connectez-vous au Wi-Fi du terrain : si l'adresse du PC a changé, l'application le retrouve seule.")
+                text.Item().Text(L.T("chef_d_equipe_installez_l_application_airsoft_pl"));
+                text.Item().Text(t => { t.Span(L.T("ou_saisissez_serveur")).SemiBold(); t.Span(server).FontFamily("Consolas"); });
+                text.Item().Text(t => { t.Span(L.T("code_d_equipe")).SemiBold(); t.Span(Core.Gps.EnrollmentCodes.Format(code)).FontSize(14).Bold().FontFamily("Consolas"); });
+                text.Item().Text(L.T("le_jour_de_l_op_connectez_vous_au_wi_fi_du_terra"))
                     .FontSize(8).FontColor(Colors.Grey.Darken1);
             });
         })));
@@ -254,14 +255,14 @@ public static class PackageGenerator
                 {
                     t.Span(mission.Name).Bold().FontSize(12);
                     if (!mission.IsEssential)
-                        t.Span("  (optionnelle)").Italic().FontColor(Colors.Grey.Darken1);
+                        t.Span(L.T("optionnelle_2")).Italic().FontColor(Colors.Grey.Darken1);
                 });
             });
 
             if (zone is not null)
                 col.Item().Text(t =>
                 {
-                    t.Span("Zone : ").SemiBold();
+                    t.Span(L.T("zone_3")).SemiBold();
                     t.Span(zone.Name);
                     if (zone.Points.Count > 0)
                         t.Span($" — {(zone.Kind == ZoneKind.Area ? "centre " : "")}{Coordinates.Format(GeoMath.Centroid(zone.Points), format)}");
@@ -269,15 +270,15 @@ public static class PackageGenerator
 
             var partners = mission.TeamIds.Count > 1 ? mission.TeamIds.Count - 1 : 0;
             if (partners > 0)
-                col.Item().Text($"Mission conjointe avec {partners} autre(s) équipe(s).").FontColor(Colors.Grey.Darken2);
+                col.Item().Text(L.F("mission_conjointe_avec_x_autre_s_equipe_s", partners)).FontColor(Colors.Grey.Darken2);
 
             var predecessors = mission.PredecessorIds.Select(id => input.AllMissions.GetValueOrDefault(id)?.Name).OfType<string>().ToList();
             if (predecessors.Count > 0)
-                col.Item().Text(t => { t.Span("Après : ").SemiBold(); t.Span(string.Join(", ", predecessors)); });
+                col.Item().Text(t => { t.Span(L.T("apres")).SemiBold(); t.Span(string.Join(", ", predecessors)); });
 
             var items = mission.Items.Select(u => input.Items.TryGetValue(u.ItemId, out var item) ? $"{u.Quantity} × {item.Name}" : null).OfType<string>().ToList();
             if (items.Count > 0)
-                col.Item().Text(t => { t.Span("Matériel : ").SemiBold(); t.Span(string.Join(", ", items)); });
+                col.Item().Text(t => { t.Span(L.T("materiel")).SemiBold(); t.Span(string.Join(", ", items)); });
 
             if (mission.Description.Length > 0)
                 col.Item().PaddingTop(3).Text(mission.Description);
@@ -325,7 +326,7 @@ public static class PackageGenerator
         container.AlignCenter().Text(t =>
         {
             t.DefaultTextStyle(s => s.FontSize(8).FontColor(Colors.Grey.Darken1));
-            t.Span($"Généré le {DateTime.Now.ToString("d MMMM yyyy HH:mm", French)} avec Airsoft Planner — page ");
+            t.Span(L.F("genere_le_x_avec_airsoft_planner_page", DateTime.Now.ToString("d MMMM yyyy HH:mm", French)));
             t.CurrentPageNumber();
             t.Span(" / ");
             t.TotalPages();

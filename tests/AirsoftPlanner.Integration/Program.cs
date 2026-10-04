@@ -58,6 +58,10 @@ Geo(43.6492, 5.9871);
 
 // 1. Code faux saisi à la main
 Adb($"shell am start -n {Activity}");
+// Les vérifications portent sur les textes français : langue de l'application choisie avec le bouton 🌐.
+Wait(3);
+Tap("Lang");
+TapInPlace("Français"); // sans défilement : un glissement hors de la boîte de dialogue la fermerait
 Check("Écran d'enrôlement affiché", () => Screen().Contains("S'enrôler"), 15);
 Capture("android-1-enrolement.png");
 TypeInto(0, $"10.0.2.2:{Port}");
@@ -392,6 +396,13 @@ void Tap(string text)
     }
     Adb($"shell input tap {node.X} {node.Y}");
     Wait(1);
+}
+
+void TapInPlace(string text)
+{
+    var node = ScreenNodes().First(n => n.Text == text);
+    Adb($"shell input tap {node.X} {node.Y}");
+    Wait(2);
 }
 
 void TypeInto(int fieldIndex, string text)

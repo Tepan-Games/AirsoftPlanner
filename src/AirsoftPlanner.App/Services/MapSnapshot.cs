@@ -4,6 +4,7 @@ using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
 using SkiaSharp;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services;
 
@@ -17,7 +18,7 @@ public static class MapSnapshot
     public static byte[] Render(MapLayer layer, IEnumerable<(Zone Zone, bool Highlighted)> zones, int maxSide = 1800,
         Func<Guid, string?>? factionColor = null, IEnumerable<(string Color, IReadOnlyList<GeoPoint> Points)>? trails = null)
     {
-        using var source = SKBitmap.Decode(layer.Image) ?? throw new InvalidOperationException("Fond de carte illisible.");
+        using var source = SKBitmap.Decode(layer.Image) ?? throw new InvalidOperationException(L.T("fond_de_carte_illisible"));
         var scale = Math.Min(1.0, (double)maxSide / Math.Max(source.Width, source.Height));
         var info = new SKImageInfo((int)(source.Width * scale), (int)(source.Height * scale));
         using var surface = SKSurface.Create(info);
@@ -116,7 +117,7 @@ public static class MapSnapshot
         using var font = new SKFont(SKTypeface.Default, Math.Max(12, info.Width / 95f));
         using var text = new SKPaint { Color = SKColors.White, IsAntialias = true };
         using var textBackground = new SKPaint { Color = new SKColor(0, 0, 0, 170) };
-        var french = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+        var french = AirsoftPlanner.Core.Localization.L.Culture;
 
         void Label(string value, float x, float y)
         {
@@ -183,7 +184,7 @@ public static class MapSnapshot
             Label($"◄ {zone - 1} | {zone} ►", x - font.MeasureText($"◄ {zone - 1} | {zone} ►") / 2, font.Size * 2.6f);
         }
 
-        Label($"Quadrillage UTM {string.Join(" | ", names)} · {(spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m")}"
-              + (names.Count > 1 ? " · limite de fuseau en jaune" : ""), 6, info.Height - 8);
+        Label(L.F("quadrillage_utm_x_x", string.Join(" | ", names), (spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m"))
+              + (names.Count > 1 ? L.T("limite_de_fuseau_en_jaune") : ""), 6, info.Height - 8);
     }
 }

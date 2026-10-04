@@ -8,6 +8,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.EntityFrameworkCore;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -57,7 +58,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
-    public string ThemeButtonText => IsNightMode ? "☀ Mode jour" : "🌙 Mode nuit";
+    public string ThemeButtonText => IsNightMode ? L.T("mode_jour") : L.T("mode_nuit");
 
     /// <summary>Bascule jour / nuit, mémorisée pour les prochains lancements.</summary>
     [RelayCommand]
@@ -71,8 +72,8 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     }
 
     public string WindowTitle => _file is null
-        ? "Airsoft Planner"
-        : $"{Path.GetFileName(_file.Path)} — Airsoft Planner";
+        ? L.T("airsoft_planner")
+        : L.F("x_airsoft_planner", Path.GetFileName(_file.Path));
 
     [RelayCommand]
     private async Task NewOperationAsync()
@@ -80,7 +81,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         if (!await ConfirmDiscardOrSaveAsync())
             return;
 
-        var path = await dialogs.PickNewOperationFileAsync("Nouvelle OP");
+        var path = await dialogs.PickNewOperationFileAsync(L.T("nouvelle_op"));
         if (path is null)
             return;
 
@@ -139,10 +140,10 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             return;
 
         Reload();
-        await dialogs.ShowInfoAsync("Fusion terminée", report.Changes == 0
-            ? "Aucune différence : ce fichier contient déjà toutes les modifications de la copie."
-            : $"{report.Added} élément(s) ajouté(s), {report.Updated} mis à jour, {report.Deleted} supprimé(s)."
-              + (report.KeptLocal > 0 ? $" {report.KeptLocal} élément(s) plus récent(s) ici conservé(s)." : ""));
+        await dialogs.ShowInfoAsync(L.T("fusion_terminee"), report.Changes == 0
+            ? L.T("aucune_difference_ce_fichier_contient_deja_toute")
+            : L.F("x_element_s_ajoute_s_x_mis_a_jour_x_supprime_s", report.Added, report.Updated, report.Deleted)
+              + (report.KeptLocal > 0 ? L.F("x_element_s_plus_recent_s_ici_conserve_s", report.KeptLocal) : ""));
     }
 
     // ----- Travail partagé (OneDrive, Google Drive, Dropbox, partage réseau) -----
@@ -163,14 +164,14 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     private async Task ConfigureSharingAsync()
     {
         var path = await dialogs.PickSaveFileAsync(
-            "Fichier partagé (dans OneDrive, Google Drive, Dropbox ou un dossier réseau)",
-            Path.GetFileName(_file!.Path), "Fichier d'OP partagé", OperationFile.Extension);
+            L.T("fichier_partage_dans_onedrive_google_drive_dropb"),
+            Path.GetFileName(_file!.Path), L.T("fichier_d_op_partage"), OperationFile.Extension);
         if (path is null)
             return;
 
         if (string.Equals(Path.GetFullPath(path), Path.GetFullPath(_file.Path), StringComparison.OrdinalIgnoreCase))
         {
-            await dialogs.ShowErrorAsync("Le fichier partagé doit être différent de votre copie de travail : choisissez un emplacement dans le dossier synchronisé.");
+            await dialogs.ShowErrorAsync(L.T("le_fichier_partage_doit_etre_different_de_votre"));
             return;
         }
 
@@ -199,14 +200,14 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             var report = SharedSync.Sync(_file, shared);
             if (report.Received.Changes > 0)
                 Reload();
-            SharingStatus = $"☁ Partagé · synchronisé à {DateTime.Now:HH:mm}"
-                            + (report.Received.Changes > 0 ? $" · {report.Received.Changes} modification(s) reçue(s)" : "")
-                            + (report.ConflictCopiesMerged > 0 ? $" · {report.ConflictCopiesMerged} copie(s) en conflit fusionnée(s)" : "");
+            SharingStatus = L.F("partage_synchronise_a_x", DateTime.Now)
+                            + (report.Received.Changes > 0 ? L.F("x_modification_s_recue_s", report.Received.Changes) : "")
+                            + (report.ConflictCopiesMerged > 0 ? L.F("x_copie_s_en_conflit_fusionnee_s", report.ConflictCopiesMerged) : "");
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or DbUpdateException)
         {
             // Dossier synchronisé momentanément indisponible (hors ligne...) : on réessaiera au prochain cycle.
-            SharingStatus = $"☁ Partagé · échec de synchronisation à {DateTime.Now:HH:mm} ({ex.Message})";
+            SharingStatus = L.F("partage_echec_de_synchronisation_a_x_x", DateTime.Now, ex.Message);
         }
     }
 
@@ -224,7 +225,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         OnPropertyChanged(nameof(IsShared));
         StopSharingCommand.NotifyCanExecuteChanged();
         SyncNowCommand.NotifyCanExecuteChanged();
-        SharingStatus = IsShared ? $"☁ Partagé : {Path.GetFileName(SharedPath)}" : "";
+        SharingStatus = IsShared ? L.F("partage_x", Path.GetFileName(SharedPath)) : "";
         if (IsShared)
             _syncTimer.Start();
         else
@@ -233,7 +234,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     // ----- Installation -----
 
-    public string VersionText => $"Airsoft Planner {typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)}";
+    public string VersionText => L.F("airsoft_planner_x", typeof(MainViewModel).Assembly.GetName().Version?.ToString(3));
 
     /// <summary>Associe les fichiers .aop au logiciel (utilisateur courant) : ouverture par double-clic.</summary>
     [RelayCommand]
@@ -245,11 +246,11 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         try
         {
             FileAssociation.Register();
-            await dialogs.ShowInfoAsync("Fichiers .aop", "Les fichiers d'OP (.aop) s'ouvrent désormais dans Airsoft Planner par double-clic.");
+            await dialogs.ShowInfoAsync(L.T("fichiers_aop"), L.T("les_fichiers_d_op_aop_s_ouvrent_desormais_dans_a"));
         }
         catch (Exception ex) when (ex is UnauthorizedAccessException or System.Security.SecurityException or InvalidOperationException)
         {
-            await dialogs.ShowErrorAsync($"Association impossible : {ex.Message}");
+            await dialogs.ShowErrorAsync(L.F("association_impossible_x", ex.Message));
         }
     }
 
@@ -257,10 +258,32 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     public const string ProjectSite = "https://github.com/Tepan-Games/AirsoftPlanner";
 
     [RelayCommand]
-    private async Task AboutAsync() => await dialogs.ShowInfoAsync("À propos",
-        $"{VersionText} — Tepan Games\nLogiciel de préparation et de suivi d'OP d'airsoft (Windows) et application Android du chef d'équipe.\n\n"
-        + $"Code source et nouvelles versions : {ProjectSite}\n\n"
-        + "Cartes : IGN (Géoplateforme, Licence Ouverte). PDF : QuestPDF (licence Community).");
+    private async Task AboutAsync() => await dialogs.ShowInfoAsync(L.T("a_propos"),
+        L.F("x_tepan_games_logiciel_de_preparation_et_de_suiv", VersionText)
+        + L.F("code_source_et_nouvelles_versions_x", ProjectSite)
+        + L.T("cartes_ign_geoplateforme_licence_ouverte_pdf_que"));
+
+    /// <summary>Change la langue : enregistrée pour ce poste, appliquée en redémarrant le logiciel (l'OP ouverte est rouverte).</summary>
+    [RelayCommand]
+    private async Task ChangeLanguageAsync(string code)
+    {
+        if (code == AirsoftPlanner.Core.Localization.L.Code)
+            return;
+        AppSettings.Current.Language = code;
+        AppSettings.Current.Save();
+        if (!await ConfirmDiscardOrSaveAsync())
+            return;
+        try
+        {
+            var arguments = _file is null ? "" : $"\"{_file.Path}\"";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Environment.ProcessPath!, arguments) { UseShellExecute = false });
+            (Avalonia.Application.Current?.ApplicationLifetime as Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime)?.Shutdown();
+        }
+        catch (Exception ex) when (ex is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            // Redémarrage impossible : la langue sera appliquée au prochain lancement.
+        }
+    }
 
     [RelayCommand]
     private void OpenProjectSite()

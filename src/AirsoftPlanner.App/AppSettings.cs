@@ -5,6 +5,7 @@ using System.Text.Json.Serialization;
 using AirsoftPlanner.Core.Geo;
 using Avalonia;
 using Avalonia.Styling;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App;
 
@@ -45,6 +46,9 @@ public class AppSettings
     /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
     public static bool StartGpsServerOnce { get; set; }
 
+    /// <summary>Langue du logiciel (« fr », « en »...) ; vide : langue de Windows.</summary>
+    public string Language { get; set; } = "";
+
     /// <summary>Dernière recherche automatique d'une mise à jour.</summary>
     public DateTimeOffset LastUpdateCheck { get; set; }
 
@@ -64,7 +68,7 @@ public class AppSettings
 
     public int MqttPort { get; set; } = 1883;
 
-    public string MqttTopic { get; set; } = "msh/#";
+    public string MqttTopic { get; set; } = L.T("msh");
 
     public string MqttUser { get; set; } = "";
 

@@ -83,7 +83,8 @@ public static class DocumentationBuilder
             "Fonctionne hors ligne : une connexion n'est nécessaire que pour télécharger les fonds de carte (ou pour un nom DynDNS).",
             "Une OP = un fichier .aop (base SQLite) qu'on peut copier, envoyer à un autre orga, fusionner, ou partager dans un dossier OneDrive pour travailler à plusieurs en même temps.",
             "L'application Android du chef d'équipe envoie sa position au PC de l'OP et reçoit la mission diffusée, les messages du QG et de l'orga, le plan radio, les points d'intérêt et la carte.",
-            "Coordonnées en UTM (avec gestion des terrains à cheval sur deux fuseaux), degrés décimaux ou degrés-minutes-secondes, au choix.");
+            "Coordonnées en UTM (avec gestion des terrains à cheval sur deux fuseaux), degrés décimaux ou degrés-minutes-secondes, au choix.",
+            "Disponible en français, anglais, allemand, espagnol et italien : menu « ⋯ » › Langue dans le logiciel (il redémarre dans la langue choisie) ; l'application suit la langue du téléphone ou se règle avec le bouton 🌐.");
         Shot(col, img, "accueil", "Écran d'accueil : créer une OP ou ouvrir un fichier .aop.");
     }
 
@@ -102,6 +103,12 @@ public static class DocumentationBuilder
             "Copier AirsoftPlanner.apk (dossier « 2 - Application Android ») sur le téléphone du chef d'équipe ou de l'orga et l'ouvrir pour l'installer (autoriser l'installation d'applications externes).",
             "Accorder la localisation « toujours » et les notifications : l'envoi de la position continue écran éteint (notification permanente).",
             "Android 8 ou plus récent ; Wi-Fi du terrain (ou réseau mobile si le PC est joignable par un nom DynDNS).");
+        H2(col, "Mises à jour");
+        Bullets(col,
+            "Le logiciel vérifie une fois par jour si une nouvelle version est publiée sur GitHub (et à la demande : menu « ⋯ » › Rechercher une mise à jour).",
+            "Un bandeau propose alors « Mettre à jour » : la nouvelle version est téléchargée, installée, et le logiciel redémarre (l'OP en cours est enregistrée d'abord). « Plus tard » ne signale plus cette version.",
+            "L'application affiche un bouton de téléchargement de la nouvelle APK.",
+            "Sans connexion Internet, ou tant que le dépôt du projet n'est pas public, aucune alerte n'est affichée.");
     }
 
     private static void Preparation(ColumnDescriptor col, IReadOnlyDictionary<string, byte[]> img)
@@ -121,7 +128,7 @@ public static class DocumentationBuilder
         Shot(col, img, "equipes", "Onglet Équipes.");
         Shot(col, img, "equipes-android", "Bas de l'onglet Équipes : véhicules et application Android de l'équipe.");
         H2(col, "Terrain et zones");
-        P(col, "Emprise du terrain (centre et taille, ou deux coins), téléchargement des fonds IGN (photo aérienne, Plan IGN) enregistrés dans le fichier, import d'une image calée. Zones (polygones) et points : catégorie (bivouac, campement, respawn, infirmerie, ravitaillement, parking, PC orga, danger, objectif), symbole militaire, faction propriétaire (couleur), taille d'unité et visibilité (orga seulement, toutes les équipes ou une faction). Le quadrillage suit le format de coordonnées choisi ; un terrain à cheval sur deux fuseaux UTM affiche un quadrillage par fuseau et la limite en jaune.");
+        P(col, "Emprise du terrain (centre et taille, ou deux coins), téléchargement des fonds IGN (photo aérienne, Plan IGN) enregistrés dans le fichier, import d'une image calée. Zones (polygones) et points : catégorie (bivouac, campement, respawn, infirmerie, ravitaillement, parking, PC orga, danger, objectif), symbole militaire, faction propriétaire (couleur), taille d'unité et visibilité (orga seulement, toutes les équipes, une faction, ou pendant une mission : un dépôt d'armes ou un point de contact n'est alors envoyé aux téléphones des équipes de la mission que tant qu'elle leur est diffusée). Le quadrillage suit le format de coordonnées choisi ; un terrain à cheval sur deux fuseaux UTM affiche un quadrillage par fuseau et la limite en jaune.");
         Shot(col, img, "terrain", "Onglet Terrain & zones : symboles militaires aux couleurs des factions, limite de fuseau UTM en jaune.");
         H2(col, "Matériel de jeu");
         P(col, "Caisses, artifices, fumigènes, accessoires, documents de renseignement… avec la quantité disponible, le caractère consommable et l'utilisation par les missions (alerte si une mission en demande plus que le stock). Les objets d'objectif sont suivis pendant l'OP (qui l'a, quand, où).");

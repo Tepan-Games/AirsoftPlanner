@@ -60,6 +60,10 @@ public static class L
     public static string T(string key) =>
         _current.TryGetValue(key, out var text) || Reference.TryGetValue(key, out text) ? text : key;
 
+    /// <summary>Texte dans une langue donnée, sans changer la langue en cours (vérifications, documents).</summary>
+    public static string TIn(string code, string key) =>
+        Table(code).TryGetValue(key, out var text) || Reference.TryGetValue(key, out text) ? text : key;
+
     /// <summary>Texte traduit avec des valeurs ({0}, {1}...), mises en forme selon la langue.</summary>
     public static string F(string key, params object?[] args) => string.Format(Culture, T(key), args);
 

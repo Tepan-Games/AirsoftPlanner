@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System.Net.Http.Json;
 using AirsoftPlanner.Core.Gps;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Mobile;
 
@@ -10,7 +11,7 @@ internal static class ServerApi
     private static readonly HttpClient Http = new() { Timeout = TimeSpan.FromSeconds(15) };
 
     /// <summary>Le jeton n'est plus reconnu (révoqué par l'orga, ou autre OP).</summary>
-    public sealed class RevokedException() : Exception("Ce téléphone n'est plus autorisé par l'orga.");
+    public sealed class RevokedException() : Exception(L.T("ce_telephone_n_est_plus_autorise_par_l_orga"));
 
     public static string Normalize(string server)
     {
@@ -37,7 +38,7 @@ internal static class ServerApi
             throw new RevokedException();
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync(ProtocolJson.Default.TrackResponse)
-               ?? throw new HttpRequestException("Réponse vide du PC de l'OP.");
+               ?? throw new HttpRequestException(L.T("reponse_vide_du_pc_de_l_op"));
     }
 
     /// <summary>

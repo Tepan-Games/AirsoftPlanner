@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -7,15 +8,15 @@
     <Grid ColumnDefinitions="*,6,*">
         <!-- Règles du jeu -->
         <DockPanel Margin="12">
-            <TextBlock DockPanel.Dock="Top" Text="Règles du jeu" Classes="h1" />
+            <TextBlock DockPanel.Dock="Top" Text="{l:T regles_du_jeu}" Classes="h1" />
             <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="12" Opacity="0.7" Margin="0,4,0,8"
-                       Text="Importez vos documents existants (PDF, Word…) ou rédigez les règles propres à l'OP. Ils sont joints, dans cet ordre, au package de chaque équipe." />
+                       Text="{l:T importez_vos_documents_existants_pdf_word_ou_red}" />
             <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="6" Margin="0,0,0,8">
-                <Button Content="Importer un document…" Command="{Binding ImportRuleCommand}" />
-                <Button Content="Rédiger" Command="{Binding WriteRuleCommand}" />
-                <Button Content="▲" Command="{Binding MoveRuleUpCommand}" ToolTip.Tip="Monter" />
-                <Button Content="▼" Command="{Binding MoveRuleDownCommand}" ToolTip.Tip="Descendre" />
-                <Button Content="Supprimer" Command="{Binding RemoveRuleCommand}" />
+                <Button Content="{l:T importer_un_document}" Command="{Binding ImportRuleCommand}" />
+                <Button Content="{l:T rediger}" Command="{Binding WriteRuleCommand}" />
+                <Button Content="▲" Command="{Binding MoveRuleUpCommand}" ToolTip.Tip="{l:T monter}" />
+                <Button Content="▼" Command="{Binding MoveRuleDownCommand}" ToolTip.Tip="{l:T descendre}" />
+                <Button Content="{l:T supprimer}" Command="{Binding RemoveRuleCommand}" />
             </StackPanel>
             <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}" MaxHeight="180">
                 <ListBox.ItemTemplate>
@@ -29,15 +30,15 @@
             </ListBox>
 
             <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,10,0,6" IsVisible="{Binding HasSelectedRule}">
-                <TextBlock Text="Titre" Classes="label" />
+                <TextBlock Text="{l:T titre}" Classes="label" />
                 <TextBox Text="{Binding SelectedRule.Title, FallbackValue=''}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Ouvrir / aperçu PDF" Command="{Binding OpenRuleCommand}" />
-                    <Button Content="Remplacer le fichier…" Command="{Binding ReplaceRuleFileCommand}"
+                    <Button Content="{l:T ouvrir_apercu_pdf}" Command="{Binding OpenRuleCommand}" />
+                    <Button Content="{l:T remplacer_le_fichier}" Command="{Binding ReplaceRuleFileCommand}"
                             IsVisible="{Binding SelectedRule.IsImported, FallbackValue=False}" />
                 </StackPanel>
                 <TextBlock IsVisible="{Binding SelectedRule.IsWritten, FallbackValue=False}" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
-                           Text="Mise en forme : une ligne « # Titre » ouvre une section, une ligne « - texte » fait une puce." />
+                           Text="{l:T mise_en_forme_une_ligne_titre_ouvre_une_section}" />
             </StackPanel>
             <TextBox Text="{Binding SelectedRule.Text, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap"
                      IsVisible="{Binding SelectedRule.IsWritten, FallbackValue=False}" FontFamily="Consolas,monospace" />
@@ -47,13 +48,13 @@
 
         <!-- Diffusion -->
         <DockPanel Grid.Column="2" Margin="12">
-            <TextBlock DockPanel.Dock="Top" Text="Packages des équipes" Classes="h1" />
+            <TextBlock DockPanel.Dock="Top" Text="{l:T packages_des_equipes}" Classes="h1" />
             <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="12" Opacity="0.7" Margin="0,4,0,8"
-                       Text="Chaque package contient l'ordre de mission initial de l'équipe (PDF avec carte) et les règles, dans un dossier et une archive ZIP à envoyer au chef d'équipe. Pointez l'envoi puis la confirmation de réception." />
+                       Text="{l:T chaque_package_contient_l_ordre_de_mission_initi}" />
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                 <StackPanel Orientation="Horizontal" Spacing="6">
-                    <Button Content="Générer tous les packages…" Command="{Binding GenerateAllCommand}" />
-                    <Button Content="Générer pour l'équipe" Command="{Binding GenerateSelectedCommand}" />
+                    <Button Content="{l:T generer_tous_les_packages}" Command="{Binding GenerateAllCommand}" />
+                    <Button Content="{l:T generer_pour_l_equipe}" Command="{Binding GenerateSelectedCommand}" />
                 </StackPanel>
                 <TextBlock Text="{Binding Summary}" HorizontalAlignment="Right" VerticalAlignment="Center" FontWeight="SemiBold" />
             </DockPanel>
@@ -61,11 +62,11 @@
 
             <Border DockPanel.Dock="Bottom" Padding="0,8,0,0">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Marquer envoyé" Command="{Binding MarkSentCommand}" />
+                    <Button Content="{l:T marquer_envoye}" Command="{Binding MarkSentCommand}" />
                     <TextBox Text="{Binding SelectedPackage.ReceivedByInput, FallbackValue=''}" Width="200"
-                             PlaceholderText="Confirmé par…" />
-                    <Button Content="Marquer reçu" Command="{Binding MarkReceivedCommand}" />
-                    <Button Content="Ouvrir le dossier" Command="{Binding OpenPackageFolderCommand}" />
+                             PlaceholderText="{l:T confirme_par}" />
+                    <Button Content="{l:T marquer_recu}" Command="{Binding MarkReceivedCommand}" />
+                    <Button Content="{l:T ouvrir_le_dossier}" Command="{Binding OpenPackageFolderCommand}" />
                 </StackPanel>
             </Border>
 

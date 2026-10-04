@@ -9,6 +9,7 @@ using AirsoftPlanner.Core.Planning;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -146,7 +147,7 @@ public partial class MissionsViewModel : ViewModelBase
         var source = Selected!.Model;
         var copy = new Mission
         {
-            Name = source.Name + " (copie)",
+            Name = source.Name + L.T("copie"),
             Description = source.Description,
             ZoneId = source.ZoneId,
             TeamIds = [.. source.TeamIds],
@@ -213,7 +214,7 @@ public partial class MissionsViewModel : ViewModelBase
             DurationMinutes = DefaultDuration,
             TeamIds = [team.Model.Id],
             IsEssential = true,
-            Description = "Mission créée pendant l'OP.",
+            Description = L.T("mission_creee_pendant_l_op"),
         });
         return Selected!;
     }
@@ -224,7 +225,7 @@ public partial class MissionsViewModel : ViewModelBase
     {
         AddMission(new Mission
         {
-            Name = $"Mission {Missions.Count + 1}",
+            Name = L.F("mission_x", Missions.Count + 1),
             StartMinutes = start,
             DurationMinutes = DefaultDuration,
             TeamIds = teamIds,
@@ -304,10 +305,10 @@ public partial class MissionsViewModel : ViewModelBase
         var count = Missions.Count(m => m.HasIssues);
         IssueSummary = count switch
         {
-            0 when Missions.Count > 0 => "Planning cohérent",
+            0 when Missions.Count > 0 => L.T("planning_coherent"),
             0 => "",
-            1 => "1 mission à vérifier",
-            _ => $"{count} missions à vérifier",
+            1 => L.T("1_mission_a_verifier"),
+            _ => L.F("x_missions_a_verifier", count),
         };
     }
 
@@ -317,18 +318,18 @@ public partial class MissionsViewModel : ViewModelBase
         var team = _teams.Items.FirstOrDefault(t => t.Model.Id == issue.TeamId)?.Name;
         return issue.Kind switch
         {
-            ScheduleIssueKind.NoTeam => "Aucune équipe n'est affectée",
-            ScheduleIssueKind.TeamOverlap => $"{team} est déjà sur « {other} » à ce moment",
-            ScheduleIssueKind.PredecessorNotFinished => $"Commence avant la fin de « {other} »",
-            ScheduleIssueKind.PredecessorDisabled => $"Le prérequis « {other} » est désactivé",
-            ScheduleIssueKind.DependencyCycle => "Les prérequis forment une boucle",
-            ScheduleIssueKind.OutsideOperation => "Déborde des horaires de l'OP",
-            ScheduleIssueKind.TooManyPlayers => "Effectif maximum dépassé",
+            ScheduleIssueKind.NoTeam => L.T("aucune_equipe_n_est_affectee"),
+            ScheduleIssueKind.TeamOverlap => L.F("x_est_deja_sur_x_a_ce_moment", team, other),
+            ScheduleIssueKind.PredecessorNotFinished => L.F("commence_avant_la_fin_de_x", other),
+            ScheduleIssueKind.PredecessorDisabled => L.F("le_prerequis_x_est_desactive", other),
+            ScheduleIssueKind.DependencyCycle => L.T("les_prerequis_forment_une_boucle"),
+            ScheduleIssueKind.OutsideOperation => L.T("deborde_des_horaires_de_l_op"),
+            ScheduleIssueKind.TooManyPlayers => L.T("effectif_maximum_depasse"),
             ScheduleIssueKind.ItemShortage => FindItem(issue.ItemId ?? Guid.Empty) is { } item
                 ? item.IsConsumable
-                    ? $"Pas assez de « {item.Name} » pour toute l'OP (stock {item.Model.Quantity})"
-                    : $"Pas assez de « {item.Name} » pour les missions simultanées (stock {item.Model.Quantity})"
-                : "Matériel insuffisant",
+                    ? L.F("pas_assez_de_x_pour_toute_l_op_stock_x", item.Name, item.Model.Quantity)
+                    : L.F("pas_assez_de_x_pour_les_missions_simultanees_sto", item.Name, item.Model.Quantity)
+                : L.T("materiel_insuffisant"),
             _ => issue.Kind.ToString(),
         };
     }

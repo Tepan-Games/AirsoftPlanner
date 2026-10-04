@@ -9,6 +9,7 @@ using AirsoftPlanner.Core.Planning;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -28,7 +29,7 @@ public partial class MessageRowViewModel(OrgaMessage message, string audience) :
     public string Audience => audience;
 
     /// <summary>« QG » (ordre en jeu) ou « Orga ».</summary>
-    public string Sender => message.Sender == MessageSender.Hq ? "QG" : "Orga";
+    public string Sender => message.Sender == MessageSender.Hq ? "QG" : L.T("orga_2");
 
     public string Text => message.Text;
 
@@ -56,7 +57,7 @@ public class DiffusionPromptViewModel(TeamViewModel team, DiffusionSuggestion su
     public string Question => question;
 
     /// <summary>« Diffuser » : terminer la mission en cours (s'il y en a une) et diffuser la suivante.</summary>
-    public string AcceptLabel => suggestion.Next is null ? "Terminer" : suggestion.Current is null ? "Diffuser" : "Terminer et diffuser";
+    public string AcceptLabel => suggestion.Next is null ? L.T("terminer") : suggestion.Current is null ? L.T("diffuser") : L.T("terminer_et_diffuser");
 
     public bool CanEndOnly => suggestion.Current is not null && suggestion.Next is not null;
 }
@@ -155,7 +156,7 @@ public partial class DispatchViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is System.IO.IOException or InvalidOperationException or UnauthorizedAccessException)
         {
-            await _dialogs.ShowErrorAsync($"Photo illisible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("photo_illisible_x", ex.Message));
         }
     }
 
@@ -196,7 +197,7 @@ public partial class DispatchViewModel : ViewModelBase
     {
         // Mission en cours au moment de chaque message (regroupement sur le téléphone), puis les plus récents.
         var tagged = MessageHistory.TagMissions(_messages.Where(m => m.IsFor(team.Model)),
-                id => _missions.Missions.FirstOrDefault(m => m.Model.Id == id)?.Name ?? "Mission supprimée")
+                id => _missions.Missions.FirstOrDefault(m => m.Model.Id == id)?.Name ?? L.T("mission_supprimee"))
             .TakeLast(100)
             .ToList();
         var messages = tagged.Select(t => t.Message).ToList();
@@ -284,8 +285,8 @@ public partial class DispatchViewModel : ViewModelBase
             model.CompletedMissionIds = [.. model.CompletedMissionIds, previous.Id];
         model.PublishedMissionId = mission.Id;
         var zone = _terrain.Zones.FirstOrDefault(z => z.Model.Id == mission.ZoneId)?.Name;
-        var text = (previous is not null && previous.Id != mission.Id ? $"Mission « {previous.Name} » terminée. " : "")
-                   + $"Nouvelle mission : {mission.Name} ({MissionTime.Format(mission.StartMinutes)}–{MissionTime.Format(mission.EndMinutes)}"
+        var text = (previous is not null && previous.Id != mission.Id ? L.F("mission_x_terminee", previous.Name) : "")
+                   + L.F("nouvelle_mission_x_x_x", mission.Name, MissionTime.Format(mission.StartMinutes), MissionTime.Format(mission.EndMinutes))
                    + (zone is null ? ")" : $", {zone})");
         AddMessage(text, MessageTarget.Team, model.Id, MessageKind.MissionAssigned, mission.Id, MessageSender.Hq);
     }
@@ -299,7 +300,7 @@ public partial class DispatchViewModel : ViewModelBase
         if (!model.CompletedMissionIds.Contains(current.Id))
             model.CompletedMissionIds = [.. model.CompletedMissionIds, current.Id];
         model.PublishedMissionId = null;
-        AddMessage($"Mission « {current.Name} » terminée. Attendez les ordres.", MessageTarget.Team, model.Id,
+        AddMessage(L.F("mission_x_terminee_attendez_les_ordres", current.Name), MessageTarget.Team, model.Id,
             MessageKind.MissionEnded, current.Id, MessageSender.Hq);
     }
 
@@ -367,14 +368,14 @@ public partial class DispatchViewModel : ViewModelBase
 
     private string Question(TeamViewModel team, DiffusionSuggestion s, double now)
     {
-        string When(Mission m) => m.StartMinutes > now ? $"début {MissionTime.Format(m.StartMinutes)}" : $"prévue depuis {MissionTime.Format(m.StartMinutes)}";
+        string When(Mission m) => m.StartMinutes > now ? L.F("debut_x", MissionTime.Format(m.StartMinutes)) : L.F("prevue_depuis_x", MissionTime.Format(m.StartMinutes));
         if (s.Current is { } running && s.Next is { } urgent && _urgent.ContainsKey(team.Model.Id))
-            return $"{team.Name} : mission urgente « {urgent.Name} » — la diffuser maintenant (« {running.Name} » sera terminée) ?";
+            return L.F("x_mission_urgente_x_la_diffuser_maintenant_x_ser", team.Name, urgent.Name, running.Name);
         return (s.Current, s.Next) switch
         {
-            ({ } current, { } next) => $"{team.Name} : « {current.Name} » devait finir à {MissionTime.Format(current.EndMinutes)}. Terminer et diffuser « {next.Name} » ({When(next)}) ?",
-            ({ } current, null) => $"{team.Name} : « {current.Name} » devait finir à {MissionTime.Format(current.EndMinutes)} (dernière mission). La terminer ?",
-            (null, { } next) => $"{team.Name} : diffuser la mission « {next.Name} » ({When(next)}) ?",
+            ({ } current, { } next) => L.F("x_x_devait_finir_a_x_terminer_et_diffuser_x_x", team.Name, current.Name, MissionTime.Format(current.EndMinutes), next.Name, When(next)),
+            ({ } current, null) => L.F("x_x_devait_finir_a_x_derniere_mission_la_termine", team.Name, current.Name, MissionTime.Format(current.EndMinutes)),
+            (null, { } next) => L.F("x_diffuser_la_mission_x_x", team.Name, next.Name, When(next)),
             _ => "",
         };
     }
@@ -401,20 +402,20 @@ public partial class DispatchViewModel : ViewModelBase
 
     private string AudienceOf(OrgaMessage message) => message.Target switch
     {
-        MessageTarget.Faction => $"Faction {_factions.Items.FirstOrDefault(f => f.Model.Id == message.TargetId)?.Name ?? "?"}",
-        MessageTarget.Team => _teams.Items.FirstOrDefault(t => t.Model.Id == message.TargetId)?.Name ?? "Équipe supprimée",
-        _ => "Toutes les équipes",
+        MessageTarget.Faction => L.F("faction_x", _factions.Items.FirstOrDefault(f => f.Model.Id == message.TargetId)?.Name ?? "?"),
+        MessageTarget.Team => _teams.Items.FirstOrDefault(t => t.Model.Id == message.TargetId)?.Name ?? L.T("equipe_supprimee"),
+        _ => L.T("toutes_les_equipes"),
     };
 
     private void RefreshTargets()
     {
         var selected = SelectedTarget;
         Targets.Clear();
-        Targets.Add(new MessageTargetOption(MessageTarget.AllTeams, null, "Toutes les équipes"));
+        Targets.Add(new MessageTargetOption(MessageTarget.AllTeams, null, L.T("toutes_les_equipes")));
         foreach (var faction in _factions.Items)
-            Targets.Add(new MessageTargetOption(MessageTarget.Faction, faction.Model.Id, $"Faction {faction.Name}"));
+            Targets.Add(new MessageTargetOption(MessageTarget.Faction, faction.Model.Id, L.F("faction_x", faction.Name)));
         foreach (var team in _teams.Items)
-            Targets.Add(new MessageTargetOption(MessageTarget.Team, team.Model.Id, $"Équipe {team.Name}"));
+            Targets.Add(new MessageTargetOption(MessageTarget.Team, team.Model.Id, L.F("equipe_x", team.Name)));
         SelectedTarget = Targets.FirstOrDefault(t => selected is not null && t.Target == selected.Target && t.Id == selected.Id) ?? Targets[0];
     }
 
@@ -433,10 +434,10 @@ public partial class DispatchViewModel : ViewModelBase
             var targeted = _teams.Items.Where(t => row.Model.IsFor(t.Model)).ToList();
             var received = _delivered.GetValueOrDefault(row.Model.Id) ?? [];
             var waiting = targeted.Where(t => !received.Contains(t.Model.Id)).Select(t => t.Name).ToList();
-            row.Delivery = targeted.Count == 0 ? "aucune équipe"
-                : waiting.Count == 0 ? "✔ reçu par toutes les équipes visées"
-                : waiting.Count == targeted.Count ? "en attente (aucun téléphone n'a encore reçu)"
-                : $"reçu par {targeted.Count - waiting.Count}/{targeted.Count} · en attente : {string.Join(", ", waiting.Take(6))}{(waiting.Count > 6 ? "…" : "")}";
+            row.Delivery = targeted.Count == 0 ? L.T("aucune_equipe")
+                : waiting.Count == 0 ? L.T("recu_par_toutes_les_equipes_visees")
+                : waiting.Count == targeted.Count ? L.T("en_attente_aucun_telephone_n_a_encore_recu")
+                : L.F("recu_par_x_x_en_attente_x_x", targeted.Count - waiting.Count, targeted.Count, string.Join(", ", waiting.Take(6)), (waiting.Count > 6 ? "…" : ""));
         }
     }
 
@@ -452,7 +453,7 @@ public partial class DispatchViewModel : ViewModelBase
         foreach (var row in Teams)
         {
             var current = CurrentOf(row.Team);
-            row.Published = current is null ? "aucune mission diffusée"
+            row.Published = current is null ? L.T("aucune_mission_diffusee")
                 : $"{current.Name} ({MissionTime.Format(current.StartMinutes)}–{MissionTime.Format(current.EndMinutes)})";
             var missions = _missions.Missions
                 .Where(m => m.Model.IsEnabled && m.Model.TeamIds.Contains(row.Team.Model.Id))

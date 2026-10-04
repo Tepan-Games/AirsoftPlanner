@@ -7,6 +7,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Controls;
 
@@ -41,10 +42,10 @@ public class DetachableHost : ContentControl
             VerticalAlignment = VerticalAlignment.Top,
             ZIndex = 10,
         };
-        ToolTip.SetTip(_detachButton, "Afficher dans une fenêtre séparée (pour un autre écran)");
+        ToolTip.SetTip(_detachButton, L.T("afficher_dans_une_fenetre_separee_pour_un_autre"));
         _detachButton.Click += (_, _) => Detach();
 
-        var reattach = new Button { Content = "Rattacher", HorizontalAlignment = HorizontalAlignment.Center };
+        var reattach = new Button { Content = L.T("rattacher"), HorizontalAlignment = HorizontalAlignment.Center };
         reattach.Click += (_, _) => _window?.Close();
         _placeholder = new Border
         {
@@ -56,7 +57,7 @@ public class DetachableHost : ContentControl
                 Spacing = 8,
                 Children =
                 {
-                    new TextBlock { Text = "Affiché dans une fenêtre séparée", Opacity = 0.7, HorizontalAlignment = HorizontalAlignment.Center },
+                    new TextBlock { Text = L.T("affiche_dans_une_fenetre_separee"), Opacity = 0.7, HorizontalAlignment = HorizontalAlignment.Center },
                     reattach,
                 },
             },
@@ -89,7 +90,7 @@ public class DetachableHost : ContentControl
         _attached.Children.Add(_placeholder);
         _window = new Window
         {
-            Title = $"{Title} — Airsoft Planner",
+            Title = L.F("x_airsoft_planner", Title),
             Width = Math.Max(600, Bounds.Width),
             Height = Math.Max(400, Bounds.Height),
             DataContext = DataContext,

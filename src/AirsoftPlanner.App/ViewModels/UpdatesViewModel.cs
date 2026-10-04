@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -11,6 +11,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -31,7 +32,7 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
     public bool HasUpdate => Available is not null;
 
     public string Banner => Available is { } release
-        ? $"🔔 {release.Name} est disponible (version installée : {CurrentVersion.ToString(3)})."
+        ? L.F("x_est_disponible_version_installee_x", release.Name, CurrentVersion.ToString(3))
         : "";
 
     [ObservableProperty]
@@ -57,19 +58,19 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
     [RelayCommand]
     private async Task CheckAsync()
     {
-        Status = "Recherche d'une mise à jour…";
+        Status = L.T("recherche_d_une_mise_a_jour");
         var release = await UpdateChecker.GetLatestAsync(Http);
         Status = "";
         if (release is null)
         {
-            await dialogs.ShowInfoAsync("Mises à jour",
-                $"Impossible de connaître la dernière version (pas de connexion Internet, ou dépôt pas encore public).\n\n{UpdateChecker.ProjectUrl}");
+            await dialogs.ShowInfoAsync(L.T("mises_a_jour"),
+                L.F("impossible_de_connaitre_la_derniere_version_pas", UpdateChecker.ProjectUrl));
             return;
         }
 
         if (!UpdateChecker.IsNewer(release, CurrentVersion))
         {
-            await dialogs.ShowInfoAsync("Mises à jour", $"Airsoft Planner est à jour (version {CurrentVersion.ToString(3)}).");
+            await dialogs.ShowInfoAsync(L.T("mises_a_jour"), L.F("airsoft_planner_est_a_jour_version_x", CurrentVersion.ToString(3)));
             return;
         }
 
@@ -121,7 +122,7 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
             Directory.CreateDirectory(folder);
             var zip = Path.Combine(folder, "archive.zip");
 
-            Status = $"Téléchargement de {release.Name}…";
+            Status = L.F("telechargement_de_x", release.Name);
             using (var response = await Http.GetAsync(release.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
@@ -136,14 +137,14 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
                     await target.WriteAsync(buffer.AsMemory(0, n));
                     read += n;
                     if (total is > 0)
-                        Status = $"Téléchargement de {release.Name}… {read * 100 / total:0} %";
+                        Status = L.F("telechargement_de_x_x", release.Name, read * 100 / total);
                 }
             }
 
-            Status = "Préparation de l'installation…";
+            Status = L.T("preparation_de_l_installation");
             await Task.Run(() => ZipFile.ExtractToDirectory(zip, folder));
             var installer = Directory.GetFiles(folder, "Installer.ps1", SearchOption.AllDirectories).FirstOrDefault()
-                            ?? throw new InvalidOperationException("Archive sans programme d'installation.");
+                            ?? throw new InvalidOperationException(L.T("archive_sans_programme_d_installation"));
 
             Process.Start(new ProcessStartInfo("powershell.exe",
                 $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{installer}\" -Relancer")
@@ -157,7 +158,7 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
                                        or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TaskCanceledException)
         {
             Status = "";
-            await dialogs.ShowErrorAsync($"Mise à jour impossible : {ex.Message}\nVous pouvez la télécharger depuis {release.PageUrl}");
+            await dialogs.ShowErrorAsync(L.F("mise_a_jour_impossible_x_vous_pouvez_la_telechar", ex.Message, release.PageUrl));
         }
         finally
         {

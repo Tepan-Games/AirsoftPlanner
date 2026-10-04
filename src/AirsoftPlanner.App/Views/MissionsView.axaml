@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -12,13 +13,13 @@
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button Content="+ Mission" Command="{Binding AddCommand}" />
-                        <Button Content="Dupliquer" Command="{Binding DuplicateCommand}" />
-                        <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
-                        <Button Content="Tout afficher" Click="OnFitClick" />
-                        <Button Content="Gérer un retard…" Command="{Binding OpenDelayCommand}"
-                                ToolTip.Tip="Répercuter le retard de la mission sélectionnée sur la suite du planning" />
-                        <Button Content="Annuler le dernier décalage" Command="{Binding Delay.UndoCommand}"
+                        <Button Content="{l:T mission}" Command="{Binding AddCommand}" />
+                        <Button Content="{l:T dupliquer}" Command="{Binding DuplicateCommand}" />
+                        <Button Content="{l:T supprimer}" Command="{Binding RemoveCommand}" />
+                        <Button Content="{l:T tout_afficher}" Click="OnFitClick" />
+                        <Button Content="{l:T gerer_un_retard}" Command="{Binding OpenDelayCommand}"
+                                ToolTip.Tip="{l:T repercuter_le_retard_de_la_mission_selectionnee}" />
+                        <Button Content="{l:T annuler_le_dernier_decalage}" Command="{Binding Delay.UndoCommand}"
                                 ToolTip.Tip="{Binding Delay.LastApplied}" />
                     </StackPanel>
                     <TextBlock Text="{Binding IssueSummary}" HorizontalAlignment="Right" VerticalAlignment="Center"
@@ -27,7 +28,7 @@
             </Border>
             <views:DelayPanel DockPanel.Dock="Bottom" DataContext="{Binding Delay}" IsVisible="{Binding IsOpen}" />
             <TextBlock DockPanel.Dock="Bottom" Margin="10,4" FontSize="11" Opacity="0.65" TextWrapping="Wrap"
-                       Text="Double-clic : nouvelle mission · Glisser : déplacer (ou changer d'équipe) · Bord bas : durée · Molette : défiler · Ctrl+molette : zoom · Pointillés : mission optionnelle" />
+                       Text="{l:T double_clic_nouvelle_mission_glisser_deplacer_ou}" />
             <controls:TimelineControl x:Name="Timeline"
                                       Columns="{Binding Columns}"
                                       Missions="{Binding Missions}"
@@ -41,14 +42,16 @@
         <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
 
         <!-- Carte toujours visible : terrain, points d'intérêt, matériel des missions, zone de la mission sélectionnée -->
-        <controls:DetachableHost Grid.Column="2" Title="Carte de l'organisation">
+        <controls:DetachableHost Grid.Column="2" Title="{l:T carte_de_l_organisation}">
             <controls:DetachableHost.Panel>
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="8,3">
                         <StackPanel Orientation="Horizontal" Spacing="14">
-                            <CheckBox Content="Quadrillage" IsChecked="{Binding Terrain.ShowUtmGrid}" />
-                            <TextBlock Text="{Binding Selected.ZoneName, FallbackValue='', StringFormat='Zone de la mission : {0}'}"
-                                       VerticalAlignment="Center" FontSize="12" Opacity="0.8" IsVisible="{Binding HasSelection}" />
+                            <CheckBox Content="{l:T quadrillage}" IsChecked="{Binding Terrain.ShowUtmGrid}" />
+                            <TextBlock VerticalAlignment="Center" FontSize="12" Opacity="0.8" IsVisible="{Binding HasSelection}">
+                                <Run Text="{l:T zone_de_la_mission}" />
+                                <Run Text="{Binding Selected.ZoneName, FallbackValue=''}" />
+                            </TextBlock>
                         </StackPanel>
                     </Border>
                     <controls:TerrainMapControl Layer="{Binding Terrain.SelectedLayer}"
@@ -66,25 +69,25 @@
         <Border Grid.Column="3" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <Panel>
                 <TextBlock IsVisible="{Binding !HasSelection}" Margin="16" TextWrapping="Wrap" Opacity="0.7"
-                           Text="Sélectionnez une mission sur la frise, ou double-cliquez dans la colonne d'une équipe pour en créer une." />
+                           Text="{l:T selectionnez_une_mission_sur_la_frise_ou_double}" />
                 <ScrollViewer IsVisible="{Binding HasSelection}">
                     <StackPanel Margin="14" Spacing="8">
-                        <TextBlock Text="Mission" Classes="h1" />
+                        <TextBlock Text="{l:T mission_2}" Classes="h1" />
                         <Border IsVisible="{Binding Selected.HasIssues, FallbackValue=False}" Background="#FFEBEE"
                                 CornerRadius="4" Padding="8">
                             <TextBlock Text="{Binding Selected.IssuesText, FallbackValue=''}" Foreground="#B71C1C"
                                        TextWrapping="Wrap" />
                         </Border>
-                        <TextBlock Text="Nom" Classes="label" />
+                        <TextBlock Text="{l:T nom}" Classes="label" />
                         <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
 
                         <Grid ColumnDefinitions="*,12,*">
                             <StackPanel Spacing="10">
-                                <TextBlock Text="Début" Classes="label" />
+                                <TextBlock Text="{l:T debut}" Classes="label" />
                                 <TextBox Text="{Binding Selected.StartText, FallbackValue=''}" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="10">
-                                <TextBlock Text="Durée (min)" Classes="label" />
+                                <TextBlock Text="{l:T duree_min}" Classes="label" />
                                 <NumericUpDown Value="{Binding Selected.DurationMinutes, FallbackValue=30}" Minimum="5"
                                                Maximum="1440" Increment="5" FormatString="0" />
                             </StackPanel>
@@ -92,15 +95,15 @@
                         <TextBlock Text="{Binding Selected.TimeRangeText, FallbackValue=''}" FontSize="12" Opacity="0.7" />
 
                         <StackPanel Orientation="Horizontal" Spacing="16">
-                            <CheckBox Content="Essentielle" IsChecked="{Binding Selected.IsEssential, FallbackValue=True}"
-                                      ToolTip.Tip="Une mission non essentielle peut être désactivée pour rattraper un retard" />
-                            <CheckBox Content="Activée" IsChecked="{Binding Selected.IsEnabled, FallbackValue=True}" />
+                            <CheckBox Content="{l:T essentielle}" IsChecked="{Binding Selected.IsEssential, FallbackValue=True}"
+                                      ToolTip.Tip="{l:T une_mission_non_essentielle_peut_etre_desactivee}" />
+                            <CheckBox Content="{l:T activee}" IsChecked="{Binding Selected.IsEnabled, FallbackValue=True}" />
                         </StackPanel>
 
-                        <TextBlock Text="Zone" Classes="label" />
+                        <TextBlock Text="{l:T zone}" Classes="label" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <ComboBox ItemsSource="{Binding Zones}" SelectedItem="{Binding Selected.Zone, FallbackValue={x:Null}}"
-                                      PlaceholderText="Aucune zone" MinWidth="230">
+                                      PlaceholderText="{l:T aucune_zone}" MinWidth="230">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ZoneViewModel">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -111,15 +114,15 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Content="Retirer" Command="{Binding ClearZoneCommand}" />
+                            <Button Content="{l:T retirer}" Command="{Binding ClearZoneCommand}" />
                         </StackPanel>
 
                         <TextBlock IsVisible="{Binding Selected.HasMissionPoints, FallbackValue=False}" TextWrapping="Wrap" FontSize="12"
-                                   ToolTip.Tip="Points dont la visibilité est « pendant une mission » (onglet Terrain &amp; zones) : envoyés aux téléphones seulement pendant cette mission">
-                            <Run Text="Points diffusés avec la mission :" FontWeight="SemiBold" />
+                                   ToolTip.Tip="{l:T points_dont_la_visibilite_est_pendant_une_missio}">
+                            <Run Text="{l:T points_diffuses_avec_la_mission}" FontWeight="SemiBold" />
                             <Run Text="{Binding Selected.MissionPoints, FallbackValue=''}" />
                         </TextBlock>
-                        <TextBlock Text="Équipes" Classes="label" />
+                        <TextBlock Text="{l:T equipes}" Classes="label" />
                         <ItemsControl ItemsSource="{Binding TeamChoices}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TeamChoiceViewModel">
@@ -136,13 +139,13 @@
 
                         <TextBlock Text="{Binding Selected.PlayersText, FallbackValue=''}" FontSize="12" Opacity="0.75" />
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <CheckBox Content="Effectif maximum" IsChecked="{Binding Selected.HasMaxPlayers, FallbackValue=False}" />
+                            <CheckBox Content="{l:T effectif_maximum}" IsChecked="{Binding Selected.HasMaxPlayers, FallbackValue=False}" />
                             <NumericUpDown Value="{Binding Selected.MaxPlayers, FallbackValue={x:Null}}" Minimum="1" Maximum="5000"
                                            Increment="1" FormatString="0" Width="130"
                                            IsEnabled="{Binding Selected.HasMaxPlayers, FallbackValue=False}" />
                         </StackPanel>
 
-                        <TextBlock Text="Matériel de jeu utilisé" Classes="label" />
+                        <TextBlock Text="{l:T materiel_de_jeu_utilise}" Classes="label" />
                         <ItemsControl ItemsSource="{Binding Selected.ItemUses, FallbackValue={x:Null}}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:MissionItemUseViewModel">
@@ -150,7 +153,7 @@
                                         <TextBlock Text="{Binding Item.Name}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
                                         <NumericUpDown Grid.Column="1" Value="{Binding Quantity}" Minimum="1" Maximum="1000"
                                                        Increment="1" FormatString="0" Width="110" Margin="6,0" />
-                                        <Button Grid.Column="2" Content="✕" ToolTip.Tip="Retirer de la mission"
+                                        <Button Grid.Column="2" Content="✕" ToolTip.Tip="{l:T retirer_de_la_mission}"
                                                 Command="{Binding $parent[UserControl].((vm:MissionsViewModel)DataContext).RemoveItemCommand}"
                                                 CommandParameter="{Binding}" />
                                     </Grid>
@@ -159,23 +162,24 @@
                         </ItemsControl>
                         <Grid ColumnDefinitions="*,Auto,Auto">
                             <ComboBox ItemsSource="{Binding GameItems}" SelectedItem="{Binding ItemToAdd}"
-                                      PlaceholderText="Choisir un élément…" HorizontalAlignment="Stretch">
+                                      PlaceholderText="{l:T choisir_un_element}" HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:GameItemViewModel">
                                         <TextBlock>
                                             <Run Text="{Binding Name}" />
-                                            <Run Text="{Binding Quantity, StringFormat='(stock {0})'}" FontSize="11" />
+                                            <Run Text="(" FontSize="11" /><Run Text="{l:T stock}" FontSize="11" />
+                                            <Run Text="{Binding Quantity}" FontSize="11" /><Run Text=")" FontSize="11" />
                                         </TextBlock>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
                             <NumericUpDown Grid.Column="1" Value="{Binding ItemToAddQuantity}" Minimum="1" Maximum="1000"
                                            Increment="1" FormatString="0" Width="110" Margin="6,0" />
-                            <Button Grid.Column="2" Content="Ajouter" Command="{Binding AddItemCommand}" />
+                            <Button Grid.Column="2" Content="{l:T ajouter}" Command="{Binding AddItemCommand}" />
                         </Grid>
 
-                        <TextBlock Text="Prérequis (missions à terminer avant)" Classes="label" />
-                        <TextBlock IsVisible="{Binding !PredecessorChoices.Count}" Text="Aucune autre mission." FontSize="12" Opacity="0.6" />
+                        <TextBlock Text="{l:T prerequis_missions_a_terminer_avant}" Classes="label" />
+                        <TextBlock IsVisible="{Binding !PredecessorChoices.Count}" Text="{l:T aucune_autre_mission}" FontSize="12" Opacity="0.6" />
                         <ItemsControl ItemsSource="{Binding PredecessorChoices}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:PredecessorChoiceViewModel">
@@ -189,7 +193,7 @@
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
 
-                        <TextBlock Text="Briefing (objectif, consignes, conditions de réussite)" Classes="label" />
+                        <TextBlock Text="{l:T briefing_objectif_consignes_conditions_de_reussi}" Classes="label" />
                         <TextBox Text="{Binding Selected.Description, FallbackValue=''}" AcceptsReturn="True"
                                  TextWrapping="Wrap" MinHeight="140" />
                     </StackPanel>

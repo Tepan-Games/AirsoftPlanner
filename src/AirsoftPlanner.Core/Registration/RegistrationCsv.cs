@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text;
 
 namespace AirsoftPlanner.Core.Registration;
@@ -39,7 +39,7 @@ public static class RegistrationCsv
 
         var columns = MapHeaders(lines[0]);
         if (!columns.ContainsKey("team"))
-            throw new FormatException("Colonne « Équipe » introuvable dans l'en-tête du fichier.");
+            throw new FormatException(AirsoftPlanner.Core.Localization.L.T("colonne_equipe_introuvable"));
 
         string Field(IReadOnlyList<string> row, string key) =>
             columns.TryGetValue(key, out var index) && index < row.Count ? row[index].Trim() : "";

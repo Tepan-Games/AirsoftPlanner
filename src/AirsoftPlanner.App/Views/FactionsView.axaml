@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:app="using:AirsoftPlanner.App"
@@ -15,8 +16,8 @@
     <Grid ColumnDefinitions="300,*">
         <DockPanel Margin="12">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Content="Ajouter" Command="{Binding AddCommand}" />
-                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+                <Button Content="{l:T ajouter}" Command="{Binding AddCommand}" />
+                <Button Content="{l:T supprimer}" Command="{Binding RemoveCommand}" />
             </StackPanel>
             <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
                 <ListBox.ItemTemplate>
@@ -36,53 +37,53 @@
         </DockPanel>
 
         <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24"
-                   Text="Ajoutez les camps de l'OP (ex. OTAN / Insurgés), puis rattachez-y les équipes." />
+                   Text="{l:T ajoutez_les_camps_de_l_op_ex_otan_insurges_puis}" />
 
         <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
             <StackPanel DataContext="{Binding Selected}" x:DataType="vm:FactionViewModel"
                         Margin="24" MaxWidth="620" HorizontalAlignment="Left" Spacing="12">
-                <TextBlock Text="Faction" Classes="h1" />
-                <TextBlock Text="Nom" Classes="label" />
+                <TextBlock Text="{l:T faction}" Classes="h1" />
+                <TextBlock Text="{l:T nom}" Classes="label" />
                 <TextBox Text="{Binding Name}" />
-                <TextBlock Text="Couleur (carte, frise)" Classes="label" />
+                <TextBlock Text="{l:T couleur_carte_frise}" Classes="label" />
                 <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding Color}" Width="120"
                           ItemTemplate="{StaticResource ColorSwatch}" />
 
-                <TextBlock Text="Effectif" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="{l:T effectif}" Classes="h2" Margin="0,8,0,0" />
                 <StackPanel Orientation="Horizontal" Spacing="16">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Minimum (0 = aucun)" Classes="label" />
+                        <TextBlock Text="{l:T minimum_0_aucun}" Classes="label" />
                         <NumericUpDown Value="{Binding MinPlayers}" Minimum="0" Maximum="5000" Increment="1" FormatString="0" Width="150" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Maximum (0 = sans limite)" Classes="label" />
+                        <TextBlock Text="{l:T maximum_0_sans_limite}" Classes="label" />
                         <NumericUpDown Value="{Binding MaxPlayers}" Minimum="0" Maximum="5000" Increment="1" FormatString="0" Width="150" />
                     </StackPanel>
                 </StackPanel>
                 <TextBlock Text="{Binding StaffingText}" TextWrapping="Wrap" Classes.warning="{Binding HasStaffingIssue}" />
 
-                <TextBlock Text="Identification" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="{l:T identification}" Classes="h2" Margin="0,8,0,0" />
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <CheckBox Content="Brassard" IsChecked="{Binding HasArmband}" />
+                    <CheckBox Content="{l:T brassard}" IsChecked="{Binding HasArmband}" />
                     <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding ArmbandColor}" Width="120"
                               IsEnabled="{Binding HasArmband}" ItemTemplate="{StaticResource ColorSwatch}" />
                 </StackPanel>
-                <TextBlock Text="Tenue / camouflage imposé (vide = libre)" Classes="label" />
-                <TextBox Text="{Binding Uniform}" PlaceholderText="ex. Multicam, CE, Flecktarn, tenue civile…" />
+                <TextBlock Text="{l:T tenue_camouflage_impose_vide_libre}" Classes="label" />
+                <TextBox Text="{Binding Uniform}" PlaceholderText="{l:T ex_multicam_ce_flecktarn_tenue_civile}" />
 
-                <TextBlock Text="Commandement et radio" Classes="h2" Margin="0,8,0,0" />
-                <TextBlock Text="Équipe chef de faction" Classes="label" />
+                <TextBlock Text="{l:T commandement_et_radio}" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="{l:T equipe_chef_de_faction}" Classes="label" />
                 <ComboBox ItemsSource="{Binding Teams}" SelectedItem="{Binding CommandTeam}" MinWidth="260"
-                          PlaceholderText="Aucune (rattachez d'abord des équipes)">
+                          PlaceholderText="{l:T aucune_rattachez_d_abord_des_equipes}">
                     <ComboBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:TeamViewModel">
                             <TextBlock Text="{Binding Name}" />
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
-                <TextBlock Text="Fréquence radio de commandement (faction)" Classes="label" />
-                <TextBox Text="{Binding RadioFrequency}" PlaceholderText="ex. PMR 446 canal 1 / 446.00625 MHz" />
-                <TextBlock Text="Fréquences des équipes" Classes="label" />
+                <TextBlock Text="{l:T frequence_radio_de_commandement_faction}" Classes="label" />
+                <TextBox Text="{Binding RadioFrequency}" PlaceholderText="{l:T ex_pmr_446_canal_1_446_00625_mhz}" />
+                <TextBlock Text="{l:T frequences_des_equipes}" Classes="label" />
                 <ItemsControl ItemsSource="{Binding Teams}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:TeamViewModel">
@@ -95,7 +96,7 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="Description, objectifs généraux, background" Classes="label" />
+                <TextBlock Text="{l:T description_objectifs_generaux_background}" Classes="label" />
                 <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="120" />
             </StackPanel>
         </ScrollViewer>

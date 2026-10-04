@@ -3,6 +3,7 @@ using AirsoftPlanner.Core.Gps;
 using Android.Content;
 using Android.Graphics;
 using Android.Views;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Mobile;
 
@@ -89,7 +90,7 @@ public class MapCanvasView(Context context) : View(context)
         if (_bitmap is null || _map is null)
         {
             canvas.DrawColor(_nightMode ? Color.Black : Color.Rgb(43, 47, 51));
-            canvas.DrawText("Carte en cours de téléchargement…", 24, 60, _textPaint);
+            canvas.DrawText(L.T("carte_en_cours_de_telechargement"), 24, 60, _textPaint);
             return;
         }
 
@@ -133,7 +134,7 @@ public class MapCanvasView(Context context) : View(context)
             var t = ToScreen(target);
             _targetPaint.SetStyle(Paint.Style.Stroke);
             canvas.DrawCircle(t.X, t.Y, 34, _targetPaint);
-            Label(canvas, "Mission", t.X, t.Y - 46);
+            Label(canvas, L.T("mission_2"), t.X, t.Y - 46);
         }
 
         foreach (var ally in _allies)
@@ -150,7 +151,7 @@ public class MapCanvasView(Context context) : View(context)
         {
             var o = ToScreen(own);
             Dot(canvas, o, _ownPaint);
-            Label(canvas, Prefs.Team.Length > 0 ? Prefs.Team : "Vous", o.X, o.Y - 34);
+            Label(canvas, Prefs.Team.Length > 0 ? Prefs.Team : L.T("vous"), o.X, o.Y - 34);
         }
     }
 

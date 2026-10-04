@@ -1,53 +1,54 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              x:Class="AirsoftPlanner.App.Views.GeneralView"
              x:DataType="vm:OperationViewModel">
     <ScrollViewer>
         <StackPanel Margin="24" MaxWidth="640" HorizontalAlignment="Left" Spacing="12">
-            <TextBlock Text="Informations générales" Classes="h1" />
-            <TextBlock Text="Nom de l'OP" Classes="label" />
+            <TextBlock Text="{l:T informations_generales}" Classes="h1" />
+            <TextBlock Text="{l:T nom_de_l_op}" Classes="label" />
             <TextBox Text="{Binding Name}" />
-            <TextBlock Text="Organisé par (équipe ou association)" Classes="label" />
-            <TextBox Text="{Binding OrganizerName}" PlaceholderText="ex. Association Airsoft du Gâtinais" />
-            <TextBlock Text="Terrain / lieu" Classes="label" />
+            <TextBlock Text="{l:T organise_par_equipe_ou_association}" Classes="label" />
+            <TextBox Text="{Binding OrganizerName}" PlaceholderText="{l:T ex_association_airsoft_du_gatinais}" />
+            <TextBlock Text="{l:T terrain_lieu}" Classes="label" />
             <TextBox Text="{Binding Location}" />
             <Grid ColumnDefinitions="Auto,12,Auto" RowDefinitions="Auto,Auto,Auto,Auto">
-                <TextBlock Text="Date de début" Classes="label" />
-                <TextBlock Grid.Column="2" Text="Heure de début" Classes="label" />
+                <TextBlock Text="{l:T date_de_debut}" Classes="label" />
+                <TextBlock Grid.Column="2" Text="{l:T heure_de_debut}" Classes="label" />
                 <CalendarDatePicker Grid.Row="1" SelectedDate="{Binding StartDate}" Margin="0,10,0,0"
-                                    ToolTip.Tip="Changer la date de début déplace toute l'OP, missions comprises" />
+                                    ToolTip.Tip="{l:T changer_la_date_de_debut_deplace_toute_l_op_miss}" />
                 <TextBox Grid.Row="1" Grid.Column="2" Text="{Binding StartTimeText}" Width="100" Margin="0,10,0,0" />
-                <TextBlock Grid.Row="2" Text="Date de fin" Classes="label" Margin="0,14,0,-6" />
-                <TextBlock Grid.Row="2" Grid.Column="2" Text="Heure de fin" Classes="label" Margin="0,14,0,-6" />
+                <TextBlock Grid.Row="2" Text="{l:T date_de_fin}" Classes="label" Margin="0,14,0,-6" />
+                <TextBlock Grid.Row="2" Grid.Column="2" Text="{l:T heure_de_fin}" Classes="label" Margin="0,14,0,-6" />
                 <CalendarDatePicker Grid.Row="3" SelectedDate="{Binding EndDate}" Margin="0,10,0,0" />
                 <TextBox Grid.Row="3" Grid.Column="2" Text="{Binding EndTimeText}" Width="100" Margin="0,10,0,0" />
             </Grid>
             <TextBlock Text="{Binding DurationText}" Opacity="0.7" />
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <StackPanel Spacing="10">
-                    <TextBlock Text="Fréquence radio de l'orga" Classes="label" />
-                    <TextBox Text="{Binding OrgaRadioFrequency}" Width="200" PlaceholderText="ex. PMR 446 canal 8" />
+                    <TextBlock Text="{l:T frequence_radio_de_l_orga}" Classes="label" />
+                    <TextBox Text="{Binding OrgaRadioFrequency}" Width="200" PlaceholderText="{l:T ex_pmr_446_canal_8}" />
                 </StackPanel>
                 <StackPanel Spacing="10">
-                    <TextBlock Text="Numéro d'urgence de l'orga" Classes="label" />
-                    <TextBox Text="{Binding EmergencyPhone}" Width="200" PlaceholderText="ex. 06 00 00 00 00" />
+                    <TextBlock Text="{l:T numero_d_urgence_de_l_orga}" Classes="label" />
+                    <TextBox Text="{Binding EmergencyPhone}" Width="200" PlaceholderText="{l:T ex_06_00_00_00_00}" />
                 </StackPanel>
             </StackPanel>
-            <TextBlock Text="Vitesses estimées (km/h), pour estimer les retards" Classes="label" />
+            <TextBlock Text="{l:T vitesses_estimees_km_h_pour_estimer_les_retards}" Classes="label" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="À pied" VerticalAlignment="Center" />
+                <TextBlock Text="{l:T a_pied}" VerticalAlignment="Center" />
                 <NumericUpDown Value="{Binding WalkingSpeedKmh}" Minimum="0.5" Maximum="20" Increment="0.5"
                                FormatString="0.0" Width="140" />
-                <TextBlock Text="En véhicule" VerticalAlignment="Center" Margin="16,0,0,0" />
+                <TextBlock Text="{l:T en_vehicule}" VerticalAlignment="Center" Margin="16,0,0,0" />
                 <NumericUpDown Value="{Binding VehicleSpeedKmh}" Minimum="1" Maximum="120" Increment="5"
                                FormatString="0" Width="140"
-                               ToolTip.Tip="Utilisée pour les équipes qui ont un véhicule « en jeu » (onglet Équipes)" />
+                               ToolTip.Tip="{l:T utilisee_pour_les_equipes_qui_ont_un_vehicule_en}" />
             </StackPanel>
-            <TextBlock Text="Format des coordonnées dans les documents imprimés (l'affichage à l'écran se règle dans la barre du haut)" TextWrapping="Wrap" Classes="label" />
+            <TextBlock Text="{l:T format_des_coordonnees_dans_les_documents_imprim}" TextWrapping="Wrap" Classes="label" />
             <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
                       MinWidth="320" />
-            <TextBlock Text="Description / contexte" Classes="label" />
+            <TextBlock Text="{l:T description_contexte}" Classes="label" />
             <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
         </StackPanel>
     </ScrollViewer>

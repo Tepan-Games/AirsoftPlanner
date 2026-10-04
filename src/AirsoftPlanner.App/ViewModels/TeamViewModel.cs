@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Registration;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -115,7 +116,7 @@ public class TeamViewModel : ViewModelBase
 
     public string EnrollmentCodeText => _team.EnrollmentCode.Length == 0 ? "—" : Core.Gps.EnrollmentCodes.Format(_team.EnrollmentCode);
 
-    public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : "📻 fréquence non définie";
+    public string RadioFrequencyLabel => _team.RadioFrequency.Length > 0 ? $"📻 {_team.RadioFrequency}" : L.T("frequence_non_definie");
 
     /// <summary>Effectif annoncé à l'inscription (les membres peuvent n'être saisis qu'en partie).</summary>
     public decimal? PlayerCount
@@ -137,20 +138,20 @@ public class TeamViewModel : ViewModelBase
 
     public string SizeText => Members.Count switch
     {
-        0 => $"{_team.PlayerCount} joueur(s) annoncé(s)",
-        var count when count < _team.PlayerCount => $"{_team.PlayerCount} joueur(s) annoncé(s), {count} renseigné(s)",
-        var count => $"{count} joueur(s)",
+        0 => L.F("x_joueur_s_annonce_s", _team.PlayerCount),
+        var count when count < _team.PlayerCount => L.F("x_joueur_s_annonce_s_x_renseigne_s", _team.PlayerCount, count),
+        var count => L.F("x_joueur_s", count),
     };
 
     public MemberViewModel? Leader => Members.FirstOrDefault(m => m.IsLeader);
 
     public string LeaderText => Leader is { } leader
         ? $"{leader.DisplayName}{(leader.Phone.Length > 0 ? " · " + leader.Phone : "")}"
-        : "Pas de chef d'équipe désigné";
+        : L.T("pas_de_chef_d_equipe_designe");
 
     public string VehicleSummary => Vehicles.Count == 0
-        ? "Pas de véhicule"
-        : string.Join(", ", Vehicles.Select(v => $"{v.Quantity} × {(v.Kind.Length > 0 ? v.Kind : "véhicule")}"));
+        ? L.T("pas_de_vehicule")
+        : string.Join(", ", Vehicles.Select(v => $"{v.Quantity} × {(v.Kind.Length > 0 ? v.Kind : L.T("vehicule_2"))}"));
 
     public string Notes
     {

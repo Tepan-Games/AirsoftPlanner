@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
 using AirsoftPlanner.Core.Domain;
 
@@ -19,15 +19,18 @@ public enum CoordinateFormat
 /// <summary>Affichage et saisie de coordonnées dans tous les formats gérés.</summary>
 public static partial class Coordinates
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
+
+    /// <summary>Ouest : « O » en français, espagnol et italien, « W » sinon.</summary>
+    private static char West => AirsoftPlanner.Core.Localization.L.Code is "fr" or "es" or "it" ? 'O' : 'W';
 
     public static string Format(GeoPoint point, CoordinateFormat format) => format switch
     {
         CoordinateFormat.DecimalDegrees => string.Format(French, "{0:0.000000}° {1}, {2:0.000000}° {3}",
             Math.Abs(point.Latitude), point.Latitude >= 0 ? 'N' : 'S',
-            Math.Abs(point.Longitude), point.Longitude >= 0 ? 'E' : 'O'),
+            Math.Abs(point.Longitude), point.Longitude >= 0 ? 'E' : West),
         CoordinateFormat.DegreesMinutesSeconds =>
-            $"{FormatDms(point.Latitude, 'N', 'S')} {FormatDms(point.Longitude, 'E', 'O')}",
+            $"{FormatDms(point.Latitude, 'N', 'S')} {FormatDms(point.Longitude, 'E', West)}",
         CoordinateFormat.Utm => UtmCoordinate.FromGeo(point).ToString(),
         _ => throw new ArgumentOutOfRangeException(nameof(format)),
     };

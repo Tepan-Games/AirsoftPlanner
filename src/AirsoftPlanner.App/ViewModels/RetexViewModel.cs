@@ -9,6 +9,7 @@ using AirsoftPlanner.App.Services;
 using AirsoftPlanner.Core.Retex;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -66,7 +67,7 @@ public partial class RetexViewModel : ViewModelBase
             _tracking.RecordedItemEvents,
             _tracking.RecordedPlayerEvents,
             minutes => new DateTimeOffset(_operation.ToDateTime(minutes)),
-            id => _items.Items.FirstOrDefault(i => i.Model.Id == id)?.Name ?? "objet supprimé",
+            id => _items.Items.FirstOrDefault(i => i.Model.Id == id)?.Name ?? L.T("objet_supprime"),
             kind => ItemEventOption.Of(kind).Label,
             reason => OutReasonOption.Of(reason).Label);
 
@@ -82,11 +83,11 @@ public partial class RetexViewModel : ViewModelBase
 
         var ended = DateTimeOffset.Now > _file.Operation.EndsAt;
         Status = ended
-            ? $"OP terminée le {_file.Operation.EndsAt.LocalDateTime:dd/MM/yyyy à HH:mm}."
-            : "OP pas encore terminée : bilan provisoire.";
+            ? L.F("op_terminee_le_x", _file.Operation.EndsAt.LocalDateTime)
+            : L.T("op_pas_encore_terminee_bilan_provisoire");
         Summary = $"{_retex.Teams.Sum(t => t.MissionsPublished)}/{_retex.Teams.Sum(t => t.MissionsPlanned)} missions diffusées · "
-                  + $"{_retex.Teams.Sum(t => t.MissionsCompleted)} terminées · {_retex.Teams.Sum(t => t.DistanceKm):0.0} km parcourus · "
-                  + $"{_retex.Timeline.Count} événements";
+                  + L.F("x_terminees_x_km_parcourus", _retex.Teams.Sum(t => t.MissionsCompleted), _retex.Teams.Sum(t => t.DistanceKm))
+                  + L.F("x_evenements", _retex.Timeline.Count);
         GlobalPdfCommand.NotifyCanExecuteChanged();
         AllTeamsPdfCommand.NotifyCanExecuteChanged();
     }
@@ -94,7 +95,7 @@ public partial class RetexViewModel : ViewModelBase
     [RelayCommand(CanExecute = nameof(HasRetex))]
     private async Task GlobalPdfAsync() => await GenerateAsync(folder =>
     {
-        var path = Path.Combine(folder, PackageGenerator.SafeFileName($"RETEX - {_file.Operation.Name}.pdf"));
+        var path = Path.Combine(folder, PackageGenerator.SafeFileName(L.F("retex_x_pdf", _file.Operation.Name)));
         RetexGenerator.WriteGlobal(_retex!, Context(), path);
         return path;
     });
@@ -116,7 +117,7 @@ public partial class RetexViewModel : ViewModelBase
 
     private string WriteTeam(string folder, TeamRetex sheet)
     {
-        var path = Path.Combine(folder, PackageGenerator.SafeFileName($"RETEX - {_file.Operation.Name} - {sheet.Team.Name}.pdf"));
+        var path = Path.Combine(folder, PackageGenerator.SafeFileName(L.F("retex_x_x_pdf", _file.Operation.Name, sheet.Team.Name)));
         RetexGenerator.WriteTeam(sheet, Context(), path);
         return path;
     }
@@ -128,13 +129,13 @@ public partial class RetexViewModel : ViewModelBase
 
     private async Task GenerateAsync(Func<string, string> write)
     {
-        var folder = await _dialogs.PickFolderAsync("Dossier où enregistrer le RETEX", null);
+        var folder = await _dialogs.PickFolderAsync(L.T("dossier_ou_enregistrer_le_retex"), null);
         if (folder is null)
             return;
         try
         {
             var path = await Task.Run(() => write(folder));
-            Status = $"RETEX enregistré : {path}";
+            Status = L.F("retex_enregistre_x", path);
             if (!OperatingSystem.IsWindows() || AppSettings.SuppressOpening)
                 return;
             Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
@@ -142,7 +143,7 @@ public partial class RetexViewModel : ViewModelBase
         catch (Exception ex)
         {
             // Action lancée par l'utilisateur : toute erreur (disque, PDF, image) est signalée sans fermer le logiciel.
-            await _dialogs.ShowErrorAsync($"Génération du RETEX impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("generation_du_retex_impossible_x", ex.Message));
         }
     }
 

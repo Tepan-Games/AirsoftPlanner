@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -8,7 +9,7 @@
             Background="{DynamicResource SystemControlBackgroundAltHighBrush}">
         <DockPanel>
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CloseCommand}" ToolTip.Tip="Fermer sans appliquer" />
+                <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CloseCommand}" ToolTip.Tip="{l:T fermer_sans_appliquer}" />
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="15" VerticalAlignment="Center" />
                     <NumericUpDown Value="{Binding DelayMinutes}" Minimum="5" Maximum="600" Increment="5" FormatString="0" Width="120" />
@@ -17,12 +18,12 @@
             </DockPanel>
             <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,0,0,6" />
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Content="Optimiser (désactiver les optionnelles utiles)" Command="{Binding OptimizeCommand}" />
-                <Button Content="Appliquer au planning" Command="{Binding ApplyCommand}" Classes="accent" />
+                <Button Content="{l:T optimiser_desactiver_les_optionnelles_utiles}" Command="{Binding OptimizeCommand}" />
+                <Button Content="{l:T appliquer_au_planning}" Command="{Binding ApplyCommand}" Classes="accent" />
             </StackPanel>
             <Grid ColumnDefinitions="*,12,*">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Text="Missions décalées" Classes="label" Margin="0,0,0,4" />
+                    <TextBlock DockPanel.Dock="Top" Text="{l:T missions_decalees}" Classes="label" Margin="0,0,0,4" />
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Changes}">
                             <ItemsControl.ItemTemplate>
@@ -41,9 +42,9 @@
                     </ScrollViewer>
                 </DockPanel>
                 <DockPanel Grid.Column="2">
-                    <TextBlock DockPanel.Dock="Top" Text="Missions optionnelles à désactiver pour rattraper" Classes="label" Margin="0,0,0,4" />
+                    <TextBlock DockPanel.Dock="Top" Text="{l:T missions_optionnelles_a_desactiver_pour_rattrape}" Classes="label" Margin="0,0,0,4" />
                     <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !Cuts.Count}" Opacity="0.6" FontSize="12" TextWrapping="Wrap"
-                               Text="Aucune mission optionnelle ne permet de réduire ce retard." />
+                               Text="{l:T aucune_mission_optionnelle_ne_permet_de_reduire}" />
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Cuts}">
                             <ItemsControl.ItemTemplate>

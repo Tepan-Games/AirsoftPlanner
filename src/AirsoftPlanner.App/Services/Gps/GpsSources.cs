@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using MQTTnet;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services.Gps;
 
@@ -125,7 +126,7 @@ public sealed class LocalGpsServer : IAsyncDisposable
             {
                 var position = new GeoPoint(point.Latitude, point.Longitude);
                 if (position.IsValid)
-                    FixReceived?.Invoke(new GpsFix(authorization.Team, position, point.Time, "Appli Android"));
+                    FixReceived?.Invoke(new GpsFix(authorization.Team, position, point.Time, L.T("appli_android")));
             }
 
             return Results.Json(authorization);
@@ -148,10 +149,10 @@ public sealed class LocalGpsServer : IAsyncDisposable
             var team = form["equipe"].ToString();
             var text = form["coordonnees"].ToString();
             if (!TeamNames().Contains(team) || !AirsoftPlanner.Core.Geo.Coordinates.TryParse(text, out var point))
-                return Results.Content(EntryPage("⚠ Équipe ou coordonnées non reconnues (ex. 31U 477439 5361677 ou 48.405, 2.699)."), "text/html; charset=utf-8");
+                return Results.Content(EntryPage(L.T("equipe_ou_coordonnees_non_reconnues_ex_31u_47743")), "text/html; charset=utf-8");
 
-            FixReceived?.Invoke(new GpsFix(team, point, DateTimeOffset.Now, "Saisie web"));
-            return Results.Content(EntryPage($"✔ Position de {WebUtility.HtmlEncode(team)} enregistrée à {DateTime.Now:HH:mm}."), "text/html; charset=utf-8");
+            FixReceived?.Invoke(new GpsFix(team, point, DateTimeOffset.Now, L.T("saisie_web")));
+            return Results.Content(EntryPage(L.F("position_de_x_enregistree_a_x", WebUtility.HtmlEncode(team), DateTime.Now)), "text/html; charset=utf-8");
         });
 
         app.MapPost("/api/positions", async (HttpContext context) =>
@@ -198,17 +199,18 @@ public sealed class LocalGpsServer : IAsyncDisposable
     private string EntryPage(string? message)
     {
         var options = string.Concat(TeamNames().Select(t => $"<option>{WebUtility.HtmlEncode(t)}</option>"));
+        static string H(string key) => WebUtility.HtmlEncode(L.T(key));
         return $$"""
-            <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-            <title>Position d'équipe</title>
+            <!doctype html><html lang="{{L.Code}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+            <title>{{H("web_titre_saisie")}}</title>
             <body style="font-family:sans-serif;padding:16px;max-width:480px;margin:auto">
-            <h2>Envoyer la position de l'équipe</h2>
+            <h2>{{H("web_envoyer_position")}}</h2>
             <p style="font-weight:bold">{{message}}</p>
             <form method="post" action="/saisie">
-              <p><label>Équipe<br><select name="equipe" style="font-size:1.2em;width:100%">{{options}}</select></label></p>
-              <p><label>Coordonnées (UTM ou degrés)<br>
+              <p><label>{{H("equipe")}}<br><select name="equipe" style="font-size:1.2em;width:100%">{{options}}</select></label></p>
+              <p><label>{{H("web_coordonnees_utm_ou_degres")}}<br>
                 <input name="coordonnees" style="font-size:1.2em;width:100%" placeholder="31U 477439 5361677" autocomplete="off"></label></p>
-              <p><button style="font-size:1.2em;width:100%;padding:12px">Envoyer</button></p>
+              <p><button style="font-size:1.2em;width:100%;padding:12px">{{H("envoyer")}}</button></p>
             </form>
             </body></html>
             """;
@@ -224,12 +226,11 @@ public sealed class LocalGpsServer : IAsyncDisposable
         }
 
         // Page d'accueil : vérifier depuis un téléphone que le serveur est joignable.
-        return Results.Content("""
-            <!doctype html><html lang="fr"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+        return Results.Content($$"""
+            <!doctype html><html lang="{{L.Code}}"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
             <title>Airsoft Planner</title><body style="font-family:sans-serif;padding:16px">
-            <h2>Airsoft Planner — réception GPS</h2>
-            <p>Le serveur est joignable. Dans <b>Traccar Client</b>, indiquez cette adresse comme
-            « adresse du serveur » et l'identifiant GPS de votre équipe comme « identifiant de l'appareil ».</p>
+            <h2>{{WebUtility.HtmlEncode(L.T("web_reception_gps"))}}</h2>
+            <p>{{WebUtility.HtmlEncode(L.T("web_serveur_joignable"))}}</p>
             </body></html>
             """, "text/html; charset=utf-8");
     }
@@ -304,7 +305,7 @@ public sealed class OperationServerSource : IDisposable
                         if (last.TryGetValue(p.Team, out var previous) && previous >= p.Time)
                             continue;
                         last[p.Team] = p.Time;
-                        FixReceived?.Invoke(new GpsFix(p.Team, new GeoPoint(p.Latitude, p.Longitude), p.Time, $"PC de l'OP ({p.Source})"));
+                        FixReceived?.Invoke(new GpsFix(p.Team, new GeoPoint(p.Latitude, p.Longitude), p.Time, L.F("pc_de_l_op_x", p.Source)));
                     }
                 }
                 catch (Exception ex) when (ex is HttpRequestException or JsonException or TaskCanceledException && !token.IsCancellationRequested)

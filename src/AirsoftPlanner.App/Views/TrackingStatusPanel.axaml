@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -7,19 +8,19 @@
              x:Class="AirsoftPlanner.App.Views.TrackingStatusPanel"
              x:DataType="vm:TrackingViewModel">
     <TabControl Grid.Row="2" Padding="0">
-    <TabItem Header="Équipes">
+    <TabItem Header="{l:T equipes}">
     <DockPanel>
         <Border DockPanel.Dock="Top" Padding="8,4">
             <WrapPanel>
-                <ToggleButton Margin="0,0,8,4" Content="Placer l'équipe sur la carte" IsChecked="{Binding IsPlacing}"
+                <ToggleButton Margin="0,0,8,4" Content="{l:T placer_l_equipe_sur_la_carte}" IsChecked="{Binding IsPlacing}"
                               IsEnabled="{Binding HasSelection}" />
-                <TextBox Margin="0,0,8,4" Text="{Binding PositionInput}" Width="220" PlaceholderText="ou coordonnées reçues (UTM, degrés…)" />
-                <Button Margin="0,0,8,4" Content="Enregistrer la position" Command="{Binding SetPositionCommand}" />
-                <Button Margin="0,0,8,4" Content="Gérer le retard…" Command="{Binding PlanDelayCommand}"
-                        ToolTip.Tip="Répercuter le retard estimé de l'équipe sur la suite du planning" />
-                <Button Margin="0,0,8,4" Content="⚠ Mission urgente" Command="{Binding CreateUrgentMissionCommand}" Foreground="#C62828"
-                        ToolTip.Tip="Crée tout de suite une mission pour l'équipe sélectionnée, puis cliquez sur la carte pour situer l'intervention" />
-                <TextBlock Margin="0,0,8,4" Text="→ cliquez sur la carte" IsVisible="{Binding IsPlacingUrgent}" Foreground="#C62828"
+                <TextBox Margin="0,0,8,4" Text="{Binding PositionInput}" Width="220" PlaceholderText="{l:T ou_coordonnees_recues_utm_degres}" />
+                <Button Margin="0,0,8,4" Content="{l:T enregistrer_la_position}" Command="{Binding SetPositionCommand}" />
+                <Button Margin="0,0,8,4" Content="{l:T gerer_le_retard}" Command="{Binding PlanDelayCommand}"
+                        ToolTip.Tip="{l:T repercuter_le_retard_estime_de_l_equipe_sur_la_s}" />
+                <Button Margin="0,0,8,4" Content="{l:T mission_urgente}" Command="{Binding CreateUrgentMissionCommand}" Foreground="#C62828"
+                        ToolTip.Tip="{l:T cree_tout_de_suite_une_mission_pour_l_equipe_sel}" />
+                <TextBlock Margin="0,0,8,4" Text="{l:T cliquez_sur_la_carte}" IsVisible="{Binding IsPlacingUrgent}" Foreground="#C62828"
                            VerticalAlignment="Center" FontWeight="SemiBold" />
             </WrapPanel>
         </Border>
@@ -48,10 +49,10 @@
         </ListBox>
     </DockPanel>
     </TabItem>
-    <TabItem Header="Joueurs">
+    <TabItem Header="{l:T joueurs}">
         <DockPanel Margin="8,4">
             <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !HasSelection}" Opacity="0.65"
-                       Text="Sélectionnez une équipe dans l'onglet Équipes." />
+                       Text="{l:T selectionnez_une_equipe_dans_l_onglet_equipes}" />
             <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" FontSize="11" Opacity="0.8" Margin="0,0,0,4">
                 <Run Text="{Binding Selected.Team.Name, FallbackValue=''}" FontWeight="SemiBold" />
                 <Run Text="— " />
@@ -59,12 +60,12 @@
             </TextBlock>
             <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                 <ComboBox ItemsSource="{Binding OutReasons}" SelectedItem="{Binding SelectedOutReason}" MinWidth="170" Margin="0,0,6,4" />
-                <TextBox Text="{Binding OutNotes}" Width="160" PlaceholderText="Précision (facultatif)" Margin="0,0,6,4" />
+                <TextBox Text="{Binding OutNotes}" Width="160" PlaceholderText="{l:T precision_facultatif}" Margin="0,0,6,4" />
                 <NumericUpDown Value="{Binding AnonymousCount}" Minimum="1" Maximum="100" Increment="1" FormatString="0" Width="110"
                                IsVisible="{Binding !SelectedTeamHasMembers}" Margin="0,0,6,4"
-                               ToolTip.Tip="Nombre de joueurs (équipe sans membres saisis)" />
-                <Button Content="Hors jeu" Command="{Binding PlayerOutCommand}" Margin="0,0,6,4" />
-                <Button Content="Retour en jeu" Command="{Binding PlayerBackCommand}" Margin="0,0,6,4" />
+                               ToolTip.Tip="{l:T nombre_de_joueurs_equipe_sans_membres_saisis}" />
+                <Button Content="{l:T hors_jeu}" Command="{Binding PlayerOutCommand}" Margin="0,0,6,4" />
+                <Button Content="{l:T retour_en_jeu}" Command="{Binding PlayerBackCommand}" Margin="0,0,6,4" />
             </WrapPanel>
             <ListBox ItemsSource="{Binding Players}" SelectedItem="{Binding SelectedPlayer}">
                 <ListBox.ItemTemplate>
@@ -78,26 +79,26 @@
             </ListBox>
         </DockPanel>
     </TabItem>
-    <TabItem Header="Messages et missions">
+    <TabItem Header="{l:T messages_et_missions}">
         <ScrollViewer DataContext="{Binding Dispatch}" x:DataType="vm:DispatchViewModel">
             <StackPanel Margin="8,4" Spacing="6">
-                <TextBlock Text="Message aux téléphones des équipes" FontWeight="SemiBold" />
+                <TextBlock Text="{l:T message_aux_telephones_des_equipes}" FontWeight="SemiBold" />
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <RadioButton Content="QG (ordre en jeu)" IsChecked="{Binding ComposeAsHq}" GroupName="sender"
-                                 ToolTip.Tip="Affiché dans la partie principale de l'application, comme un ordre du commandement (roleplay)" />
-                    <RadioButton Content="Orga (organisation, sécurité)" IsChecked="{Binding !ComposeAsHq}" GroupName="sender"
-                                 ToolTip.Tip="Affiché dans la section Orga de l'application, avec les contacts de l'orga" />
+                    <RadioButton Content="{l:T qg_ordre_en_jeu}" IsChecked="{Binding ComposeAsHq}" GroupName="sender"
+                                 ToolTip.Tip="{l:T affiche_dans_la_partie_principale_de_l_applicati}" />
+                    <RadioButton Content="{l:T orga_organisation_securite}" IsChecked="{Binding !ComposeAsHq}" GroupName="sender"
+                                 ToolTip.Tip="{l:T affiche_dans_la_section_orga_de_l_application_av}" />
                 </StackPanel>
                 <DockPanel>
                     <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}" MinWidth="190" Margin="0,0,6,0" />
-                    <Button DockPanel.Dock="Right" Content="Envoyer" Command="{Binding SendCommand}" Margin="6,0,0,0" Classes="accent" />
-                    <Button DockPanel.Dock="Right" Content="📷 Photo…" Command="{Binding AttachPhotoCommand}" Margin="6,0,0,0"
-                            ToolTip.Tip="Joindre une photo (réduite automatiquement pour le Wi-Fi du terrain)" />
-                    <TextBox Text="{Binding ComposeText}" PlaceholderText="ex. Fin de partie à 17 h, retour au PC" AcceptsReturn="False" />
+                    <Button DockPanel.Dock="Right" Content="{l:T envoyer}" Command="{Binding SendCommand}" Margin="6,0,0,0" Classes="accent" />
+                    <Button DockPanel.Dock="Right" Content="{l:T photo}" Command="{Binding AttachPhotoCommand}" Margin="6,0,0,0"
+                            ToolTip.Tip="{l:T joindre_une_photo_reduite_automatiquement_pour_l}" />
+                    <TextBox Text="{Binding ComposeText}" PlaceholderText="{l:T ex_fin_de_partie_a_17_h_retour_au_pc}" AcceptsReturn="False" />
                 </DockPanel>
                 <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasComposePhoto}">
-                    <TextBlock Text="📷 Photo jointe au prochain message" VerticalAlignment="Center" FontSize="12" />
-                    <Button Content="Retirer" Command="{Binding RemovePhotoCommand}" Padding="6,1" FontSize="11" />
+                    <TextBlock Text="{l:T photo_jointe_au_prochain_message}" VerticalAlignment="Center" FontSize="12" />
+                    <Button Content="{l:T retirer}" Command="{Binding RemovePhotoCommand}" Padding="6,1" FontSize="11" />
                 </StackPanel>
                 <ItemsControl ItemsSource="{Binding Messages}">
                     <ItemsControl.ItemTemplate>
@@ -119,9 +120,9 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <TextBlock Text="Missions diffusées aux téléphones" FontWeight="SemiBold" Margin="0,8,0,0" />
+                <TextBlock Text="{l:T missions_diffusees_aux_telephones}" FontWeight="SemiBold" Margin="0,8,0,0" />
                 <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
-                           Text="Le téléphone affiche seulement la mission diffusée par l'orga. Le bandeau « À diffuser » propose de terminer une mission ou de diffuser la suivante au bon moment ; ici, on peut diffuser n'importe quelle mission." />
+                           Text="{l:T le_telephone_affiche_seulement_la_mission_diffus}" />
                 <ItemsControl ItemsSource="{Binding Teams}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:TeamDispatchViewModel">
@@ -135,10 +136,10 @@
                                         </DataTemplate>
                                     </ComboBox.ItemTemplate>
                                 </ComboBox>
-                                <Button Grid.Column="3" Content="Diffuser" Margin="0,0,4,0"
+                                <Button Grid.Column="3" Content="{l:T diffuser}" Margin="0,0,4,0"
                                         Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).PublishSelectedCommand}"
                                         CommandParameter="{Binding}" />
-                                <Button Grid.Column="4" Content="Terminer"
+                                <Button Grid.Column="4" Content="{l:T terminer}"
                                         Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).EndPublishedCommand}"
                                         CommandParameter="{Binding}" />
                             </Grid>
@@ -148,27 +149,27 @@
             </StackPanel>
         </ScrollViewer>
     </TabItem>
-    <TabItem Header="Objets d'objectif">
+    <TabItem Header="{l:T objets_d_objectif}">
         <DockPanel>
             <Border DockPanel.Dock="Top" Padding="8,4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{Binding ItemEventOptions}" SelectedItem="{Binding SelectedItemEvent}" MinWidth="170" />
                     <ComboBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding ItemEventTeam}" MinWidth="140"
-                              IsVisible="{Binding ItemEventNeedsTeam}" PlaceholderText="Équipe…">
+                              IsVisible="{Binding ItemEventNeedsTeam}" PlaceholderText="{l:T equipe_2}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:TeamStatusViewModel">
                                 <TextBlock Text="{Binding Team.Name}" />
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <Button Content="Enregistrer" Command="{Binding RecordItemEventCommand}"
-                            ToolTip.Tip="« Placé » et « Déposé » demandent ensuite un clic sur la carte" />
-                    <TextBlock Text="→ cliquez sur la carte" IsVisible="{Binding IsPlacingItem}" Foreground="#EF6C00"
+                    <Button Content="{l:T enregistrer}" Command="{Binding RecordItemEventCommand}"
+                            ToolTip.Tip="{l:T place_et_depose_demandent_ensuite_un_clic_sur_la}" />
+                    <TextBlock Text="{l:T cliquez_sur_la_carte}" IsVisible="{Binding IsPlacingItem}" Foreground="#EF6C00"
                                VerticalAlignment="Center" FontWeight="SemiBold" />
                 </StackPanel>
             </Border>
             <TextBlock DockPanel.Dock="Top" IsVisible="{Binding !TrackedItems.Count}" Margin="10" Opacity="0.65" TextWrapping="Wrap"
-                       Text="Aucun objet suivi : cochez « Objet d'objectif à suivre » sur les éléments concernés dans l'onglet Matériel de jeu." />
+                       Text="{l:T aucun_objet_suivi_cochez_objet_d_objectif_a_suiv}" />
             <ListBox ItemsSource="{Binding TrackedItems}" SelectedItem="{Binding SelectedItem}">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:TrackedItemViewModel">

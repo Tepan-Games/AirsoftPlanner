@@ -12,6 +12,7 @@ using AirsoftPlanner.Data;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -25,12 +26,12 @@ public record OutReasonOption(OutReason Value, string Label)
 {
     public static IReadOnlyList<OutReasonOption> All { get; } =
     [
-        new(OutReason.RealInjury, "Blessure réelle"),
-        new(OutReason.Rest, "Pause / fatigue"),
-        new(OutReason.Equipment, "Problème de matériel"),
-        new(OutReason.Sanction, "Sanction"),
-        new(OutReason.Abandon, "Abandon / départ"),
-        new(OutReason.Other, "Autre"),
+        new(OutReason.RealInjury, L.T("blessure_reelle")),
+        new(OutReason.Rest, L.T("pause_fatigue")),
+        new(OutReason.Equipment, L.T("probleme_de_materiel")),
+        new(OutReason.Sanction, L.T("sanction")),
+        new(OutReason.Abandon, L.T("abandon_depart")),
+        new(OutReason.Other, L.T("autre")),
     ];
 
     public static OutReasonOption Of(OutReason reason) => All.First(o => o.Value == reason);
@@ -49,11 +50,11 @@ public record PlaybackSpeed(double MinutesPerSecond, string Label)
 {
     public static IReadOnlyList<PlaybackSpeed> All { get; } =
     [
-        new(1 / 60.0, "× 1 (temps réel)"),
+        new(1 / 60.0, L.T("1_temps_reel")),
         new(10 / 60.0, "× 10"),
-        new(1, "× 60 (1 min/s)"),
-        new(5, "× 300 (5 min/s)"),
-        new(15, "× 900 (15 min/s)"),
+        new(1, L.T("60_1_min_s")),
+        new(5, L.T("300_5_min_s")),
+        new(15, L.T("900_15_min_s")),
     ];
 
     public override string ToString() => Label;
@@ -68,12 +69,12 @@ public record ItemEventOption(ItemEventKind Kind, string Label, bool NeedsTeam, 
 {
     public static IReadOnlyList<ItemEventOption> All { get; } =
     [
-        new(ItemEventKind.Placed, "Placé sur le terrain", false, true),
-        new(ItemEventKind.PickedUp, "Récupéré par", true, false),
-        new(ItemEventKind.Transferred, "Passé à", true, false),
-        new(ItemEventKind.Dropped, "Déposé / abandonné", false, true),
-        new(ItemEventKind.Lost, "Perdu", false, false),
-        new(ItemEventKind.Returned, "Rendu à l'orga", false, false),
+        new(ItemEventKind.Placed, L.T("place_sur_le_terrain"), false, true),
+        new(ItemEventKind.PickedUp, L.T("recupere_par"), true, false),
+        new(ItemEventKind.Transferred, L.T("passe_a"), true, false),
+        new(ItemEventKind.Dropped, L.T("depose_abandonne"), false, true),
+        new(ItemEventKind.Lost, L.T("perdu"), false, false),
+        new(ItemEventKind.Returned, L.T("rendu_a_l_orga"), false, false),
     ];
 
     public static ItemEventOption Of(ItemEventKind kind) => All.First(o => o.Kind == kind);
@@ -110,7 +111,7 @@ public record TeamMarker(GeoPoint Point, string Color, string Label, string Stat
 /// <summary>État d'une équipe à l'instant suivi.</summary>
 public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     public TeamViewModel Team => team;
 
@@ -144,11 +145,11 @@ public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 
     public string StatusLabel => Status switch
     {
-        ProgressStatus.OnTime => "À l'heure",
-        ProgressStatus.Tight => "Juste",
-        ProgressStatus.Late => "En retard",
-        ProgressStatus.Idle => "Sans mission",
-        _ => "Position inconnue",
+        ProgressStatus.OnTime => L.T("a_l_heure_2"),
+        ProgressStatus.Tight => L.T("juste"),
+        ProgressStatus.Late => L.T("en_retard"),
+        ProgressStatus.Idle => L.T("sans_mission"),
+        _ => L.T("position_inconnue"),
     };
 
     public string StatusColor => Status switch
@@ -174,34 +175,34 @@ public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
 
         MissionText = (progress.CurrentMission, progress.TargetMission) switch
         {
-            ({ } current, _) => $"En cours : {describeMission(current)}",
-            (null, { } next) => $"Prochaine : {describeMission(next)}",
-            _ => "Aucune mission à venir",
+            ({ } current, _) => L.F("en_cours_x", describeMission(current)),
+            (null, { } next) => L.F("prochaine_x", describeMission(next)),
+            _ => L.T("aucune_mission_a_venir"),
         };
 
         DistanceText = progress switch
         {
-            { DistanceMeters: 0 } => "Sur la zone",
+            { DistanceMeters: 0 } => L.T("sur_la_zone"),
             { DistanceMeters: { } distance, TravelMinutes: { } travel, SlackMinutes: { } slack } =>
-                string.Format(French, "{0} · {1} à pied · {2}", FormatDistance(distance), MissionTime.FormatDuration((int)Math.Ceiling(travel)),
-                    progress.CurrentMission is not null ? "mission commencée"
+                string.Format(French, L.T("x_x_a_pied_x"), FormatDistance(distance), MissionTime.FormatDuration((int)Math.Ceiling(travel)),
+                    progress.CurrentMission is not null ? L.T("mission_commencee")
                     : slack >= 0 ? $"marge {MissionTime.FormatDuration((int)slack)}"
-                    : $"retard estimé {MissionTime.FormatDuration((int)Math.Ceiling(-slack))}"),
+                    : L.F("retard_estime_x", MissionTime.FormatDuration((int)Math.Ceiling(-slack)))),
             _ => "",
         };
 
-        PositionText = position is not { } point ? "Aucune position reçue"
+        PositionText = position is not { } point ? L.T("aucune_position_recue")
             : $"{formatPoint(point)} · {FormatAge(progress.PositionAgeMinutes ?? 0)}";
     }
 
     private static string FormatDistance(double meters) =>
-        meters < 1000 ? $"{meters:0} m" : string.Format(French, "{0:0.0} km", meters / 1000);
+        meters < 1000 ? $"{meters:0} m" : string.Format(French, L.T("x_km"), meters / 1000);
 
     private static string FormatAge(double minutes) => minutes switch
     {
-        < 1 => "à l'instant",
-        < 60 => $"il y a {minutes:0} min",
-        _ => $"il y a {MissionTime.FormatDuration((int)minutes)}",
+        < 1 => L.T("a_l_instant"),
+        < 60 => L.F("il_y_a_x_min", minutes),
+        _ => L.F("il_y_a_x", MissionTime.FormatDuration((int)minutes)),
     };
 }
 
@@ -368,8 +369,8 @@ public partial class TrackingViewModel : ViewModelBase
     /// <summary>Instant suivi, en minutes depuis minuit le premier jour de l'OP.</summary>
     public double NowMinutes => IsSimulation ? SimulatedMinutes : _operation.ToMinutes(DateTime.Now);
 
-    public string NowText => (IsSimulation ? "Simulation : " : "Maintenant : ")
-        + _operation.ToDateTime(NowMinutes).ToString("dddd d MMMM HH:mm", CultureInfo.GetCultureInfo("fr-FR"));
+    public string NowText => (IsSimulation ? L.T("simulation_2") : L.T("maintenant"))
+        + _operation.ToDateTime(NowMinutes).ToString("dddd d MMMM HH:mm", AirsoftPlanner.Core.Localization.L.Culture);
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(SetPositionCommand), nameof(PlanDelayCommand), nameof(PlayerOutCommand), nameof(PlayerBackCommand))]
@@ -451,7 +452,7 @@ public partial class TrackingViewModel : ViewModelBase
     private string OutDescription(OutPlayer player)
     {
         var since = MissionTime.Format((int)Math.Round(_operation.ToMinutes(player.Since.LocalDateTime)));
-        return $"Hors jeu — {OutReasonOption.Of(player.Reason).Label.ToLowerInvariant()} depuis {since}{(player.Notes.Length > 0 ? $" ({player.Notes})" : "")}";
+        return L.F("hors_jeu_x_depuis_x_x", OutReasonOption.Of(player.Reason).Label.ToLowerInvariant(), since, (player.Notes.Length > 0 ? $" ({player.Notes})" : ""));
     }
 
     private void RefreshPlayers()
@@ -470,17 +471,17 @@ public partial class TrackingViewModel : ViewModelBase
         Players = team.Members
             .Select(m => strength.Out.FirstOrDefault(o => o.MemberId == m.Model.Id) is { } o
                 ? new PlayerRow(m, m.DisplayName, true, OutDescription(o))
-                : new PlayerRow(m, m.DisplayName, false, "En jeu"))
+                : new PlayerRow(m, m.DisplayName, false, L.T("en_jeu")))
             .Concat(strength.Out.Where(o => o.MemberId is null)
-                .Select(o => new PlayerRow(null, $"{o.Players} joueur(s) non nommé(s)", true, OutDescription(o))))
+                .Select(o => new PlayerRow(null, L.F("x_joueur_s_non_nomme_s", o.Players), true, OutDescription(o))))
             .ToList();
         SelectedPlayer = Players.FirstOrDefault(p => p.Member is not null && p.Member == selectedMember);
 
         var events = _playerEvents.Where(e => e.TeamId == team.Model.Id && e.At <= now).ToList();
         var timeline = StrengthTracker.Timeline(team.Size, events);
         StrengthHistory = timeline.Count == 0
-            ? $"Effectif complet ({team.Size}) depuis le début de l'OP"
-            : $"Début : {team.Size} → " + string.Join(" → ", timeline.Select(t =>
+            ? L.F("effectif_complet_x_depuis_le_debut_de_l_op", team.Size)
+            : L.F("debut_x_2", team.Size) + string.Join(" → ", timeline.Select(t =>
                 $"{MissionTime.Format((int)Math.Round(_operation.ToMinutes(t.At.LocalDateTime)))} : {t.Present}"));
     }
 
@@ -638,7 +639,7 @@ public partial class TrackingViewModel : ViewModelBase
     {
         var now = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
         var teams = _teams.Items.ToDictionary(t => t.Model.Id);
-        string TeamName(Guid? id) => id is { } t && teams.TryGetValue(t, out var team) ? team.Name : "équipe inconnue";
+        string TeamName(Guid? id) => id is { } t && teams.TryGetValue(t, out var team) ? team.Name : L.T("equipe_inconnue");
         string Time(DateTimeOffset at) => MissionTime.Format((int)Math.Round(_operation.ToMinutes(at.LocalDateTime)));
 
         foreach (var tracked in TrackedItems)
@@ -648,12 +649,12 @@ public partial class TrackingViewModel : ViewModelBase
             tracked.Location = state.Location;
             tracked.StateText = state.Kind switch
             {
-                null => "Pas encore suivi",
-                ItemEventKind.Placed => $"Sur le terrain depuis {Time(state.Since!.Value)}",
-                ItemEventKind.PickedUp or ItemEventKind.Transferred => $"Détenu par {TeamName(state.HolderTeamId)} depuis {Time(state.Since!.Value)}",
-                ItemEventKind.Dropped => $"Déposé à {Time(state.Since!.Value)}",
-                ItemEventKind.Lost => $"Perdu (signalé à {Time(state.Since!.Value)})",
-                _ => $"Rendu à l'orga à {Time(state.Since!.Value)}",
+                null => L.T("pas_encore_suivi"),
+                ItemEventKind.Placed => L.F("sur_le_terrain_depuis_x", Time(state.Since!.Value)),
+                ItemEventKind.PickedUp or ItemEventKind.Transferred => L.F("detenu_par_x_depuis_x", TeamName(state.HolderTeamId), Time(state.Since!.Value)),
+                ItemEventKind.Dropped => L.F("depose_a_x", Time(state.Since!.Value)),
+                ItemEventKind.Lost => L.F("perdu_signale_a_x", Time(state.Since!.Value)),
+                _ => L.F("rendu_a_l_orga_a_x", Time(state.Since!.Value)),
             };
             tracked.StateColor = state.Kind switch
             {
@@ -664,8 +665,8 @@ public partial class TrackingViewModel : ViewModelBase
                 _ => "#9E9E9E",
             };
             tracked.LocationText = state.Location is { } point && state.OnField
-                ? $"À récupérer : {Coordinates.Format(point, _operation.CoordinateFormat)}"
-                : state.OnField ? "Position inconnue" : "";
+                ? L.F("a_recuperer_x", Coordinates.Format(point, _operation.CoordinateFormat))
+                : state.OnField ? L.T("position_inconnue") : "";
             tracked.History = events.Where(e => e.At <= now).OrderByDescending(e => e.At)
                 .Select(e => $"{Time(e.At)} — {ItemEventOption.Of(e.Kind).Label}{(e.TeamId is null ? "" : " " + TeamName(e.TeamId))}"
                              + (e.Location is { } l ? $" ({Coordinates.Format(l, _operation.CoordinateFormat)})" : ""))
@@ -698,7 +699,7 @@ public partial class TrackingViewModel : ViewModelBase
     {
         if (IsPlacingUrgent && _urgentMission is { } urgent)
         {
-            urgent.Zone = Terrain.AddPointZone($"Urgence {MissionTime.Format(urgent.StartMinutes)}", point, "#C62828");
+            urgent.Zone = Terrain.AddPointZone(L.F("urgence_x", MissionTime.Format(urgent.StartMinutes)), point, "#C62828");
             IsPlacingUrgent = false;
             _urgentMission = null;
             Refresh();
@@ -723,7 +724,7 @@ public partial class TrackingViewModel : ViewModelBase
     private void SetPosition()
     {
         if (!Coordinates.TryParse(PositionInput, out var point))
-            throw new FormatException("Coordonnées non reconnues.");
+            throw new FormatException(L.T("coordonnees_non_reconnues"));
 
         RecordPosition(Selected!.Team, point);
         PositionInput = "";
@@ -779,7 +780,7 @@ public partial class TrackingViewModel : ViewModelBase
             TeamId = organizer.Model.Id,
             Point = point,
             ReceivedAt = at ?? DateTimeOffset.Now,
-            Source = "Téléphone orga",
+            Source = L.T("telephone_orga"),
         };
         _file.Add(position);
         var index = _positions.FindLastIndex(p => p.ReceivedAt <= position.ReceivedAt);
@@ -826,8 +827,8 @@ public partial class TrackingViewModel : ViewModelBase
             status.Update(progress, last?.Point, DescribeMission, p => Coordinates.Format(p, _operation.CoordinateFormat));
             var strength = StrengthOf(status.Team, new DateTimeOffset(_operation.ToDateTime(now)));
             status.StrengthText = strength.OutCount == 0
-                ? $"Effectif : {strength.Present}/{status.Team.Size}"
-                : $"Effectif : {strength.Present}/{status.Team.Size} · {strength.OutCount} hors jeu";
+                ? L.F("effectif_x_x", strength.Present, status.Team.Size)
+                : L.F("effectif_x_x_x_hors_jeu", strength.Present, status.Team.Size, strength.OutCount);
             status.HasRealInjury = strength.Out.Any(o => o.Reason == OutReason.RealInjury);
             status.Target = progress.TargetMission?.ZoneId is { } zoneId && zones.TryGetValue(zoneId, out var zone) && zone.Points.Count > 0
                 ? GeoMath.Centroid(zone.Points)
@@ -840,10 +841,10 @@ public partial class TrackingViewModel : ViewModelBase
         var unknown = Statuses.Count(s => s.Status == ProgressStatus.Unknown);
         Summary = string.Join(" · ", new[]
         {
-            late > 0 ? $"{late} en retard" : null,
-            tight > 0 ? $"{tight} juste(s)" : null,
-            unknown > 0 ? $"{unknown} sans position" : null,
-        }.OfType<string>().DefaultIfEmpty("Toutes les équipes sont dans les temps"));
+            late > 0 ? L.F("x_en_retard", late) : null,
+            tight > 0 ? L.F("x_juste_s", tight) : null,
+            unknown > 0 ? L.F("x_sans_position", unknown) : null,
+        }.OfType<string>().DefaultIfEmpty(L.T("toutes_les_equipes_sont_dans_les_temps")));
         RefreshItems();
         RefreshMarkers();
         RefreshRadioPlan();
@@ -889,13 +890,13 @@ public partial class TrackingViewModel : ViewModelBase
         var operation = _file.Operation;
         OrgaContact = string.Join(" · ", new[]
         {
-            operation.OrgaRadioFrequency.Length > 0 ? $"Orga {operation.OrgaRadioFrequency}" : null,
-            operation.EmergencyPhone.Length > 0 ? $"☎ Urgence {operation.EmergencyPhone}" : null,
+            operation.OrgaRadioFrequency.Length > 0 ? L.F("orga_x", operation.OrgaRadioFrequency) : null,
+            operation.EmergencyPhone.Length > 0 ? L.F("urgence_x_2", operation.EmergencyPhone) : null,
         }.OfType<string>());
         RadioPlan = Missions.Columns
             .GroupBy(t => t.Faction)
             .Select(g => new RadioFaction(
-                g.Key?.Name ?? "Sans faction",
+                g.Key?.Name ?? L.T("sans_faction"),
                 g.Key?.Color ?? "#607D8B",
                 g.Key is null ? "" : Frequency(g.Key.RadioFrequency),
                 g.Select(t => new RadioTeam(t.Name, Frequency(t.RadioFrequency), g.Key?.CommandTeam == t,

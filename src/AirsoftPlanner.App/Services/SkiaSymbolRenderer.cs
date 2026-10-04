@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using AirsoftPlanner.Core.Symbols;
 using SkiaSharp;

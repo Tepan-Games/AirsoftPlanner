@@ -15,6 +15,7 @@ using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Controls;
 
@@ -171,7 +172,7 @@ public class TerrainMapControl : Control
         context.FillRectangle(EmptyBackground, new Rect(Bounds.Size));
         if (ViewBounds is not { IsValid: true } view)
         {
-            DrawCenteredMessage(context, "Définissez l'emprise du terrain ou téléchargez un fond de carte pour afficher la carte.");
+            DrawCenteredMessage(context, L.T("definissez_l_emprise_du_terrain_ou_telechargez_u"));
             return;
         }
 
@@ -500,8 +501,8 @@ public class TerrainMapControl : Control
         }
 
         DrawText(context, new Point(6, Bounds.Height - 6),
-            $"Quadrillage UTM {string.Join(" | ", zones)} · {(spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m")}"
-            + (zones.Count > 1 ? " · limite de fuseau en jaune" : ""), 10, alignBottom: true);
+            L.F("quadrillage_utm_x_x", string.Join(" | ", zones), (spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m"))
+            + (zones.Count > 1 ? L.T("limite_de_fuseau_en_jaune") : ""), 10, alignBottom: true);
     }
 
     /// <returns>Nom du fuseau (ex. « 31U »).</returns>
@@ -570,7 +571,7 @@ public class TerrainMapControl : Control
         var step = dms
             ? spacing >= 1 ? $"{spacing:0}°" : spacing >= 1 / 60.0 ? $"{Math.Round(spacing * 60):0}'" : $"{Math.Round(spacing * 3600):0}\""
             : AngleNumber(spacing, spacing) + "°";
-        DrawText(context, new Point(6, Bounds.Height - 6), $"Quadrillage {(dms ? "degrés-minutes-secondes" : "degrés décimaux")} · {step}", 10, alignBottom: true);
+        DrawText(context, new Point(6, Bounds.Height - 6), L.F("quadrillage_x_x", (dms ? L.T("degres_minutes_secondes") : L.T("degres_decimaux")), step), 10, alignBottom: true);
     }
 
     private static string AngleLabel(double value, double spacing, bool dms, char positive, char negative)
@@ -589,12 +590,12 @@ public class TerrainMapControl : Control
     private static string AngleNumber(double value, double spacing)
     {
         var decimals = Math.Clamp((int)Math.Ceiling(-Math.Log10(spacing) - 1e-9), 0, 6);
-        return value.ToString("F" + decimals, CultureInfo.GetCultureInfo("fr-FR"));
+        return value.ToString("F" + decimals, AirsoftPlanner.Core.Localization.L.Culture);
     }
 
     private static string GridLabel(double value, double spacing) => spacing >= 1000
         ? (value / 1000).ToString("0", CultureInfo.InvariantCulture)
-        : (value / 1000).ToString(spacing >= 100 ? "0.0" : "0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        : (value / 1000).ToString(spacing >= 100 ? "0.0" : "0.00", AirsoftPlanner.Core.Localization.L.Culture);
 
     private static void DrawGridLine(DrawingContext context, Point start, Point end)
     {

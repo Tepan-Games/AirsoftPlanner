@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -9,8 +10,8 @@
     <DockPanel>
     <Border DockPanel.Dock="Top" Padding="8,3">
         <StackPanel Orientation="Horizontal" Spacing="14">
-            <CheckBox Content="Trajets des équipes" IsChecked="{Binding ShowTrails}" />
-            <CheckBox Content="Quadrillage" ToolTip.Tip="Quadrillage dans le format de coordonnées choisi en haut de la fenêtre (UTM : un quadrillage par fuseau, limite en jaune)" IsChecked="{Binding Terrain.ShowUtmGrid}" />
+            <CheckBox Content="{l:T trajets_des_equipes}" IsChecked="{Binding ShowTrails}" />
+            <CheckBox Content="{l:T quadrillage}" ToolTip.Tip="{l:T quadrillage_dans_le_format_de_coordonnees_choisi}" IsChecked="{Binding Terrain.ShowUtmGrid}" />
         </StackPanel>
     </Border>
     <controls:TerrainMapControl Layer="{Binding Terrain.SelectedLayer}"

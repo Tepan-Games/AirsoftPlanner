@@ -1,7 +1,8 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.IO;
 using AirsoftPlanner.Core.Domain;
 using Avalonia.Media.Imaging;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -24,6 +25,6 @@ public class MapLayerViewModel(MapLayer layer) : ViewModelBase
     /// <summary>Image décodée à la première utilisation.</summary>
     public Bitmap Bitmap => _bitmap ??= new Bitmap(new MemoryStream(layer.Image));
 
-    public string Details => string.Format(CultureInfo.GetCultureInfo("fr-FR"), "{0:0.0} Mo · {1:0.00} × {2:0.00} km",
+    public string Details => string.Format(AirsoftPlanner.Core.Localization.L.Culture, L.T("x_mo_x_x_km"),
         layer.Image.Length / 1_048_576.0, Bounds.SizeInMeters().Width / 1000, Bounds.SizeInMeters().Height / 1000);
 }

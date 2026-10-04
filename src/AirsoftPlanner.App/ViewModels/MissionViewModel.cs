@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Planning;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -66,7 +67,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
         set
         {
             if (!MissionTime.TryParse(value, out var minutes))
-                throw new FormatException("Heure non reconnue (ex. 10:30).");
+                throw new FormatException(L.T("heure_non_reconnue_ex_10_30"));
             // Une heure plus tôt que le début de l'OP désigne le lendemain (OP de nuit).
             if (minutes < owner.OperationStartMinutes && minutes + MissionTime.MinutesPerDay <= owner.OperationEndMinutes)
                 minutes += MissionTime.MinutesPerDay;
@@ -135,7 +136,7 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
         get
         {
             var assigned = owner.AssignedPlayers(this);
-            return mission.MaxPlayers is { } max ? $"{assigned} joueur(s) affecté(s) sur {max} maximum" : $"{assigned} joueur(s) affecté(s)";
+            return mission.MaxPlayers is { } max ? L.F("x_joueur_s_affecte_s_sur_x_maximum", assigned, max) : L.F("x_joueur_s_affecte_s", assigned);
         }
     }
 

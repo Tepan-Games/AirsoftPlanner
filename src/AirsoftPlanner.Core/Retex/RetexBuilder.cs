@@ -1,5 +1,6 @@
 ﻿using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Core.Retex;
 
@@ -18,7 +19,7 @@ public record MissionOutcome(Mission Mission, DateTimeOffset PlannedStart, DateT
 public record RetexEvent(DateTimeOffset At, string Team, string Category, string Text)
 {
     /// <summary>Jour et heure locale (« sam. 10:20 »).</summary>
-    public string Time => At.LocalDateTime.ToString("ddd HH:mm", System.Globalization.CultureInfo.GetCultureInfo("fr-FR"));
+    public string Time => At.LocalDateTime.ToString("ddd HH:mm", AirsoftPlanner.Core.Localization.L.Culture);
 }
 
 /// <summary>Bilan d'une équipe.</summary>
@@ -89,11 +90,11 @@ public static class RetexBuilder
             var events = new List<RetexEvent>();
             events.AddRange(own.Select(m => new RetexEvent(m.SentAt, team.Name, Category(m), m.Text)));
             events.AddRange(itemEvents.Where(e => e.TeamId == team.Id).Select(e =>
-                new RetexEvent(e.At, team.Name, "Objet", $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}{(e.Notes.Length > 0 ? $" ({e.Notes})" : "")}")));
+                new RetexEvent(e.At, team.Name, L.T("objet"), $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}{(e.Notes.Length > 0 ? $" ({e.Notes})" : "")}")));
             events.AddRange(playerEvents.Where(e => e.TeamId == team.Id).Select(e =>
-                new RetexEvent(e.At, team.Name, "Effectif", e.IsOut
-                    ? $"{e.Players} joueur(s) hors jeu : {outReasonLabel(e.Reason)}{(e.Notes.Length > 0 ? $" ({e.Notes})" : "")}"
-                    : $"{e.Players} joueur(s) de retour en jeu")));
+                new RetexEvent(e.At, team.Name, L.T("effectif"), e.IsOut
+                    ? L.F("x_joueur_s_hors_jeu_x_x", e.Players, outReasonLabel(e.Reason), (e.Notes.Length > 0 ? $" ({e.Notes})" : ""))
+                    : L.F("x_joueur_s_de_retour_en_jeu", e.Players))));
 
             sheets.Add(new TeamRetex(team, outcomes, distance / 1000, trail.Count, trail.FirstOrDefault()?.ReceivedAt, trail.LastOrDefault()?.ReceivedAt,
                 playerEvents.Where(e => e.TeamId == team.Id && e.IsOut).Sum(e => e.Players), own, events.OrderBy(e => e.At).ToList())
@@ -107,13 +108,13 @@ public static class RetexBuilder
         timeline.AddRange(messages.Select(m => new RetexEvent(m.SentAt, m.Target switch
         {
             MessageTarget.Team => TeamName(m.TargetId),
-            MessageTarget.Faction => "Faction",
-            _ => "Toutes les équipes",
+            MessageTarget.Faction => L.T("faction"),
+            _ => L.T("toutes_les_equipes"),
         }, Category(m), m.Text)));
-        timeline.AddRange(itemEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), "Objet", $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}")));
-        timeline.AddRange(playerEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), "Effectif", e.IsOut
-            ? $"{e.Players} joueur(s) hors jeu : {outReasonLabel(e.Reason)}"
-            : $"{e.Players} joueur(s) de retour en jeu")));
+        timeline.AddRange(itemEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), L.T("objet"), $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}")));
+        timeline.AddRange(playerEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), L.T("effectif"), e.IsOut
+            ? L.F("x_joueur_s_hors_jeu_x", e.Players, outReasonLabel(e.Reason))
+            : L.F("x_joueur_s_de_retour_en_jeu", e.Players))));
         return new OperationRetex(sheets, timeline.OrderBy(e => e.At).ToList());
     }
 
@@ -129,8 +130,8 @@ public static class RetexBuilder
 
     private static string Category(OrgaMessage message) => message.Kind switch
     {
-        MessageKind.MissionAssigned => "Mission diffusée",
-        MessageKind.MissionEnded => "Mission terminée",
-        _ => message.Sender == MessageSender.Hq ? "Message QG" : "Message orga",
+        MessageKind.MissionAssigned => L.T("mission_diffusee"),
+        MessageKind.MissionEnded => L.T("mission_terminee"),
+        _ => message.Sender == MessageSender.Hq ? L.T("message_qg") : L.T("message_orga"),
     };
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
@@ -6,6 +6,7 @@ using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -13,13 +14,13 @@ public record GameItemCategoryOption(GameItemCategory Value, string Label, bool 
 {
     public static IReadOnlyList<GameItemCategoryOption> All { get; } =
     [
-        new(GameItemCategory.Crate, "Caisse", false),
-        new(GameItemCategory.Pyrotechnic, "Artifice / grenade", true),
-        new(GameItemCategory.Smoke, "Fumigène", true),
-        new(GameItemCategory.Prop, "Accessoire de décor", false),
-        new(GameItemCategory.Document, "Document / renseignement", false),
-        new(GameItemCategory.Communication, "Radio / électronique", false),
-        new(GameItemCategory.Other, "Autre", false),
+        new(GameItemCategory.Crate, L.T("caisse"), false),
+        new(GameItemCategory.Pyrotechnic, L.T("artifice_grenade"), true),
+        new(GameItemCategory.Smoke, L.T("fumigene"), true),
+        new(GameItemCategory.Prop, L.T("accessoire_de_decor"), false),
+        new(GameItemCategory.Document, L.T("document_renseignement"), false),
+        new(GameItemCategory.Communication, L.T("radio_electronique"), false),
+        new(GameItemCategory.Other, L.T("autre"), false),
     ];
 
     public static GameItemCategoryOption Of(GameItemCategory category) => All.First(o => o.Value == category);
@@ -111,10 +112,10 @@ public class GameItemViewModel(GameItem item) : ViewModelBase
     public bool HasShortage { get; private set; }
 
     public string UsageSummary => !IsUsed
-        ? "Utilisé dans aucune mission"
+        ? L.T("utilise_dans_aucune_mission")
         : item.IsConsumable
             ? $"{UsedQuantity} / {item.Quantity} consommé(s) dans {_usages.Count(u => u.IsEnabled)} mission(s)"
-            : $"Utilisé dans {_usages.Count(u => u.IsEnabled)} mission(s) · stock {item.Quantity}";
+            : L.F("utilise_dans_x_mission_s_stock_x", _usages.Count(u => u.IsEnabled), item.Quantity);
 
     public void SetShortage(bool shortage)
     {
@@ -162,7 +163,7 @@ public partial class GameItemsViewModel : ViewModelBase
     [RelayCommand]
     private void Add()
     {
-        var item = new GameItem { Name = $"Élément {Items.Count + 1}", Category = GameItemCategory.Crate };
+        var item = new GameItem { Name = L.F("element_x", Items.Count + 1), Category = GameItemCategory.Crate };
         _file.Add(item);
         var viewModel = new GameItemViewModel(item);
         Items.Add(viewModel);

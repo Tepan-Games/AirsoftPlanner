@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Planning;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -15,7 +16,7 @@ public partial class CutChoiceViewModel(MissionViewModel mission, int gain, Acti
 {
     public MissionViewModel Mission => mission;
 
-    public string GainText => $"évite {MissionTime.FormatDuration(gain)} de retard";
+    public string GainText => L.F("evite_x_de_retard", MissionTime.FormatDuration(gain));
 
     [ObservableProperty]
     private bool _isSelected;
@@ -55,7 +56,7 @@ public partial class DelayViewModel(MissionsViewModel missions) : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(UndoCommand))]
     private string _lastApplied = "";
 
-    public string Title => Mission is null ? "" : $"Retard sur « {Mission.Name} » ({Mission.StartText})";
+    public string Title => Mission is null ? "" : L.F("retard_sur_x_x", Mission.Name, Mission.StartText);
 
     /// <summary>Ouvre le panneau pour une mission, avec un retard proposé (ex. retard estimé en suivi).</summary>
     public void Open(MissionViewModel mission, int delayMinutes)
@@ -101,8 +102,8 @@ public partial class DelayViewModel(MissionsViewModel missions) : ViewModelBase
         foreach (var change in plan.Changes)
             byId[change.MissionId].StartMinutes = change.NewStart;
 
-        LastApplied = $"Retard de {MissionTime.FormatDuration(Delay)} appliqué : {plan.Changes.Count} mission(s) décalée(s)"
-                      + (plan.DisabledMissionIds.Count > 0 ? $", {plan.DisabledMissionIds.Count} désactivée(s)" : "");
+        LastApplied = L.F("retard_de_x_applique_x_mission_s_decalee_s", MissionTime.FormatDuration(Delay), plan.Changes.Count)
+                      + (plan.DisabledMissionIds.Count > 0 ? L.F("x_desactivee_s", plan.DisabledMissionIds.Count) : "");
         IsOpen = false;
     }
 
@@ -137,7 +138,7 @@ public partial class DelayViewModel(MissionsViewModel missions) : ViewModelBase
 
         if (!Mission.IsEnabled)
         {
-            Summary = "La mission est désactivée : réactivez-la pour répercuter un retard.";
+            Summary = L.T("la_mission_est_desactivee_reactivez_la_pour_repe");
             Changes = [];
             Cuts = [];
             return;
@@ -160,12 +161,12 @@ public partial class DelayViewModel(MissionsViewModel missions) : ViewModelBase
             .ToList();
 
         Summary = plan.Changes.Count <= 1 && plan.OverflowMinutes == 0
-            ? "Le retard est absorbé : aucune autre mission n'est décalée."
+            ? L.T("le_retard_est_absorbe_aucune_autre_mission_n_est")
             : string.Join(" · ", new[]
             {
-                $"{plan.Changes.Count} mission(s) décalée(s)",
-                plan.EssentialDelayMinutes > 0 ? $"missions essentielles retardées jusqu'à {MissionTime.FormatDuration(plan.MaxEssentialDelayMinutes)}" : "aucune mission essentielle retardée",
-                plan.OverflowMinutes > 0 ? $"dépasse la fin de l'OP de {MissionTime.FormatDuration(plan.OverflowMinutes)}" : null,
+                L.F("x_mission_s_decalee_s", plan.Changes.Count),
+                plan.EssentialDelayMinutes > 0 ? L.F("missions_essentielles_retardees_jusqu_a_x", MissionTime.FormatDuration(plan.MaxEssentialDelayMinutes)) : L.T("aucune_mission_essentielle_retardee"),
+                plan.OverflowMinutes > 0 ? L.F("depasse_la_fin_de_l_op_de_x", MissionTime.FormatDuration(plan.OverflowMinutes)) : null,
             }.OfType<string>());
     }
 }

@@ -12,6 +12,7 @@ using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -36,8 +37,8 @@ public class RuleDocumentViewModel(RuleDocument rule) : ViewModelBase
     public bool IsWritten => !rule.IsImported;
 
     public string KindText => rule.IsImported
-        ? $"Fichier importé : {rule.FileName} ({rule.FileContent.Length / 1024.0:0} Ko)"
-        : "Rédigé dans le logiciel";
+        ? L.F("fichier_importe_x_x_ko", rule.FileName, rule.FileContent.Length / 1024.0)
+        : L.T("redige_dans_le_logiciel");
 
     public void Replace(string fileName, byte[] content)
     {
@@ -50,7 +51,7 @@ public class RuleDocumentViewModel(RuleDocument rule) : ViewModelBase
 /// <summary>Ligne du tableau de diffusion : le package d'une équipe et son état.</summary>
 public partial class PackageRowViewModel(TeamViewModel team) : ViewModelBase
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     public TeamViewModel Team => team;
 
@@ -64,15 +65,15 @@ public partial class PackageRowViewModel(TeamViewModel team) : ViewModelBase
 
     public string ContactText => team.Leader is { } leader
         ? string.Join(" · ", new[] { leader.DisplayName, leader.Phone, leader.Email }.Where(s => s.Length > 0))
-        : "Pas de chef d'équipe (onglet Équipes)";
+        : L.T("pas_de_chef_d_equipe_onglet_equipes");
 
     public string StatusLabel => Status switch
     {
-        PackageStatus.ReadyToSend => "Prêt à envoyer",
-        PackageStatus.AwaitingConfirmation => "Envoyé — en attente de confirmation",
-        PackageStatus.Received => "Reçu",
-        PackageStatus.Outdated => Package?.SentAt is null ? "Contenu modifié — à régénérer" : "Contenu modifié — à renvoyer",
-        _ => "Pas encore généré",
+        PackageStatus.ReadyToSend => L.T("pret_a_envoyer"),
+        PackageStatus.AwaitingConfirmation => L.T("envoye_en_attente_de_confirmation"),
+        PackageStatus.Received => L.T("recu"),
+        PackageStatus.Outdated => Package?.SentAt is null ? L.T("contenu_modifie_a_regenerer") : L.T("contenu_modifie_a_renvoyer"),
+        _ => L.T("pas_encore_genere"),
     };
 
     public string StatusColor => Status switch
@@ -88,9 +89,9 @@ public partial class PackageRowViewModel(TeamViewModel team) : ViewModelBase
         ? ""
         : string.Join(" · ", new[]
         {
-            $"Généré le {Format(Package.GeneratedAt)}",
-            Package.SentAt is null ? null : $"envoyé le {Format(Package.SentAt)}",
-            Package.ReceivedAt is null ? null : $"reçu le {Format(Package.ReceivedAt)}{(Package.ReceivedBy.Length > 0 ? $" par {Package.ReceivedBy}" : "")}",
+            L.F("genere_le_x", Format(Package.GeneratedAt)),
+            Package.SentAt is null ? null : L.F("envoye_le_x", Format(Package.SentAt)),
+            Package.ReceivedAt is null ? null : L.F("recu_le_x_x", Format(Package.ReceivedAt), (Package.ReceivedBy.Length > 0 ? $" par {Package.ReceivedBy}" : "")),
         }.OfType<string>());
 
     public void Refresh(PackageStatus status)
@@ -180,7 +181,7 @@ public partial class DocumentsViewModel : ViewModelBase
     [RelayCommand]
     private void WriteRule() => AddRule(new RuleDocument
     {
-        Title = "Règles spécifiques de l'OP",
+        Title = L.T("regles_specifiques_de_l_op"),
         Text = """
                # Sécurité
                - Lunettes ou masque homologués obligatoires en zone de jeu.
@@ -248,7 +249,7 @@ public partial class DocumentsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is IOException or System.ComponentModel.Win32Exception)
         {
-            await _dialogs.ShowErrorAsync($"Impossible d'ouvrir le document : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("impossible_d_ouvrir_le_document_x", ex.Message));
         }
     }
 
@@ -291,7 +292,7 @@ public partial class DocumentsViewModel : ViewModelBase
     {
         if (SelectedPackage?.Package?.OutputPath is not { Length: > 0 } path || !Directory.Exists(path))
         {
-            await _dialogs.ShowErrorAsync("Le dossier du package est introuvable : générez-le à nouveau.");
+            await _dialogs.ShowErrorAsync(L.T("le_dossier_du_package_est_introuvable_generez_le"));
             return;
         }
 
@@ -317,12 +318,12 @@ public partial class DocumentsViewModel : ViewModelBase
 
         SelectedPackage = Packages.FirstOrDefault(p => p.Team == selectedTeam) ?? SelectedPackage;
         var counts = Packages.GroupBy(p => p.Status).ToDictionary(g => g.Key, g => g.Count());
-        Summary = Packages.Count == 0 ? "Aucune équipe" : string.Join(" · ", new[]
+        Summary = Packages.Count == 0 ? L.T("aucune_equipe_2") : string.Join(" · ", new[]
         {
             $"{counts.GetValueOrDefault(PackageStatus.Received)}/{Packages.Count} reçus",
-            counts.GetValueOrDefault(PackageStatus.AwaitingConfirmation) is > 0 and var waiting ? $"{waiting} en attente" : null,
-            counts.GetValueOrDefault(PackageStatus.Outdated) is > 0 and var outdated ? $"{outdated} à renvoyer" : null,
-            counts.GetValueOrDefault(PackageStatus.NotGenerated) is > 0 and var missing ? $"{missing} à générer" : null,
+            counts.GetValueOrDefault(PackageStatus.AwaitingConfirmation) is > 0 and var waiting ? L.F("x_en_attente", waiting) : null,
+            counts.GetValueOrDefault(PackageStatus.Outdated) is > 0 and var outdated ? L.F("x_a_renvoyer", outdated) : null,
+            counts.GetValueOrDefault(PackageStatus.NotGenerated) is > 0 and var missing ? L.F("x_a_generer", missing) : null,
         }.OfType<string>());
         GenerateAllCommand.NotifyCanExecuteChanged();
     }
@@ -342,7 +343,7 @@ public partial class DocumentsViewModel : ViewModelBase
     private async Task GenerateAsync(IReadOnlyList<PackageRowViewModel> rows)
     {
         var lastFolder = _packages.Select(p => p.OutputPath).FirstOrDefault(p => p.Length > 0);
-        var root = await _dialogs.PickFolderAsync("Dossier où créer les packages", lastFolder is null ? null : Path.GetDirectoryName(lastFolder));
+        var root = await _dialogs.PickFolderAsync(L.T("dossier_ou_creer_les_packages"), lastFolder is null ? null : Path.GetDirectoryName(lastFolder));
         if (root is null)
             return;
 
@@ -377,7 +378,7 @@ public partial class DocumentsViewModel : ViewModelBase
         catch (Exception ex)
         {
             // Action lancée par l'utilisateur : toute erreur (disque, PDF, image) est signalée sans fermer le logiciel.
-            await _dialogs.ShowErrorAsync($"Génération impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("generation_impossible_x", ex.Message));
         }
         finally
         {

@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:app="using:AirsoftPlanner.App"
@@ -12,28 +13,28 @@
             <StackPanel Margin="12" Spacing="8">
 
                 <!-- Emprise -->
-                <TextBlock Text="Emprise du terrain" Classes="h2" />
-                <TextBlock Text="Centre (copié depuis Google Maps, Géoportail, un GPS…)" Classes="label" TextWrapping="Wrap" />
-                <TextBox Text="{Binding CenterText}" PlaceholderText="ex. 31T 448251 5411952 ou 48.8583, 2.2944" />
+                <TextBlock Text="{l:T emprise_du_terrain}" Classes="h2" />
+                <TextBlock Text="{l:T centre_copie_depuis_google_maps_geoportail_un_gp}" Classes="label" TextWrapping="Wrap" />
+                <TextBox Text="{Binding CenterText}" PlaceholderText="{l:T ex_31t_448251_5411952_ou_48_8583_2_2944}" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <NumericUpDown Value="{Binding AreaSizeKm}" Minimum="0.1" Maximum="20" Increment="0.5"
                                    FormatString="0.0" Width="130" />
-                    <TextBlock Text="km de côté" VerticalAlignment="Center" />
-                    <Button Content="Appliquer" Command="{Binding ApplyCenterCommand}" />
+                    <TextBlock Text="{l:T km_de_cote}" VerticalAlignment="Center" />
+                    <Button Content="{l:T appliquer}" Command="{Binding ApplyCenterCommand}" />
                 </StackPanel>
-                <Expander Header="Ou saisir les deux coins">
+                <Expander Header="{l:T ou_saisir_les_deux_coins}">
                     <StackPanel Spacing="6">
-                        <TextBlock Text="Coin nord-ouest" Classes="label" />
+                        <TextBlock Text="{l:T coin_nord_ouest}" Classes="label" />
                         <TextBox Text="{Binding NorthWestText}" />
-                        <TextBlock Text="Coin sud-est" Classes="label" />
+                        <TextBlock Text="{l:T coin_sud_est}" Classes="label" />
                         <TextBox Text="{Binding SouthEastText}" />
                     </StackPanel>
                 </Expander>
                 <TextBlock Text="{Binding AreaSummary}" TextWrapping="Wrap" Opacity="0.75" />
 
                 <!-- Fonds de carte -->
-                <TextBlock Text="Fonds de carte" Classes="h2" Margin="0,12,0,0" />
-                <TextBlock Text="Téléchargés une fois (connexion Internet nécessaire), puis enregistrés dans le fichier d'OP pour un usage hors ligne."
+                <TextBlock Text="{l:T fonds_de_carte}" Classes="h2" Margin="0,12,0,0" />
+                <TextBlock Text="{l:T telecharges_une_fois_connexion_internet_necessai}"
                            TextWrapping="Wrap" FontSize="12" Opacity="0.7" />
                 <ListBox ItemsSource="{Binding Layers}" SelectedItem="{Binding SelectedLayer}" MaxHeight="160">
                     <ListBox.ItemTemplate>
@@ -47,25 +48,25 @@
                 </ListBox>
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{Binding Sources}" SelectedItem="{Binding SelectedSource}" MinWidth="190" />
-                    <Button Content="Télécharger" Command="{Binding DownloadCommand}" />
+                    <Button Content="{l:T telecharger}" Command="{Binding DownloadCommand}" />
                 </StackPanel>
                 <TextBlock Text="{Binding DownloadSummary}" FontSize="12" Opacity="0.7" />
                 <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsDownloading}">
                     <ProgressBar Value="{Binding DownloadProgress}" Width="220" ShowProgressText="True" />
-                    <Button Content="Annuler" Command="{Binding CancelDownloadCommand}" />
+                    <Button Content="{l:T annuler}" Command="{Binding CancelDownloadCommand}" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Importer une image…" Command="{Binding ImportImageCommand}"
-                            ToolTip.Tip="Image orientée nord en haut, couvrant exactement l'emprise du terrain" />
-                    <Button Content="Supprimer le fond" Command="{Binding RemoveLayerCommand}" />
+                    <Button Content="{l:T importer_une_image}" Command="{Binding ImportImageCommand}"
+                            ToolTip.Tip="{l:T image_orientee_nord_en_haut_couvrant_exactement}" />
+                    <Button Content="{l:T supprimer_le_fond}" Command="{Binding RemoveLayerCommand}" />
                 </StackPanel>
 
                 <!-- Zones -->
-                <TextBlock Text="Zones et points" Classes="h2" Margin="0,12,0,0" />
+                <TextBlock Text="{l:T zones_et_points}" Classes="h2" Margin="0,12,0,0" />
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="+ Zone" Command="{Binding AddAreaCommand}" ToolTip.Tip="Surface : base, secteur, zone interdite…" />
-                    <Button Content="+ Point" Command="{Binding AddPointCommand}" ToolTip.Tip="Objectif, caisse, respawn…" />
-                    <Button Content="Supprimer" Command="{Binding RemoveZoneCommand}" />
+                    <Button Content="{l:T zone_2}" Command="{Binding AddAreaCommand}" ToolTip.Tip="{l:T surface_base_secteur_zone_interdite}" />
+                    <Button Content="{l:T point}" Command="{Binding AddPointCommand}" ToolTip.Tip="{l:T objectif_caisse_respawn}" />
+                    <Button Content="{l:T supprimer}" Command="{Binding RemoveZoneCommand}" />
                 </StackPanel>
                 <ListBox ItemsSource="{Binding Zones}" SelectedItem="{Binding SelectedZone}" MaxHeight="220">
                     <ListBox.ItemTemplate>
@@ -82,11 +83,11 @@
                 </ListBox>
 
                 <StackPanel IsVisible="{Binding HasSelectedZone}" Spacing="6">
-                    <TextBlock Text="Nom" Classes="label" />
+                    <TextBlock Text="{l:T nom}" Classes="label" />
                     <TextBox Text="{Binding SelectedZone.Name, FallbackValue=''}" />
-                    <TextBlock Text="Catégorie" Classes="label" />
+                    <TextBlock Text="{l:T categorie}" Classes="label" />
                     <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedZone.Category, FallbackValue={x:Null}}" MinWidth="240" />
-                    <TextBlock Text="Symbole militaire" Classes="label" />
+                    <TextBlock Text="{l:T symbole_militaire}" Classes="label" />
                     <ComboBox ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedZone.Symbol, FallbackValue={x:Null}}" MinWidth="240">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:MilSymbolOption">
@@ -99,20 +100,20 @@
                     </ComboBox>
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Faction (couleur du symbole)" Classes="label" />
+                            <TextBlock Text="{l:T faction_couleur_du_symbole}" Classes="label" />
                             <ComboBox ItemsSource="{Binding OwnerOptions}" SelectedItem="{Binding SelectedZoneOwner}" MinWidth="150" />
                         </StackPanel>
                         <StackPanel Spacing="6">
-                            <TextBlock Text="Taille d'unité" Classes="label" />
+                            <TextBlock Text="{l:T taille_d_unite}" Classes="label" />
                             <ComboBox ItemsSource="{Binding Echelons}" SelectedItem="{Binding SelectedZone.Echelon, FallbackValue={x:Null}}" MinWidth="120" />
                         </StackPanel>
                     </StackPanel>
-                    <TextBlock Text="Visible par (téléphones des équipes, ordres de mission)" Classes="label" />
+                    <TextBlock Text="{l:T visible_par_telephones_des_equipes_ordres_de_mis}" Classes="label" />
                     <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding SelectedZoneVisibility}" MinWidth="240"
-                              ToolTip.Tip="Bivouac d'une faction, campement, respawn… : affiché sur la carte et dans la liste de l'application des équipes concernées" />
+                              ToolTip.Tip="{l:T bivouac_d_une_faction_campement_respawn_affiche}" />
                     <ComboBox ItemsSource="{Binding Missions}" SelectedItem="{Binding SelectedZoneMission}" MinWidth="240"
-                              IsVisible="{Binding IsMissionVisibility}" PlaceholderText="Mission…"
-                              ToolTip.Tip="Le point n'est envoyé aux téléphones des équipes de cette mission que pendant qu'elle leur est diffusée (dépôt d'armes, point de contact…)">
+                              IsVisible="{Binding IsMissionVisibility}" PlaceholderText="{l:T mission_3}"
+                              ToolTip.Tip="{l:T le_point_n_est_envoye_aux_telephones_des_equipes}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:MissionViewModel">
                                 <TextBlock>
@@ -122,7 +123,7 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <TextBlock Text="Couleur" Classes="label" />
+                    <TextBlock Text="{l:T couleur}" Classes="label" />
                     <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding SelectedZone.Color, FallbackValue={x:Null}}" Width="120">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="sys:String">
@@ -132,17 +133,17 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <StackPanel IsVisible="{Binding !SelectedZone.IsArea, FallbackValue=False}" Spacing="6">
-                        <TextBlock Text="Position (tous formats acceptés)" Classes="label" />
+                        <TextBlock Text="{l:T position_tous_formats_acceptes}" Classes="label" />
                         <TextBox Text="{Binding SelectedZone.PositionText, FallbackValue=''}" />
                     </StackPanel>
-                    <TextBlock Text="Description / consignes" Classes="label" />
+                    <TextBlock Text="{l:T description_consignes}" Classes="label" />
                     <TextBox Text="{Binding SelectedZone.Description, FallbackValue=''}" AcceptsReturn="True"
                              TextWrapping="Wrap" MinHeight="70" />
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ToggleButton Content="Placer sur la carte" IsChecked="{Binding IsDrawing}" />
-                        <Button Content="Annuler sommet" Command="{Binding UndoPointCommand}"
+                        <ToggleButton Content="{l:T placer_sur_la_carte}" IsChecked="{Binding IsDrawing}" />
+                        <Button Content="{l:T annuler_sommet}" Command="{Binding UndoPointCommand}"
                                 IsVisible="{Binding SelectedZone.IsArea, FallbackValue=False}" />
-                        <Button Content="Effacer" Command="{Binding ClearPointsCommand}" />
+                        <Button Content="{l:T effacer}" Command="{Binding ClearPointsCommand}" />
                     </StackPanel>
                 </StackPanel>
             </StackPanel>
@@ -153,15 +154,15 @@
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                 <DockPanel>
                     <StackPanel Orientation="Horizontal" Spacing="12">
-                        <CheckBox Content="Quadrillage" ToolTip.Tip="Quadrillage dans le format de coordonnées choisi en haut de la fenêtre (UTM : un quadrillage par fuseau, limite en jaune)" IsChecked="{Binding ShowUtmGrid}" />
-                        <Button Content="Vue d'ensemble" Click="OnResetViewClick" />
+                        <CheckBox Content="{l:T quadrillage}" ToolTip.Tip="{l:T quadrillage_dans_le_format_de_coordonnees_choisi}" IsChecked="{Binding ShowUtmGrid}" />
+                        <Button Content="{l:T vue_d_ensemble}" Click="OnResetViewClick" />
                     </StackPanel>
                     <TextBlock Text="{Binding PointerText}" HorizontalAlignment="Right" VerticalAlignment="Center"
                                FontFamily="Consolas,monospace" />
                 </DockPanel>
             </Border>
             <Border DockPanel.Dock="Bottom" Padding="10,4" IsVisible="{Binding IsDrawing}" Background="#FFF3E0">
-                <TextBlock Foreground="#E65100" Text="Mode placement : cliquez sur la carte pour placer le point ou ajouter les sommets de la zone. Désactivez « Placer sur la carte » pour terminer." TextWrapping="Wrap" />
+                <TextBlock Foreground="#E65100" Text="{l:T mode_placement_cliquez_sur_la_carte_pour_placer}" TextWrapping="Wrap" />
             </Border>
             <controls:TerrainMapControl x:Name="Map"
                                         ViewBounds="{Binding ViewBounds}"

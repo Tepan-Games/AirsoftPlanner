@@ -7,22 +7,23 @@ using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Platform.Storage;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services;
 
 public class FileDialogService(Window owner) : IFileDialogService
 {
-    private static readonly FilePickerFileType OperationFileType = new("Fichier d'OP Airsoft Planner")
+    private static readonly FilePickerFileType OperationFileType = new(L.T("fichier_d_op_airsoft_planner"))
     {
         Patterns = ["*" + OperationFile.Extension],
     };
 
-    private static readonly FilePickerFileType ImageFileType = new("Image (PNG, JPEG)")
+    private static readonly FilePickerFileType ImageFileType = new(L.T("image_png_jpeg"))
     {
         Patterns = ["*.png", "*.jpg", "*.jpeg"],
     };
 
-    private static readonly FilePickerFileType DocumentFileType = new("Document (PDF, Word, OpenDocument, texte)")
+    private static readonly FilePickerFileType DocumentFileType = new(L.T("document_pdf_word_opendocument_texte"))
     {
         Patterns = ["*.pdf", "*.docx", "*.doc", "*.odt", "*.txt", "*.md"],
     };
@@ -52,7 +53,7 @@ public class FileDialogService(Window owner) : IFileDialogService
 
     public async Task ShowImageAsync(string title, string message, byte[] png)
     {
-        var close = new Button { Content = "Fermer", HorizontalAlignment = HorizontalAlignment.Right };
+        var close = new Button { Content = L.T("fermer"), HorizontalAlignment = HorizontalAlignment.Right };
         var dialog = new Window
         {
             Title = title,
@@ -76,7 +77,7 @@ public class FileDialogService(Window owner) : IFileDialogService
         await dialog.ShowDialog(owner);
     }
 
-    public Task<string?> PickDocumentFileAsync() => PickFileAsync("Importer un document de règles", DocumentFileType);
+    public Task<string?> PickDocumentFileAsync() => PickFileAsync(L.T("importer_un_document_de_regles"), DocumentFileType);
 
     public async Task<string?> PickFolderAsync(string title, string? startFolder)
     {
@@ -94,7 +95,7 @@ public class FileDialogService(Window owner) : IFileDialogService
     {
         var file = await owner.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
         {
-            Title = "Créer une nouvelle OP",
+            Title = L.T("creer_une_nouvelle_op"),
             SuggestedFileName = suggestedName + OperationFile.Extension,
             DefaultExtension = OperationFile.Extension,
             FileTypeChoices = [OperationFileType],
@@ -102,11 +103,11 @@ public class FileDialogService(Window owner) : IFileDialogService
         return file?.TryGetLocalPath();
     }
 
-    public Task<string?> PickExistingOperationFileAsync() => PickFileAsync("Ouvrir une OP", OperationFileType);
+    public Task<string?> PickExistingOperationFileAsync() => PickFileAsync(L.T("ouvrir_une_op"), OperationFileType);
 
-    public Task<string?> PickImageFileAsync() => PickFileAsync("Importer une image du terrain", ImageFileType);
+    public Task<string?> PickImageFileAsync() => PickFileAsync(L.T("importer_une_image_du_terrain"), ImageFileType);
 
-    public Task<string?> PickPhotoFileAsync() => PickFileAsync("Joindre une photo au message", ImageFileType);
+    public Task<string?> PickPhotoFileAsync() => PickFileAsync(L.T("joindre_une_photo_au_message"), ImageFileType);
 
     public async Task<SaveChoice> AskSaveChangesAsync(string fileName)
     {
@@ -123,11 +124,11 @@ public class FileDialogService(Window owner) : IFileDialogService
             return button;
         }
 
-        dialog = CreateDialog("Modifications non enregistrées",
-            $"Enregistrer les modifications de « {fileName} » ?",
-            MakeButton("Enregistrer", SaveChoice.Save),
-            MakeButton("Ne pas enregistrer", SaveChoice.Discard),
-            MakeButton("Annuler", SaveChoice.Cancel));
+        dialog = CreateDialog(L.T("modifications_non_enregistrees"),
+            L.F("enregistrer_les_modifications_de_x", fileName),
+            MakeButton(L.T("enregistrer"), SaveChoice.Save),
+            MakeButton(L.T("ne_pas_enregistrer"), SaveChoice.Discard),
+            MakeButton(L.T("annuler"), SaveChoice.Cancel));
         await dialog.ShowDialog(owner);
         return choice;
     }
@@ -135,7 +136,7 @@ public class FileDialogService(Window owner) : IFileDialogService
     public async Task ShowErrorAsync(string message)
     {
         var close = new Button { Content = "OK" };
-        var dialog = CreateDialog("Erreur", message, close);
+        var dialog = CreateDialog(L.T("erreur"), message, close);
         close.Click += (_, _) => dialog.Close();
         await dialog.ShowDialog(owner);
     }

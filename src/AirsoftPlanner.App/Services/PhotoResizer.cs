@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using SkiaSharp;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services;
 
@@ -9,8 +10,8 @@ public static class PhotoResizer
     /// <returns>JPEG d'au plus <paramref name="maxSide"/> pixels de côté.</returns>
     public static byte[] ToJpeg(byte[] source, int maxSide = 1600, int quality = 80)
     {
-        using var codec = SKCodec.Create(new SKMemoryStream(source)) ?? throw new InvalidOperationException("Image illisible.");
-        using var decoded = SKBitmap.Decode(codec) ?? throw new InvalidOperationException("Image illisible.");
+        using var codec = SKCodec.Create(new SKMemoryStream(source)) ?? throw new InvalidOperationException(L.T("image_illisible"));
+        using var decoded = SKBitmap.Decode(codec) ?? throw new InvalidOperationException(L.T("image_illisible"));
         using var oriented = Orient(decoded, codec.EncodedOrigin);
         var scale = Math.Min(1.0, (double)maxSide / Math.Max(oriented.Width, oriented.Height));
         using var resized = oriented.Resize(new SKImageInfo((int)(oriented.Width * scale), (int)(oriented.Height * scale)),

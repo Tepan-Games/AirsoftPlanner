@@ -1,8 +1,9 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.Json;
 using System.Xml.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Registration;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Core.Gps;
 
@@ -102,7 +103,7 @@ public static class GpsParsers
             .Select(e => (Lat: Number(e.Attribute("lat")?.Value), Lon: Number(e.Attribute("lon")?.Value),
                 Time: Time(e.Elements().FirstOrDefault(c => c.Name.LocalName == "time")?.Value)))
             .Where(p => p.Lat is not null && p.Lon is not null)
-            .Select(p => new GpsFix(deviceId, new GeoPoint(p.Lat!.Value, p.Lon!.Value), p.Time, "Fichier GPX"))
+            .Select(p => new GpsFix(deviceId, new GeoPoint(p.Lat!.Value, p.Lon!.Value), p.Time, L.T("fichier_gpx")))
             .Where(f => f.Point.IsValid)
             .OrderBy(f => f.Time)
             .ToList();
@@ -123,7 +124,7 @@ public static class GpsParsers
         var (idCol, latCol, lonCol, timeCol) = (Column("équipe", "equipe", "team", "appareil", "device", "id"),
             Column("lat"), Column("lon", "lng"), Column("heure", "time", "date"));
         if (idCol < 0 || latCol < 0 || lonCol < 0)
-            throw new FormatException("Colonnes « Équipe » (ou « Appareil »), « Latitude » et « Longitude » attendues.");
+            throw new FormatException(L.T("colonnes_equipe_ou_appareil_latitude_et_longitud"));
 
         var fixes = new List<GpsFix>();
         foreach (var line in lines.Skip(1))
@@ -134,7 +135,7 @@ public static class GpsParsers
             double? lat = Number(Field(latCol)), lon = Number(Field(lonCol));
             if (Field(idCol).Length == 0 || lat is null || lon is null)
                 continue;
-            fixes.Add(new GpsFix(Field(idCol), new GeoPoint(lat.Value, lon.Value), Time(Field(timeCol)), "Fichier CSV"));
+            fixes.Add(new GpsFix(Field(idCol), new GeoPoint(lat.Value, lon.Value), Time(Field(timeCol)), L.T("fichier_csv")));
         }
 
         return fixes;

@@ -4,6 +4,7 @@ using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
 using AirsoftPlanner.Core.Planning;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -61,11 +62,11 @@ public class OperationViewModel : ViewModelBase
         set
         {
             if (!MissionTime.TryParse(value, out var minutes) || minutes >= MissionTime.MinutesPerDay)
-                throw new FormatException("Heure non reconnue (ex. 09:00).");
+                throw new FormatException(L.T("heure_non_reconnue_ex_09_00"));
 
             var start = Day.AddMinutes(minutes);
             if (start >= operation.EndsAt.LocalDateTime)
-                throw new FormatException("Le début doit précéder la fin.");
+                throw new FormatException(L.T("le_debut_doit_preceder_la_fin"));
             operation.StartsAt = new DateTimeOffset(start);
             OnScheduleChanged();
         }
@@ -81,7 +82,7 @@ public class OperationViewModel : ViewModelBase
 
             var end = date.Date + operation.EndsAt.LocalDateTime.TimeOfDay;
             if (end <= operation.StartsAt.LocalDateTime)
-                throw new FormatException("La fin doit suivre le début.");
+                throw new FormatException(L.T("la_fin_doit_suivre_le_debut"));
             operation.EndsAt = new DateTimeOffset(end);
             OnScheduleChanged();
         }
@@ -93,11 +94,11 @@ public class OperationViewModel : ViewModelBase
         set
         {
             if (!MissionTime.TryParse(value, out var minutes) || minutes >= MissionTime.MinutesPerDay)
-                throw new FormatException("Heure non reconnue (ex. 18:00).");
+                throw new FormatException(L.T("heure_non_reconnue_ex_18_00"));
 
             var end = operation.EndsAt.LocalDateTime.Date.AddMinutes(minutes);
             if (end <= operation.StartsAt.LocalDateTime)
-                throw new FormatException("La fin doit suivre le début.");
+                throw new FormatException(L.T("la_fin_doit_suivre_le_debut"));
             operation.EndsAt = new DateTimeOffset(end);
             OnScheduleChanged();
         }
@@ -109,8 +110,8 @@ public class OperationViewModel : ViewModelBase
         {
             var duration = operation.EndsAt - operation.StartsAt;
             return duration.TotalHours < 24
-                ? $"Durée : {MissionTime.FormatDuration((int)duration.TotalMinutes)}"
-                : $"Durée : {(int)duration.TotalDays} j {duration.Hours} h · {Math.Ceiling((operation.EndsAt.LocalDateTime.Date - Day).TotalDays) + 1:0} jours de jeu";
+                ? L.F("duree_x", MissionTime.FormatDuration((int)duration.TotalMinutes))
+                : L.F("duree_x_j_x_h_x_jours_de_jeu", (int)duration.TotalDays, duration.Hours, Math.Ceiling((operation.EndsAt.LocalDateTime.Date - Day).TotalDays) + 1);
         }
     }
 

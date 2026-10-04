@@ -14,13 +14,14 @@ using AirsoftPlanner.Core.Geo;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>Terrain : emprise, fonds de carte (IGN ou image) et zones.</summary>
 public partial class TerrainViewModel : ViewModelBase
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     private readonly OperationFile _file;
     private readonly OperationViewModel _operation;
@@ -94,9 +95,9 @@ public partial class TerrainViewModel : ViewModelBase
         get
         {
             if (!HasArea)
-                return "Emprise non définie : saisissez le centre du terrain ou ses deux coins.";
+                return L.T("emprise_non_definie_saisissez_le_centre_du_terra");
             var (width, height) = Area.SizeInMeters();
-            return string.Format(French, "Emprise : {0:0.00} × {1:0.00} km", width / 1000, height / 1000);
+            return string.Format(French, L.T("emprise_x_x_km"), width / 1000, height / 1000);
         }
     }
 
@@ -107,7 +108,7 @@ public partial class TerrainViewModel : ViewModelBase
             if (!HasArea)
                 return "";
             var plan = TileGrid.BestPlan(Area, SelectedSource.MaxZoom, MapDownloader.MaxImageSide);
-            return string.Format(French, "{0} tuiles · zoom {1} · {2:0.0} m par pixel", plan.TileCount, plan.Zoom, plan.MetersPerPixel);
+            return string.Format(French, L.T("x_tuiles_zoom_x_x_m_par_pixel"), plan.TileCount, plan.Zoom, plan.MetersPerPixel);
         }
     }
 
@@ -220,14 +221,14 @@ public partial class TerrainViewModel : ViewModelBase
     private void RefreshVisibilityOptions()
     {
         VisibilityOptions.Clear();
-        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Orga, null, "Orga seulement"));
-        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.AllTeams, null, "Toutes les équipes"));
-        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.DuringMission, null, "Pendant une mission…"));
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Orga, null, L.T("orga_seulement")));
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.AllTeams, null, L.T("toutes_les_equipes")));
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.DuringMission, null, L.T("pendant_une_mission")));
         foreach (var faction in _factions?.Items ?? [])
-            VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Faction, faction.Model.Id, $"Faction {faction.Name}"));
+            VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Faction, faction.Model.Id, L.F("faction_x", faction.Name)));
         OnPropertyChanged(nameof(SelectedZoneVisibility));
         OwnerOptions.Clear();
-        OwnerOptions.Add(new FactionChoice(null, "Aucune (couleur du point)"));
+        OwnerOptions.Add(new FactionChoice(null, L.T("aucune_couleur_du_point")));
         foreach (var faction in _factions?.Items ?? [])
             OwnerOptions.Add(new FactionChoice(faction.Model.Id, faction.Name));
         OnPropertyChanged(nameof(SelectedZoneOwner));
@@ -269,7 +270,7 @@ public partial class TerrainViewModel : ViewModelBase
     {
         if (!Coordinates.TryParse(CenterText, out var center))
         {
-            await _dialogs.ShowErrorAsync("Coordonnées du centre non reconnues (ex. 31T 448251 5411952, 48.8583, 2.2944 ou 48°51'30\"N 2°17'40\"E).");
+            await _dialogs.ShowErrorAsync(L.T("coordonnees_du_centre_non_reconnues_ex_31t_44825"));
             return;
         }
 
@@ -285,7 +286,7 @@ public partial class TerrainViewModel : ViewModelBase
     {
         if (!HasArea)
         {
-            await _dialogs.ShowErrorAsync("Définissez d'abord l'emprise du terrain (centre et taille, ou deux coins).");
+            await _dialogs.ShowErrorAsync(L.T("definissez_d_abord_l_emprise_du_terrain_centre_e"));
             return;
         }
 
@@ -304,7 +305,7 @@ public partial class TerrainViewModel : ViewModelBase
         }
         catch (HttpRequestException ex)
         {
-            await _dialogs.ShowErrorAsync($"Téléchargement impossible : vérifiez la connexion Internet.\n({ex.Message})");
+            await _dialogs.ShowErrorAsync(L.F("telechargement_impossible_verifiez_la_connexion", ex.Message));
         }
         finally
         {
@@ -322,7 +323,7 @@ public partial class TerrainViewModel : ViewModelBase
     {
         if (!HasArea)
         {
-            await _dialogs.ShowErrorAsync("Définissez d'abord l'emprise du terrain : l'image importée doit couvrir exactement cette emprise (nord en haut).");
+            await _dialogs.ShowErrorAsync(L.T("definissez_d_abord_l_emprise_du_terrain_l_image"));
             return;
         }
 
@@ -333,7 +334,7 @@ public partial class TerrainViewModel : ViewModelBase
         AddLayer(new MapLayer
         {
             Name = Path.GetFileNameWithoutExtension(path),
-            Attribution = "Image importée",
+            Attribution = L.T("image_importee"),
             Image = await File.ReadAllBytesAsync(path),
             Bounds = Area,
         });
@@ -351,10 +352,10 @@ public partial class TerrainViewModel : ViewModelBase
     // ----- Commandes : zones -----
 
     [RelayCommand]
-    private void AddArea() => AddZone(ZoneKind.Area, "Zone");
+    private void AddArea() => AddZone(ZoneKind.Area, L.T("zone"));
 
     [RelayCommand]
-    private void AddPoint() => AddZone(ZoneKind.Point, "Point");
+    private void AddPoint() => AddZone(ZoneKind.Point, L.T("point_2"));
 
     [RelayCommand(CanExecute = nameof(HasSelectedZone))]
     private void RemoveZone()
@@ -441,7 +442,7 @@ public partial class TerrainViewModel : ViewModelBase
                 Math.Max(nw.Latitude, se.Latitude), Math.Min(nw.Latitude, se.Latitude),
                 Math.Min(nw.Longitude, se.Longitude), Math.Max(nw.Longitude, se.Longitude));
             if (!bounds.IsValid)
-                throw new FormatException("Les deux coins doivent être différents.");
+                throw new FormatException(L.T("les_deux_coins_doivent_etre_differents"));
             _file.TerrainMap.Bounds = bounds;
         }
         else if (northWest is { } only1)
@@ -483,5 +484,5 @@ public partial class TerrainViewModel : ViewModelBase
 
     private static GeoPoint Parse(string text) => Coordinates.TryParse(text, out var point)
         ? point
-        : throw new FormatException("Coordonnées non reconnues (ex. 31T 448251 5411952 ou 48.8583, 2.2944).");
+        : throw new FormatException(L.T("coordonnees_non_reconnues_ex_31t_448251_5411952"));
 }

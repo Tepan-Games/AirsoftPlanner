@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using Avalonia.Data.Converters;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Converters;
 
@@ -13,7 +14,7 @@ public class BoolToTextConverter(string whenTrue) : IValueConverter
     /// <summary>Fréquence en double dans le plan radio.</summary>
     public static BoolToTextConverter DuplicateWarning { get; } = new("⚠");
 
-    public static BoolToTextConverter DuplicateFrequencyTip { get; } = new("Fréquence en double : voir l'alerte en haut de la fenêtre");
+    public static BoolToTextConverter DuplicateFrequencyTip { get; } = new(L.T("frequence_en_double_voir_l_alerte_en_haut_de_la"));
 
     // Rien quand c'est faux (null : pas d'infobulle vide).
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture) => value is true ? whenTrue : null;

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -13,13 +13,14 @@ using AirsoftPlanner.Core.Finance;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>Montants en euros, à la française (« 1 234,50 € »), et saisie avec virgule ou point.</summary>
 public static class Money
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     public static string Format(decimal amount) => amount.ToString("#,##0.00 €", French);
 
@@ -28,20 +29,20 @@ public static class Money
             NumberStyles.Number, CultureInfo.InvariantCulture, out amount);
 
     public static decimal Parse(string? text) =>
-        TryParse(text, out var amount) ? amount : throw new FormatException("Montant non reconnu (ex. 25 ou 12,50).");
+        TryParse(text, out var amount) ? amount : throw new FormatException(L.T("montant_non_reconnu_ex_25_ou_12_50"));
 }
 
 public record PaymentMethodOption(PaymentMethod Value, string Label)
 {
     public static IReadOnlyList<PaymentMethodOption> All { get; } =
     [
-        new(PaymentMethod.BankTransfer, "Virement"),
-        new(PaymentMethod.Cash, "Espèces"),
-        new(PaymentMethod.Check, "Chèque"),
-        new(PaymentMethod.Card, "Carte bancaire"),
+        new(PaymentMethod.BankTransfer, L.T("virement")),
+        new(PaymentMethod.Cash, L.T("especes")),
+        new(PaymentMethod.Check, L.T("cheque")),
+        new(PaymentMethod.Card, L.T("carte_bancaire")),
         new(PaymentMethod.PayPal, "PayPal"),
         new(PaymentMethod.HelloAsso, "HelloAsso"),
-        new(PaymentMethod.Other, "Autre"),
+        new(PaymentMethod.Other, L.T("autre")),
     ];
 
     public static PaymentMethodOption Of(PaymentMethod method) => All.First(o => o.Value == method);
@@ -53,13 +54,13 @@ public record ExpenseCategoryOption(ExpenseCategory Value, string Label)
 {
     public static IReadOnlyList<ExpenseCategoryOption> All { get; } =
     [
-        new(ExpenseCategory.Supplies, "Fournitures"),
-        new(ExpenseCategory.Provider, "Prestataire"),
-        new(ExpenseCategory.FieldRental, "Location du terrain"),
-        new(ExpenseCategory.Insurance, "Assurance"),
-        new(ExpenseCategory.Pyrotechnics, "Pyrotechnie"),
-        new(ExpenseCategory.Catering, "Restauration"),
-        new(ExpenseCategory.Other, "Autre"),
+        new(ExpenseCategory.Supplies, L.T("fournitures")),
+        new(ExpenseCategory.Provider, L.T("prestataire")),
+        new(ExpenseCategory.FieldRental, L.T("location_du_terrain")),
+        new(ExpenseCategory.Insurance, L.T("assurance")),
+        new(ExpenseCategory.Pyrotechnics, L.T("pyrotechnie")),
+        new(ExpenseCategory.Catering, L.T("restauration")),
+        new(ExpenseCategory.Other, L.T("autre")),
     ];
 
     public static ExpenseCategoryOption Of(ExpenseCategory category) => All.First(o => o.Value == category);
@@ -71,8 +72,8 @@ public record AdjustmentKindOption(AdjustmentKind Value, string Label)
 {
     public static IReadOnlyList<AdjustmentKindOption> All { get; } =
     [
-        new(AdjustmentKind.Discount, "Remise"),
-        new(AdjustmentKind.Gift, "Cadeau"),
+        new(AdjustmentKind.Discount, L.T("remise")),
+        new(AdjustmentKind.Gift, L.T("cadeau")),
     ];
 
     public static AdjustmentKindOption Of(AdjustmentKind kind) => All.First(o => o.Value == kind);
@@ -103,15 +104,15 @@ public partial class TeamFinanceRow(TeamViewModel team, FinancesViewModel owner)
     public string PaidText => Money.Format(Balance.Paid);
 
     public string RemainingText => Balance.Remaining > 0 ? $"reste {Money.Format(Balance.Remaining)}"
-        : Balance.Remaining < 0 ? $"trop-perçu {Money.Format(-Balance.Remaining)}" : "";
+        : Balance.Remaining < 0 ? L.F("trop_percu_x", Money.Format(-Balance.Remaining)) : "";
 
     public string StatusLabel => Balance.Status switch
     {
-        PaymentStatus.Paid => "Payé",
-        PaymentStatus.Partial => "Paiement partiel",
-        PaymentStatus.Unpaid => "Non payé",
-        PaymentStatus.Overpaid => "Trop-perçu",
-        _ => team.IsPlaying ? "Gratuit" : $"{team.Status.Label}",
+        PaymentStatus.Paid => L.T("paye"),
+        PaymentStatus.Partial => L.T("paiement_partiel"),
+        PaymentStatus.Unpaid => L.T("non_paye"),
+        PaymentStatus.Overpaid => L.T("trop_percu"),
+        _ => team.IsPlaying ? L.T("gratuit") : $"{team.Status.Label}",
     };
 
     public string StatusColor => Balance.Status switch
@@ -126,7 +127,7 @@ public partial class TeamFinanceRow(TeamViewModel team, FinancesViewModel owner)
     /// <summary>Somme due fixée à la main (vide = effectif × tarif).</summary>
     public string OverrideText
     {
-        get => team.Model.AmountDueOverride is { } amount ? amount.ToString("0.##", CultureInfo.GetCultureInfo("fr-FR")) : "";
+        get => team.Model.AmountDueOverride is { } amount ? amount.ToString("0.##", AirsoftPlanner.Core.Localization.L.Culture) : "";
         set
         {
             team.Model.AmountDueOverride = string.IsNullOrWhiteSpace(value) ? null : Money.Parse(value);
@@ -172,7 +173,7 @@ public class ExpenseViewModel(Expense expense, Action onChanged) : ViewModelBase
 
     public string AmountText
     {
-        get => expense.Amount.ToString("0.00", CultureInfo.GetCultureInfo("fr-FR"));
+        get => expense.Amount.ToString("0.00", AirsoftPlanner.Core.Localization.L.Culture);
         set
         {
             if (SetProperty(expense.Amount, Money.Parse(value), expense, (e, v) => e.Amount = v))
@@ -210,7 +211,7 @@ public class ExpenseViewModel(Expense expense, Action onChanged) : ViewModelBase
 /// <summary>Finances de l'OP : participation des équipes, autres recettes, dépenses et bilan.</summary>
 public partial class FinancesViewModel : ViewModelBase
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     private readonly OperationFile _file;
     private readonly TeamsViewModel _teams;
@@ -293,7 +294,7 @@ public partial class FinancesViewModel : ViewModelBase
         var amount = 0m;
         if (NewAdjustmentAmount.Trim().Length > 0 && (!Money.TryParse(NewAdjustmentAmount, out amount) || amount < 0))
         {
-            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 20 ou 12,50 ; vide pour un cadeau sans valeur).");
+            await _dialogs.ShowErrorAsync(L.T("montant_non_reconnu_ex_20_ou_12_50_vide_pour_un"));
             return;
         }
 
@@ -396,7 +397,7 @@ public partial class FinancesViewModel : ViewModelBase
     {
         if (!Money.TryParse(NewAmount, out var amount) || amount <= 0)
         {
-            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 25 ou 12,50).");
+            await _dialogs.ShowErrorAsync(L.T("montant_non_reconnu_ex_25_ou_12_50"));
             return;
         }
 
@@ -421,7 +422,7 @@ public partial class FinancesViewModel : ViewModelBase
     {
         if (!Money.TryParse(NewIncomeAmount, out var amount) || amount <= 0)
         {
-            await _dialogs.ShowErrorAsync("Montant non reconnu (ex. 150 ou 12,50).");
+            await _dialogs.ShowErrorAsync(L.T("montant_non_reconnu_ex_150_ou_12_50"));
             return;
         }
 
@@ -438,7 +439,7 @@ public partial class FinancesViewModel : ViewModelBase
     [RelayCommand]
     private void AddExpense()
     {
-        var expense = new Expense { Label = "Nouvelle dépense", Category = ExpenseCategory.Supplies, Date = DateTimeOffset.Now };
+        var expense = new Expense { Label = L.T("nouvelle_depense"), Category = ExpenseCategory.Supplies, Date = DateTimeOffset.Now };
         _file.Add(expense);
         var viewModel = new ExpenseViewModel(expense, Refresh);
         Expenses.Add(viewModel);
@@ -459,19 +460,19 @@ public partial class FinancesViewModel : ViewModelBase
     [RelayCommand]
     private async Task ExportCsvAsync()
     {
-        var path = await _dialogs.PickSaveFileAsync("Exporter les finances", "finances.csv", "Fichier CSV", ".csv");
+        var path = await _dialogs.PickSaveFileAsync(L.T("exporter_les_finances"), "finances.csv", L.T("fichier_csv"), ".csv");
         if (path is null)
             return;
 
         static string Quote(string value) => value.IndexOfAny([';', '"', '\n']) >= 0 ? $"\"{value.Replace("\"", "\"\"")}\"" : value;
         var teams = _teams.Items.ToDictionary(t => t.Model.Id, t => t.Name);
-        var text = new StringBuilder("Type;Date;Libellé;Catégorie / moyen;Tiers;Montant;Réglé\n");
+        var text = new StringBuilder(L.T("type_date_libelle_categorie_moyen_tiers_montant"));
         foreach (var p in _payments.OrderBy(p => p.Date))
-            text.AppendLine(string.Join(";", "Recette", p.Date.LocalDateTime.ToString("dd/MM/yyyy"),
-                Quote(p.TeamId is { } id ? $"Participation {teams.GetValueOrDefault(id, "équipe supprimée")}" : p.Label),
+            text.AppendLine(string.Join(";", L.T("recette"), p.Date.LocalDateTime.ToString("dd/MM/yyyy"),
+                Quote(p.TeamId is { } id ? L.F("participation_x", teams.GetValueOrDefault(id, L.T("equipe_supprimee_2"))) : p.Label),
                 PaymentMethodOption.Of(p.Method).Label, Quote(p.Reference), p.Amount.ToString("0.00", French), "oui"));
         foreach (var e in Expenses.Select(x => x.Model).OrderBy(e => e.Date))
-            text.AppendLine(string.Join(";", "Dépense", e.Date.LocalDateTime.ToString("dd/MM/yyyy"), Quote(e.Label),
+            text.AppendLine(string.Join(";", L.T("depense_2"), e.Date.LocalDateTime.ToString("dd/MM/yyyy"), Quote(e.Label),
                 ExpenseCategoryOption.Of(e.Category).Label, Quote(e.Supplier), (-e.Amount).ToString("0.00", French), e.IsPaid ? "oui" : "non"));
         await File.WriteAllTextAsync(path, text.ToString(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
     }
@@ -506,7 +507,7 @@ public partial class FinancesViewModel : ViewModelBase
                 var km = _vehicles.Kilometers(vehicle.Model);
                 var refund = VehicleMileage.FuelRefund(km, fuelRate);
                 fuel += refund;
-                credits.Add(new CreditRow(null, $"Carburant {vehicle.Kind} ({vehicle.KilometersText})", $"− {Money.Format(refund)}"));
+                credits.Add(new CreditRow(null, L.F("carburant_x_x", vehicle.Kind, vehicle.KilometersText), $"− {Money.Format(refund)}"));
             }
 
             var discounts = _adjustments.Where(a => a.TeamId == row.Team.Model.Id).Sum(a => a.Amount);
@@ -515,7 +516,7 @@ public partial class FinancesViewModel : ViewModelBase
             if (row.Team.IsPlaying)
                 dues[row.Team.Model.Id] = due;
             var breakdown = discounts + fuel == 0 ? ""
-                : $"{Money.Format(gross)}{(discounts > 0 ? $" − remises {Money.Format(discounts)}" : "")}{(fuel > 0 ? $" − carburant {Money.Format(fuel)}" : "")}";
+                : $"{Money.Format(gross)}{(discounts > 0 ? L.F("remises_x", Money.Format(discounts)) : "")}{(fuel > 0 ? L.F("carburant_x", Money.Format(fuel)) : "")}";
             row.Update(FinanceCalculator.Balance(due, _payments.Where(p => p.TeamId == row.Team.Model.Id)), breakdown, credits);
         }
 

@@ -1,4 +1,5 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              x:Class="AirsoftPlanner.App.Views.GameItemsView"
@@ -6,8 +7,8 @@
     <Grid ColumnDefinitions="320,*">
         <DockPanel Margin="12">
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Content="Ajouter" Command="{Binding AddCommand}" />
-                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+                <Button Content="{l:T ajouter}" Command="{Binding AddCommand}" />
+                <Button Content="{l:T supprimer}" Command="{Binding RemoveCommand}" />
             </StackPanel>
             <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
                 <ListBox.ItemTemplate>
@@ -15,7 +16,7 @@
                         <StackPanel>
                             <TextBlock>
                                 <Run Text="{Binding Quantity}" FontWeight="SemiBold" />
-                                <Run Text="×" />
+                                <Run Text="{l:T texte}" />
                                 <Run Text="{Binding Name}" />
                             </TextBlock>
                             <TextBlock FontSize="11" Opacity="0.65" TextWrapping="Wrap" Classes.warning="{Binding HasShortage}">
@@ -30,37 +31,37 @@
         </DockPanel>
 
         <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24" TextWrapping="Wrap"
-                   Text="Listez le matériel de jeu disponible (caisses, artifices, fumigènes, accessoires…), puis affectez-le aux missions dans l'onglet Scénario." />
+                   Text="{l:T listez_le_materiel_de_jeu_disponible_caisses_art}" />
 
         <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
             <StackPanel Margin="24" MaxWidth="600" HorizontalAlignment="Left" Spacing="12">
-                <TextBlock Text="Élément de jeu" Classes="h1" />
-                <TextBlock Text="Nom" Classes="label" />
+                <TextBlock Text="{l:T element_de_jeu}" Classes="h1" />
+                <TextBlock Text="{l:T nom}" Classes="label" />
                 <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
                 <StackPanel Orientation="Horizontal" Spacing="16">
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Catégorie" Classes="label" />
+                        <TextBlock Text="{l:T categorie}" Classes="label" />
                         <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding Selected.Category, FallbackValue={x:Null}}"
                                   MinWidth="220" />
                     </StackPanel>
                     <StackPanel Spacing="10">
-                        <TextBlock Text="Quantité disponible" Classes="label" />
+                        <TextBlock Text="{l:T quantite_disponible}" Classes="label" />
                         <NumericUpDown Value="{Binding Selected.Quantity, FallbackValue=0}" Minimum="0" Maximum="10000"
                                        Increment="1" FormatString="0" Width="150" />
                     </StackPanel>
                 </StackPanel>
-                <CheckBox Content="Consommable (détruit à l'usage : artifice, fumigène…)"
+                <CheckBox Content="{l:T consommable_detruit_a_l_usage_artifice_fumigene}"
                           IsChecked="{Binding Selected.IsConsumable, FallbackValue=False}" />
-                <CheckBox Content="Objet d'objectif à suivre pendant l'OP (qui l'a, où, depuis quand)"
+                <CheckBox Content="{l:T objet_d_objectif_a_suivre_pendant_l_op_qui_l_a_o}"
                           IsChecked="{Binding Selected.IsTracked, FallbackValue=False}"
-                          ToolTip.Tip="Apparaît dans le suivi de l'OP et sur la carte, pour savoir où le récupérer après la partie" />
-                <TextBlock Text="Description (contenu, conditions d'utilisation, emplacement de stockage…)" Classes="label" />
+                          ToolTip.Tip="{l:T apparait_dans_le_suivi_de_l_op_et_sur_la_carte_p}" />
+                <TextBlock Text="{l:T description_contenu_conditions_d_utilisation_emp}" Classes="label" />
                 <TextBox Text="{Binding Selected.Description, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" />
 
-                <TextBlock Text="Utilisation dans le scénario" Classes="h2" Margin="0,8,0,0" />
+                <TextBlock Text="{l:T utilisation_dans_le_scenario}" Classes="h2" Margin="0,8,0,0" />
                 <TextBlock Text="{Binding Selected.UsageSummary, FallbackValue=''}" Classes.warning="{Binding Selected.HasShortage, FallbackValue=False}" />
                 <TextBlock IsVisible="{Binding Selected.HasShortage, FallbackValue=False}" Classes="warning" TextWrapping="Wrap"
-                           Text="⚠ Stock insuffisant : voir les missions signalées dans l'onglet Scénario." />
+                           Text="{l:T stock_insuffisant_voir_les_missions_signalees_da}" />
                 <ItemsControl ItemsSource="{Binding Selected.Usages, FallbackValue={x:Null}}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:GameItemUsage">
@@ -69,7 +70,7 @@
                                 <Run Text="{Binding MissionName}" />
                                 <Run Text=" — " />
                                 <Run Text="{Binding Quantity}" />
-                                <Run Text="utilisé(s)" />
+                                <Run Text="{l:T utilise_s}" />
                             </TextBlock>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

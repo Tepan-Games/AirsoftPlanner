@@ -1,4 +1,4 @@
-using AirsoftPlanner.App.ViewModels;
+﻿using AirsoftPlanner.App.ViewModels;
 using Avalonia.Controls;
 
 namespace AirsoftPlanner.App.Views;

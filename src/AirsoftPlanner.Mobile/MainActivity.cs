@@ -10,6 +10,7 @@ using Android.Views;
 using Android.Widget;
 using Color = Android.Graphics.Color;
 using Orientation = Android.Widget.Orientation;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Mobile;
 
@@ -24,7 +25,7 @@ namespace AirsoftPlanner.Mobile;
     DataScheme = EnrollmentLink.Scheme, DataHost = "enroll")]
 public class MainActivity : Activity
 {
-    private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
+    private static CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
     private readonly Handler _refresh = new(Looper.MainLooper!);
     private LinearLayout _root = null!;
 
@@ -61,6 +62,7 @@ public class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        Prefs.ApplyLanguage();
         // Pas de barre de titre : l'écran affiche son propre titre (équipe).
         Window!.RequestFeature(WindowFeatures.NoTitle);
         _root = new LinearLayout(this) { Orientation = Orientation.Vertical };
@@ -100,7 +102,7 @@ public class MainActivity : Activity
         if (permissions.Zip(grantResults).Any(p => p.First == Android.Manifest.Permission.AccessFineLocation && p.Second == Permission.Granted))
             TrackingService.Start(this);
         else
-            Toast.MakeText(this, "La localisation est nécessaire pour envoyer la position de l'équipe.", ToastLength.Long)!.Show();
+            Toast.MakeText(this, L.T("la_localisation_est_necessaire_pour_envoyer_la_p"), ToastLength.Long)!.Show();
     }
 
     // ----- Écrans -----
@@ -144,7 +146,22 @@ public class MainActivity : Activity
         }
 
         header.AddView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
-        var toggle = new Button(this) { Text = Prefs.NightMode ? "☀ Mode jour" : "🌙 Mode nuit", TextSize = 12 };
+        var language = new Button(this) { Text = "🌐", TextSize = 16, ContentDescription = L.T("langue") };
+        language.Click += (_, _) =>
+        {
+            var languages = L.Languages;
+            new AlertDialog.Builder(this)
+                .SetTitle(L.T("langue"))!
+                .SetItems(languages.Select(l => l.Name).ToArray(), (_, e) =>
+                {
+                    Prefs.Language = languages[e.Which].Code;
+                    Prefs.ApplyLanguage();
+                    Recreate();
+                })!
+                .Show();
+        };
+        header.AddView(language, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+        var toggle = new Button(this) { Text = Prefs.NightMode ? L.T("mode_jour") : L.T("mode_nuit"), TextSize = 12 };
         toggle.Click += (_, _) =>
         {
             Prefs.NightMode = !Prefs.NightMode;
@@ -200,19 +217,19 @@ public class MainActivity : Activity
 
     private void BuildEnrollment(string server, string code)
     {
-        AddTitle("Airsoft Planner");
+        AddTitle(L.T("airsoft_planner"));
         if (Prefs.Status.StartsWith('⛔'))
             Text(Prefs.Status, 15).SetTextColor(Color.Rgb(198, 40, 40));
-        Text("Scannez le QR code d'enrôlement affiché par l'orga avec l'appareil photo du téléphone, ou saisissez l'adresse du PC de l'OP et le code de votre équipe.", 14, secondary: true);
+        Text(L.T("scannez_le_qr_code_d_enrolement_affiche_par_l_or"), 14, secondary: true);
 
-        Label("Adresse du PC de l'OP");
+        Label(L.T("adresse_du_pc_de_l_op"));
         var serverInput = Input(server, "http://192.168.1.20:5055", Android.Text.InputTypes.TextVariationUri);
-        Label("Code d'équipe");
+        Label(L.T("code_d_equipe_2"));
         var codeInput = Input(code, "K7P-4QZ", Android.Text.InputTypes.TextFlagCapCharacters);
-        Label("Nom du téléphone");
+        Label(L.T("nom_du_telephone"));
         var nameInput = Input(Prefs.DeviceName.Length > 0 ? Prefs.DeviceName : $"{Build.Manufacturer} {Build.Model}", "", Android.Text.InputTypes.ClassText);
 
-        var enroll = PrimaryButton("S'enrôler");
+        var enroll = PrimaryButton(L.T("s_enroler"));
         enroll.Click += async (_, _) =>
         {
             enroll.Enabled = false;
@@ -243,11 +260,11 @@ public class MainActivity : Activity
         _root.AddView(_qgPane);
         _target = _qgPane;
 
-        Section("Mission");
+        Section(L.T("mission_2"));
         _mission = Text("", 15);
 
         // Ordres du QG (en jeu) : groupés par mission, historique complet à la demande.
-        Section("Messages du QG");
+        Section(L.T("messages_du_qg"));
         _messages = List();
         _history = new Button(this) { TextSize = 13 };
         _history.Click += (_, _) =>
@@ -257,17 +274,17 @@ public class MainActivity : Activity
         };
         _target.AddView(_history, Spaced(4));
 
-        Section("Radio");
+        Section(L.T("radio"));
         _comms = Text("", 15);
 
-        Section("Points d'intérêt");
+        Section(L.T("points_d_interet"));
         _points = Text("", 15);
 
-        Section("Position");
+        Section(L.T("position"));
         _ownPosition = Text("", 15);
 
-        Section("Alliés");
-        _map = new MapCanvasView(this) { ContentDescription = "Carte du terrain" };
+        Section(L.T("allies"));
+        _map = new MapCanvasView(this) { ContentDescription = L.T("carte_du_terrain") };
         _target.AddView(_map, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
         _allies = Text("", 15);
 
@@ -276,7 +293,7 @@ public class MainActivity : Activity
         _root.AddView(_orgaPane);
         _target = _orgaPane;
 
-        Section("Contacts de l'orga");
+        Section(L.T("contacts_de_l_orga"));
         _orgaComms = Text("", 15);
         _emergency = PrimaryButton("", Color.Rgb(198, 40, 40));
         _emergency.Click += (_, _) =>
@@ -285,10 +302,10 @@ public class MainActivity : Activity
             if (!string.IsNullOrWhiteSpace(phone))
                 StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
         };
-        Section("Messages de l'orga");
+        Section(L.T("messages_de_l_orga"));
         _orgaMessages = List();
 
-        var leave = new Button(this) { Text = "Se désenrôler" };
+        var leave = new Button(this) { Text = L.T("se_desenroler") };
         leave.Click += (_, _) =>
         {
             TrackingService.Stop(this);
@@ -322,8 +339,8 @@ public class MainActivity : Activity
             Prefs.HqSeenAt = now;
         var unreadHq = archive.Count(m => m.Sender == MessageSender.Hq && m.SentAt > Prefs.HqSeenAt);
         var unreadOrga = archive.Count(m => m.Sender == MessageSender.Orga && m.SentAt > Prefs.OrgaSeenAt);
-        _qgTab!.Text = unreadHq > 0 ? $"QG ({unreadHq})" : "QG";
-        _orgaTab!.Text = unreadOrga > 0 ? $"ORGA ({unreadOrga})" : "ORGA";
+        _qgTab!.Text = unreadHq > 0 ? $"{L.T("onglet_qg")} ({unreadHq})" : L.T("onglet_qg");
+        _orgaTab!.Text = unreadOrga > 0 ? $"{L.T("onglet_orga")} ({unreadOrga})" : L.T("onglet_orga");
         _qgTab.SetTypeface(null, _orgaSelected ? TypefaceStyle.Normal : TypefaceStyle.Bold);
         _orgaTab.SetTypeface(null, _orgaSelected ? TypefaceStyle.Bold : TypefaceStyle.Normal);
         _qgTab.Alpha = _orgaSelected ? 0.6f : 1;
@@ -345,55 +362,55 @@ public class MainActivity : Activity
 
         var response = Prefs.LastResponse;
         var format = response?.CoordinateFormat ?? CoordinateFormat.Utm;
-        _status.Text = (Prefs.IsTracking ? "● Suivi actif" : "○ Suivi arrêté") +
-                       $" · envoi toutes les {Prefs.IntervalSeconds} s\n{Prefs.Status}";
+        _status.Text = (Prefs.IsTracking ? L.T("suivi_actif") : L.T("suivi_arrete")) +
+                       L.F("envoi_toutes_les_x_s_x", Prefs.IntervalSeconds, Prefs.Status);
         _toggle!.Text = Prefs.IsTracking ? "⏸" : "▶";
-        _toggle.ContentDescription = Prefs.IsTracking ? "Arrêter l'envoi de la position" : "Démarrer l'envoi de la position";
+        _toggle.ContentDescription = Prefs.IsTracking ? L.T("arreter_l_envoi_de_la_position") : L.T("demarrer_l_envoi_de_la_position");
 
         _mission!.Text = response?.Mission is { } m
             ? $"MISSION : {m.Name}\n" +
               $"{m.Start.LocalDateTime.ToString("ddd HH:mm", French)} – {m.End.LocalDateTime:HH:mm}\n" +
-              (m.Zone.Length > 0 ? $"Zone : {m.Zone}\n{m.ZoneCoordinates}\n" : "") +
-              (m.Equipment.Length > 0 ? $"Matériel : {m.Equipment}\n" : "") +
+              (m.Zone.Length > 0 ? L.F("zone_x_x", m.Zone, m.ZoneCoordinates) : "") +
+              (m.Equipment.Length > 0 ? L.F("materiel_x", m.Equipment) : "") +
               (m.Briefing.Length > 0 ? $"\n{m.Briefing}" : "")
-            : response is null ? "En attente du premier échange avec le PC de l'OP."
-            : "Aucune mission diffusée par l'orga : attendez les ordres.";
+            : response is null ? L.T("en_attente_du_premier_echange_avec_le_pc_de_l_op")
+            : L.T("aucune_mission_diffusee_par_l_orga_attendez_les");
 
         var archive = Prefs.MessageArchive;
         RefreshTabs(archive);
         var groups = MessageHistory.Group(archive.Where(x => x.Sender == MessageSender.Hq));
         _history!.Visibility = groups.Count > 1 ? ViewStates.Visible : ViewStates.Gone;
-        _history.Text = _showHistory ? "Masquer l'historique" : $"Historique des messages ({groups.Count - 1} mission(s) précédente(s))";
+        _history.Text = _showHistory ? L.T("masquer_l_historique") : L.F("historique_des_messages_x_mission_s_precedente_s", groups.Count - 1);
         RenderMessages(archive, groups);
 
         var comms = response?.Comms ?? Prefs.EnrollComms;
         _comms!.Text = comms is null
-            ? "En attente du premier échange avec le PC de l'OP."
+            ? L.T("en_attente_du_premier_echange_avec_le_pc_de_l_op")
             : string.Join("\n", new[]
             {
-                comms.Faction.Length > 0 ? $"Faction {comms.Faction} : {Freq(comms.FactionFrequency)}" : null,
+                comms.Faction.Length > 0 ? L.F("faction_x_x", comms.Faction, Freq(comms.FactionFrequency)) : null,
             }.OfType<string>().Concat(comms.Teams.Select(t => $"{t.Team}{(t.IsCommand ? " ★" : "")} : {Freq(t.Frequency)}")));
-        _orgaComms!.Text = comms is null ? "" : $"Fréquence orga : {Freq(comms.OrgaFrequency)}";
+        _orgaComms!.Text = comms is null ? "" : L.F("frequence_orga_x", Freq(comms.OrgaFrequency));
         _emergency!.Visibility = comms?.EmergencyPhone is { Length: > 0 } ? ViewStates.Visible : ViewStates.Gone;
-        _emergency.Text = $"☎ Urgence orga : {comms?.EmergencyPhone}";
+        _emergency.Text = L.F("urgence_orga_x", comms?.EmergencyPhone);
 
         var points = response?.Points ?? [];
         _points!.Text = points.Count == 0
-            ? "Aucun point communiqué par l'orga."
+            ? L.T("aucun_point_communique_par_l_orga")
             : string.Join("\n\n", points.Select(p =>
                 $"{p.Symbol} {p.Name} — {p.Category}\n{p.Coordinates}" + (p.Description.Length > 0 ? $"\n{p.Description}" : "")));
 
         GeoPoint? own = Prefs.LastLatitude is { } lat && Prefs.LastLongitude is { } lon ? new GeoPoint(lat, lon) : null;
-        _ownPosition!.Text = own is { } p ? Coordinates.Format(p, format) : "En attente du GPS…";
+        _ownPosition!.Text = own is { } p ? Coordinates.Format(p, format) : L.T("en_attente_du_gps");
 
         var mode = response?.ShareMode ?? AllyShareMode.None;
         var allies = response?.Allies ?? [];
         _allies!.Text = mode == AllyShareMode.None
-            ? "Positions des alliés non partagées par l'orga."
+            ? L.T("positions_des_allies_non_partagees_par_l_orga")
             : allies.Count == 0
-                ? "Aucune position alliée reçue pour le moment."
+                ? L.T("aucune_position_alliee_recue_pour_le_moment")
                 : string.Join("\n\n", allies.Select(a =>
-                    $"{a.Team} ({Freq(a.RadioFrequency)})\n{a.Coordinates}\nvu à {a.Time.LocalDateTime:HH:mm}"));
+                    L.F("x_x_x_vu_a_x", a.Team, Freq(a.RadioFrequency), a.Coordinates, a.Time.LocalDateTime)));
 
         UpdateMap(mode, response, own, allies);
     }
@@ -412,10 +429,10 @@ public class MainActivity : Activity
 
         _messages!.RemoveAllViews();
         if (groups.Count == 0)
-            AddLine(_messages, "Aucun message du QG.", 15);
+            AddLine(_messages, L.T("aucun_message_du_qg"), 15);
         foreach (var group in _showHistory ? groups : groups.Take(1))
         {
-            AddLine(_messages, group.Mission.Length > 0 ? $"— Mission « {group.Mission} » —" : "— Hors mission —", 14, bold: true);
+            AddLine(_messages, group.Mission.Length > 0 ? L.F("mission_x_2", group.Mission) : L.T("hors_mission"), 14, bold: true);
             foreach (var message in group.Messages.Reverse())
                 AddMessage(_messages, message, $"{message.SentAt.LocalDateTime:HH:mm} · {message.Audience}");
         }
@@ -423,7 +440,7 @@ public class MainActivity : Activity
         var orga = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
         _orgaMessages!.RemoveAllViews();
         if (orga.Count == 0)
-            AddLine(_orgaMessages, "Aucun message de l'orga.", 15);
+            AddLine(_orgaMessages, L.T("aucun_message_de_l_orga"), 15);
         foreach (var message in orga)
             AddMessage(_orgaMessages, message, $"{message.SentAt.LocalDateTime.ToString("ddd HH:mm", French)} · {message.Audience}");
 
@@ -445,11 +462,11 @@ public class MainActivity : Activity
             _photos[message.Id] = bitmap = decoded;
         if (bitmap is null)
         {
-            AddLine(list, "📷 Photo en cours de téléchargement…", 13);
+            AddLine(list, L.T("photo_en_cours_de_telechargement"), 13);
             return;
         }
 
-        var image = new ImageView(this) { ContentDescription = "Photo jointe" };
+        var image = new ImageView(this) { ContentDescription = L.T("photo_jointe") };
         image.SetAdjustViewBounds(true);
         image.SetImageBitmap(bitmap);
         if (Prefs.NightMode)
@@ -514,7 +531,7 @@ public class MainActivity : Activity
 
         if (Prefs.IsEnrolled)
         {
-            Toast.MakeText(this, "Ce téléphone est déjà enrôlé : désenrôlez-le d'abord pour changer d'équipe.", ToastLength.Long)!.Show();
+            Toast.MakeText(this, L.T("ce_telephone_est_deja_enrole_desenrolez_le_d_abo"), ToastLength.Long)!.Show();
             return;
         }
 
@@ -535,7 +552,7 @@ public class MainActivity : Activity
             catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
             {
                 // Adresse du package périmée (IP du PC changée, pas d'Internet pour le nom DynDNS) : recherche sur le Wi-Fi.
-                Toast.MakeText(this, "PC de l'OP injoignable : recherche sur le Wi-Fi…", ToastLength.Short)!.Show();
+                Toast.MakeText(this, L.T("pc_de_l_op_injoignable_recherche_sur_le_wi_fi"), ToastLength.Short)!.Show();
                 if (await ServerApi.DiscoverAsync(null, server) is not { } found)
                     throw;
                 server = found;
@@ -544,7 +561,7 @@ public class MainActivity : Activity
 
             if (response is null)
             {
-                Toast.MakeText(this, "Code inconnu : vérifiez-le auprès de l'orga.", ToastLength.Long)!.Show();
+                Toast.MakeText(this, L.T("code_inconnu_verifiez_le_aupres_de_l_orga"), ToastLength.Long)!.Show();
                 return;
             }
 
@@ -558,12 +575,12 @@ public class MainActivity : Activity
             Prefs.EnrollComms = response.Comms;
             Prefs.OperationId = response.OperationId;
             Prefs.EnrolledAt = DateTimeOffset.Now;
-            Prefs.Status = "Enrôlé : démarrage du suivi.";
+            Prefs.Status = L.T("enrole_demarrage_du_suivi");
             Show();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or UriFormatException or InvalidOperationException)
         {
-            Toast.MakeText(this, $"PC de l'OP injoignable (même Wi-Fi ? serveur actif ?) : {ex.Message}", ToastLength.Long)!.Show();
+            Toast.MakeText(this, L.F("pc_de_l_op_injoignable_meme_wi_fi_serveur_actif", ex.Message), ToastLength.Long)!.Show();
         }
     }
 
@@ -597,7 +614,7 @@ public class MainActivity : Activity
     private void About()
     {
         var version = PackageManager?.GetPackageInfo(PackageName!, 0)?.VersionName ?? "";
-        Text($"À propos — Airsoft Planner {version}, Tepan Games\nCode source et nouvelles versions : {AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl}", 12, secondary: true)
+        Text(L.F("a_propos_airsoft_planner_x_tepan_games_code_sour", version, AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl), 12, secondary: true)
             .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
         var update = PrimaryButton("", Color.Rgb(46, 125, 50));
         update.Visibility = ViewStates.Gone;
@@ -613,7 +630,7 @@ public class MainActivity : Activity
         var current = AirsoftPlanner.Core.Updates.UpdateChecker.ParseVersion(installed);
         if (release is null || current is null || !AirsoftPlanner.Core.Updates.UpdateChecker.IsNewer(release, current))
             return;
-        button.Text = $"⬇ Nouvelle version {release.Version.ToString(3)} disponible : télécharger";
+        button.Text = L.F("nouvelle_version_x_disponible_telecharger", release.Version.ToString(3));
         button.Visibility = ViewStates.Visible;
         button.Click += (_, _) => StartActivity(new Intent(Intent.ActionView, Android.Net.Uri.Parse(release.ApkUrl ?? release.PageUrl)));
     }

@@ -1,3 +1,4 @@
+﻿using AirsoftPlanner.Core.Localization;
 namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>
@@ -28,7 +29,7 @@ public readonly record struct GeoBounds(double North, double South, double West,
     public static GeoBounds Around(IReadOnlyCollection<GeoPoint> points, double margin = 0.1)
     {
         if (points.Count == 0)
-            throw new ArgumentException("Au moins un point est nécessaire.", nameof(points));
+            throw new ArgumentException(L.T("au_moins_un_point_est_necessaire"), nameof(points));
 
         var north = points.Max(p => p.Latitude);
         var south = points.Min(p => p.Latitude);

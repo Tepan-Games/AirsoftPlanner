@@ -11,6 +11,7 @@ using AirsoftPlanner.Core.Registration;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -93,7 +94,7 @@ public partial class TeamsViewModel : ViewModelBase
                 .Select(o => (o.Label, Count: Items.Count(t => t.Status.Value == o.Value)))
                 .Where(x => x.Count > 0)
                 .Select(x => $"{x.Count} {x.Label.ToLowerInvariant()}");
-            return $"{playing.Sum(t => t.Size)} joueur(s) inscrit(s) · " + string.Join(" · ", parts);
+            return L.F("x_joueur_s_inscrit_s", playing.Sum(t => t.Size)) + string.Join(" · ", parts);
         }
     }
 
@@ -106,7 +107,7 @@ public partial class TeamsViewModel : ViewModelBase
     [RelayCommand]
     private async Task ImportCsvAsync()
     {
-        var path = await _dialogs.PickOpenFileAsync("Importer des inscriptions", "Fichier CSV", ["*.csv", "*.txt"]);
+        var path = await _dialogs.PickOpenFileAsync(L.T("importer_des_inscriptions"), L.T("fichier_csv"), ["*.csv", "*.txt"]);
         if (path is null)
             return;
 
@@ -117,7 +118,7 @@ public partial class TeamsViewModel : ViewModelBase
         }
         catch (Exception ex) when (ex is IOException or FormatException)
         {
-            await _dialogs.ShowErrorAsync($"Import impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("import_impossible_x", ex.Message));
             return;
         }
 
@@ -168,16 +169,16 @@ public partial class TeamsViewModel : ViewModelBase
         }
 
         RefreshSummary();
-        await _dialogs.ShowInfoAsync("Import des inscriptions",
-            $"{created} équipe(s) importée(s) en pré-inscription"
-            + (waiting > 0 ? $", dont {waiting} en liste d'attente (faction complète)" : "")
-            + (skipped > 0 ? $". {skipped} ligne(s) ignorée(s) : équipe déjà présente." : "."));
+        await _dialogs.ShowInfoAsync(L.T("import_des_inscriptions"),
+            L.F("x_equipe_s_importee_s_en_pre_inscription", created)
+            + (waiting > 0 ? L.F("dont_x_en_liste_d_attente_faction_complete", waiting) : "")
+            + (skipped > 0 ? L.F("x_ligne_s_ignoree_s_equipe_deja_presente", skipped) : "."));
     }
 
     [RelayCommand]
     private async Task ExportCsvAsync()
     {
-        var path = await _dialogs.PickSaveFileAsync("Exporter les inscriptions", "inscriptions.csv", "Fichier CSV", ".csv");
+        var path = await _dialogs.PickSaveFileAsync(L.T("exporter_les_inscriptions"), "inscriptions.csv", L.T("fichier_csv"), ".csv");
         if (path is null)
             return;
 
@@ -209,15 +210,15 @@ public partial class TeamsViewModel : ViewModelBase
         }
 
         RefreshSummary();
-        await _dialogs.ShowInfoAsync("Liste d'attente", promoted.Count == 0
-            ? "Aucune place libre pour les équipes en attente."
-            : $"Équipes passées en pré-inscription : {string.Join(", ", promoted)}.");
+        await _dialogs.ShowInfoAsync(L.T("liste_d_attente_2"), promoted.Count == 0
+            ? L.T("aucune_place_libre_pour_les_equipes_en_attente")
+            : L.F("equipes_passees_en_pre_inscription_x", string.Join(", ", promoted)));
     }
 
     [RelayCommand]
     private void Add()
     {
-        var team = new Team { Name = $"Équipe {Items.Count + 1}", RegisteredAt = DateTimeOffset.Now };
+        var team = new Team { Name = L.F("equipe_x", Items.Count + 1), RegisteredAt = DateTimeOffset.Now };
         _file.Add(team);
         var viewModel = new TeamViewModel(team, Factions, [], [], _tracker);
         Items.Add(viewModel);

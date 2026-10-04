@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -138,7 +139,7 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat, F
 
     public bool IsArea => zone.Kind == ZoneKind.Area;
 
-    public string KindLabel => IsArea ? "Zone" : "Point";
+    public string KindLabel => IsArea ? L.T("zone") : L.T("point_2");
 
     public IReadOnlyList<GeoPoint> Points => zone.Points;
 
@@ -147,9 +148,9 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat, F
 
     public string Summary => zone.Points.Count switch
     {
-        0 => "Pas encore placé sur la carte",
+        0 => L.T("pas_encore_place_sur_la_carte"),
         _ when !IsArea => Coordinates.Format(zone.Points[0], coordinateFormat()),
-        < 3 => $"{zone.Points.Count} sommet(s) : il en faut au moins 3",
+        < 3 => L.F("x_sommet_s_il_en_faut_au_moins_3", zone.Points.Count),
         _ => $"{zone.Points.Count} sommets",
     };
 
@@ -160,7 +161,7 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat, F
         set
         {
             if (!Coordinates.TryParse(value, out var point))
-                throw new FormatException("Coordonnées non reconnues (ex. 31T 448251 5411952 ou 48.8583, 2.2944).");
+                throw new FormatException(L.T("coordonnees_non_reconnues_ex_31t_448251_5411952"));
 
             SetPoints([point]);
         }

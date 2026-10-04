@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:controls="using:AirsoftPlanner.App.Controls"
@@ -9,15 +10,15 @@
         <DockPanel Margin="12">
             <TextBlock DockPanel.Dock="Top" Text="{Binding Summary}" TextWrapping="Wrap" FontSize="12" Margin="0,0,0,6" />
             <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,8">
-                <Button Content="Importer (CSV)…" Command="{Binding ImportCsvCommand}" Margin="0,0,6,6"
-                        ToolTip.Tip="Inscriptions exportées d'un formulaire (Google Forms, HelloAsso…) ou d'un tableur" />
-                <Button Content="Exporter…" Command="{Binding ExportCsvCommand}" Margin="0,0,6,6" />
-                <Button Content="Liste d'attente →" Command="{Binding PromoteWaitingCommand}" Margin="0,0,6,6"
-                        ToolTip.Tip="Faire entrer les équipes en attente là où des places se sont libérées" />
+                <Button Content="{l:T importer_csv}" Command="{Binding ImportCsvCommand}" Margin="0,0,6,6"
+                        ToolTip.Tip="{l:T inscriptions_exportees_d_un_formulaire_google_fo}" />
+                <Button Content="{l:T exporter}" Command="{Binding ExportCsvCommand}" Margin="0,0,6,6" />
+                <Button Content="{l:T liste_d_attente}" Command="{Binding PromoteWaitingCommand}" Margin="0,0,6,6"
+                        ToolTip.Tip="{l:T faire_entrer_les_equipes_en_attente_la_ou_des_pl}" />
             </WrapPanel>
             <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
-                <Button Content="Ajouter" Command="{Binding AddCommand}" />
-                <Button Content="Supprimer" Command="{Binding RemoveCommand}" />
+                <Button Content="{l:T ajouter}" Command="{Binding AddCommand}" />
+                <Button Content="{l:T supprimer}" Command="{Binding RemoveCommand}" />
             </StackPanel>
             <ListBox ItemsSource="{Binding Items}" SelectedItem="{Binding Selected}">
                 <ListBox.ItemTemplate>
@@ -28,7 +29,7 @@
                             <StackPanel>
                                 <TextBlock Text="{Binding Name}" />
                                 <TextBlock FontSize="11" Opacity="0.6">
-                                    <Run Text="{Binding Faction.Name, FallbackValue='Sans faction'}" />
+                                    <Run Text="{Binding Faction.Name, FallbackValue={l:T sans_faction}}" />
                                     <Run Text="·" />
                                     <Run Text="{Binding SizeText}" />
                                 </TextBlock>
@@ -42,21 +43,21 @@
         </DockPanel>
 
         <TextBlock Grid.Column="1" IsVisible="{Binding !HasSelection}" Opacity="0.7" Margin="24"
-                   Text="Ajoutez les équipes participantes, leurs membres et leurs véhicules." />
+                   Text="{l:T ajoutez_les_equipes_participantes_leurs_membres}" />
 
         <ScrollViewer Grid.Column="1" IsVisible="{Binding HasSelection}">
             <StackPanel Margin="20" Spacing="10">
-                <TextBlock Text="Équipe" Classes="h1" />
+                <TextBlock Text="{l:T equipe}" Classes="h1" />
                 <WrapPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8" Width="260">
-                        <TextBlock Text="Nom" Classes="label" />
+                        <TextBlock Text="{l:T nom}" Classes="label" />
                         <TextBox Text="{Binding Selected.Name, FallbackValue=''}" />
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8">
-                        <TextBlock Text="Faction" Classes="label" />
+                        <TextBlock Text="{l:T faction}" Classes="label" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <ComboBox ItemsSource="{Binding Factions}" SelectedItem="{Binding Selected.Faction, FallbackValue={x:Null}}"
-                                      MinWidth="200" PlaceholderText="Sans faction">
+                                      MinWidth="200" PlaceholderText="{l:T sans_faction}">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:FactionViewModel">
                                         <StackPanel Orientation="Horizontal" Spacing="8">
@@ -67,24 +68,24 @@
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>
-                            <Button Content="Retirer" Command="{Binding ClearFactionCommand}" />
+                            <Button Content="{l:T retirer}" Command="{Binding ClearFactionCommand}" />
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8">
-                        <TextBlock Text="Inscription" Classes="label" />
+                        <TextBlock Text="{l:T inscription}" Classes="label" />
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <ComboBox ItemsSource="{Binding Statuses}" SelectedItem="{Binding Selected.Status, FallbackValue={x:Null}}" MinWidth="150" />
                             <CalendarDatePicker SelectedDate="{Binding Selected.RegisteredAt, FallbackValue={x:Null}}"
-                                                ToolTip.Tip="Date d'inscription (ordre de la liste d'attente)" />
+                                                ToolTip.Tip="{l:T date_d_inscription_ordre_de_la_liste_d_attente}" />
                         </StackPanel>
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8" Width="230">
-                        <TextBlock Text="Identifiants GPS (appareils)" Classes="label" />
-                        <TextBox Text="{Binding Selected.GpsDeviceIds, FallbackValue=''}" PlaceholderText="ex. alpha-tel, !a1b2c3d4"
-                                 ToolTip.Tip="Identifiant saisi dans Traccar Client, ou identifiant du nœud Meshtastic ; plusieurs possibles, séparés par des virgules" />
+                        <TextBlock Text="{l:T identifiants_gps_appareils}" Classes="label" />
+                        <TextBox Text="{Binding Selected.GpsDeviceIds, FallbackValue=''}" PlaceholderText="{l:T ex_alpha_tel_a1b2c3d4}"
+                                 ToolTip.Tip="{l:T identifiant_saisi_dans_traccar_client_ou_identif}" />
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8">
-                        <TextBlock Text="Symbole sur les cartes" Classes="label" />
+                        <TextBlock Text="{l:T symbole_sur_les_cartes}" Classes="label" />
                         <ComboBox ItemsSource="{x:Static vm:MilSymbolOption.ForTeams}" SelectedItem="{Binding Selected.Symbol, FallbackValue={x:Null}}" MinWidth="230">
                             <ComboBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:MilSymbolOption">
@@ -97,18 +98,18 @@
                         </ComboBox>
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8" Width="200">
-                        <TextBlock Text="Fréquence radio de l'équipe" Classes="label" />
-                        <TextBox Text="{Binding Selected.RadioFrequency, FallbackValue=''}" PlaceholderText="ex. PMR 446 canal 3" />
+                        <TextBlock Text="{l:T frequence_radio_de_l_equipe}" Classes="label" />
+                        <TextBox Text="{Binding Selected.RadioFrequency, FallbackValue=''}" PlaceholderText="{l:T ex_pmr_446_canal_3}" />
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8">
-                        <TextBlock Text="Effectif annoncé" Classes="label" />
+                        <TextBlock Text="{l:T effectif_annonce}" Classes="label" />
                         <NumericUpDown Value="{Binding Selected.PlayerCount, FallbackValue=0}" Minimum="0" Maximum="500"
                                        Increment="1" FormatString="0" Width="140" />
                     </StackPanel>
                 </WrapPanel>
 
                 <TextBlock Classes="h2" Margin="0,8,0,0">
-                    <Run Text="Membres" />
+                    <Run Text="{l:T membres}" />
                     <Run Text="{Binding Selected.SizeText, FallbackValue=''}" FontWeight="Normal" FontSize="13" />
                 </TextBlock>
                 <TextBlock Text="{Binding Selected.LeaderText, FallbackValue=''}" FontSize="12" Opacity="0.75" />
@@ -117,22 +118,22 @@
                           HeadersVisibility="Column" MinHeight="140" MaxHeight="360" BorderThickness="1"
                           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                     <DataGrid.Columns>
-                        <DataGridCheckBoxColumn Header="Chef" Binding="{Binding IsLeader}" Width="72" />
-                        <DataGridTextColumn Header="Prénom" Binding="{Binding FirstName}" Width="*" />
-                        <DataGridTextColumn Header="Nom" Binding="{Binding LastName}" Width="*" />
-                        <DataGridTextColumn Header="Pseudo / indicatif" Binding="{Binding Callsign}" Width="*" />
-                        <DataGridTextColumn Header="Rôle" Binding="{Binding Role}" Width="*" />
-                        <DataGridTextColumn Header="Portable" Binding="{Binding Phone}" Width="*" />
+                        <DataGridCheckBoxColumn Header="{l:T chef}" Binding="{Binding IsLeader}" Width="72" />
+                        <DataGridTextColumn Header="{l:T prenom}" Binding="{Binding FirstName}" Width="*" />
+                        <DataGridTextColumn Header="{l:T nom}" Binding="{Binding LastName}" Width="*" />
+                        <DataGridTextColumn Header="{l:T pseudo_indicatif}" Binding="{Binding Callsign}" Width="*" />
+                        <DataGridTextColumn Header="{l:T role}" Binding="{Binding Role}" Width="*" />
+                        <DataGridTextColumn Header="{l:T portable}" Binding="{Binding Phone}" Width="*" />
                         <DataGridTextColumn Header="E-mail" Binding="{Binding Email}" Width="1.4*" />
                     </DataGrid.Columns>
                 </DataGrid>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="+ Membre" Command="{Binding AddMemberCommand}" />
-                    <Button Content="Retirer le membre" Command="{Binding RemoveMemberCommand}" />
+                    <Button Content="{l:T membre}" Command="{Binding AddMemberCommand}" />
+                    <Button Content="{l:T retirer_le_membre}" Command="{Binding RemoveMemberCommand}" />
                 </StackPanel>
 
                 <TextBlock Classes="h2" Margin="0,8,0,0">
-                    <Run Text="Véhicules" />
+                    <Run Text="{l:T vehicules}" />
                     <Run Text="{Binding Selected.VehicleSummary, FallbackValue=''}" FontWeight="Normal" FontSize="13" />
                 </TextBlock>
                 <DataGrid ItemsSource="{Binding Selected.Vehicles, FallbackValue={x:Null}}" SelectedItem="{Binding SelectedVehicle}"
@@ -140,33 +141,33 @@
                           MinHeight="80" MaxHeight="220" BorderThickness="1"
                           BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Type (4x4, quad, pick-up…)" Binding="{Binding Kind}" Width="*" />
-                        <DataGridTextColumn Header="Nombre" Binding="{Binding Quantity}" Width="80" />
-                        <DataGridCheckBoxColumn Header="En jeu" Binding="{Binding InGame}" Width="70" />
-                        <DataGridTextColumn Header="ID GPS" Binding="{Binding GpsDeviceId}" Width="*" />
-                        <DataGridTextColumn Header="Compteur départ" Binding="{Binding OdometerStartText}" Width="*" />
-                        <DataGridTextColumn Header="Compteur arrivée" Binding="{Binding OdometerEndText}" Width="*" />
-                        <DataGridTextColumn Header="Km sur l'OP" Binding="{Binding KilometersText}" Width="*" IsReadOnly="True" />
-                        <DataGridTextColumn Header="Remarques (immatriculation, places…)" Binding="{Binding Notes}" Width="1.5*" />
+                        <DataGridTextColumn Header="{l:T type_4x4_quad_pick_up}" Binding="{Binding Kind}" Width="*" />
+                        <DataGridTextColumn Header="{l:T nombre}" Binding="{Binding Quantity}" Width="80" />
+                        <DataGridCheckBoxColumn Header="{l:T en_jeu}" Binding="{Binding InGame}" Width="70" />
+                        <DataGridTextColumn Header="{l:T id_gps}" Binding="{Binding GpsDeviceId}" Width="*" />
+                        <DataGridTextColumn Header="{l:T compteur_depart}" Binding="{Binding OdometerStartText}" Width="*" />
+                        <DataGridTextColumn Header="{l:T compteur_arrivee}" Binding="{Binding OdometerEndText}" Width="*" />
+                        <DataGridTextColumn Header="{l:T km_sur_l_op}" Binding="{Binding KilometersText}" Width="*" IsReadOnly="True" />
+                        <DataGridTextColumn Header="{l:T remarques_immatriculation_places}" Binding="{Binding Notes}" Width="1.5*" />
                     </DataGrid.Columns>
                 </DataGrid>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="+ Véhicule" Command="{Binding AddVehicleCommand}" />
-                    <Button Content="Retirer le véhicule" Command="{Binding RemoveVehicleCommand}" />
+                    <Button Content="{l:T vehicule}" Command="{Binding AddVehicleCommand}" />
+                    <Button Content="{l:T retirer_le_vehicule}" Command="{Binding RemoveVehicleCommand}" />
                 </StackPanel>
 
 
-                <TextBlock Classes="h2" Text="Application Android" Margin="0,8,0,0" />
+                <TextBlock Classes="h2" Text="{l:T application_android}" Margin="0,8,0,0" />
                 <StackPanel DataContext="{Binding Gps}" x:DataType="vm:GpsViewModel" Spacing="6">
                     <WrapPanel>
                         <TextBlock VerticalAlignment="Center" Margin="0,0,12,4">
-                            <Run Text="Code d'enrôlement :" />
+                            <Run Text="{l:T code_d_enrolement}" />
                             <Run Text="{Binding EnrollmentTeam.EnrollmentCodeText, FallbackValue='—'}" FontFamily="Consolas,monospace" FontWeight="Bold" FontSize="15" />
                         </TextBlock>
-                        <Button Content="Nouveau code" Command="{Binding GenerateCodeCommand}" Margin="0,0,6,4"
-                                ToolTip.Tip="Les téléphones déjà enrôlés restent valides" />
-                        <Button Content="QR code…" Command="{Binding ShowQrCodeCommand}" Margin="0,0,6,4"
-                                ToolTip.Tip="À scanner avec l'appareil photo du téléphone du chef d'équipe (aussi imprimé dans l'ordre de mission)" />
+                        <Button Content="{l:T nouveau_code}" Command="{Binding GenerateCodeCommand}" Margin="0,0,6,4"
+                                ToolTip.Tip="{l:T les_telephones_deja_enroles_restent_valides}" />
+                        <Button Content="{l:T qr_code}" Command="{Binding ShowQrCodeCommand}" Margin="0,0,6,4"
+                                ToolTip.Tip="{l:T a_scanner_avec_l_appareil_photo_du_telephone_du}" />
                     </WrapPanel>
                     <ItemsControl ItemsSource="{Binding TeamDevices}">
                         <ItemsControl.ItemTemplate>
@@ -177,17 +178,17 @@
                                         <Run Text="{Binding Device}" FontWeight="SemiBold" />
                                         <Run Text="{Binding LastSeen}" Foreground="Gray" />
                                     </TextBlock>
-                                    <Button Content="Révoquer" Padding="6,1" FontSize="11" IsVisible="{Binding !IsRevoked}"
+                                    <Button Content="{l:T revoquer}" Padding="6,1" FontSize="11" IsVisible="{Binding !IsRevoked}"
                                             Command="{Binding $parent[ItemsControl].((vm:GpsViewModel)DataContext).RevokeRowCommand}" CommandParameter="{Binding}" />
                                 </StackPanel>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                     <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
-                               Text="Intervalle d'envoi, ce que voient les téléphones, serveur et adresse publiée : Scénario › Suivi de l'OP › Paramètres du suivi." />
+                               Text="{l:T intervalle_d_envoi_ce_que_voient_les_telephones}" />
                 </StackPanel>
 
-                <TextBlock Text="Notes" Classes="label" />
+                <TextBlock Text="{l:T notes}" Classes="label" />
                 <TextBox Text="{Binding Selected.Notes, FallbackValue=''}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" />
             </StackPanel>
         </ScrollViewer>

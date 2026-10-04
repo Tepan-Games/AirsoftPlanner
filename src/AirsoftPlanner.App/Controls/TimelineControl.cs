@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -13,6 +13,7 @@ using Avalonia.Controls;
 using Avalonia.Data;
 using Avalonia.Input;
 using Avalonia.Media;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Controls;
 
@@ -296,7 +297,7 @@ public class TimelineControl : Control
         context.FillRectangle(Background, new Rect(Bounds.Size));
         if (columns.Count == 0)
         {
-            DrawText(context, "Ajoutez des équipes (onglet Équipes) pour construire la frise du scénario.",
+            DrawText(context, L.T("ajoutez_des_equipes_onglet_equipes_pour_construi"),
                 new Point(24, 24), 14, ThemeColors.Hint, Bounds.Width - 48);
             return;
         }
@@ -358,7 +359,7 @@ public class TimelineControl : Control
             context.DrawRectangle(fill, border, rect, 4, 4);
 
             var title = (mission.HasIssues && mission.IsEnabled ? "⚠ " : "") + mission.Name
-                        + (mission.IsEssential ? "" : " (optionnelle)") + (mission.IsEnabled ? "" : " — désactivée");
+                        + (mission.IsEssential ? "" : L.T("optionnelle")) + (mission.IsEnabled ? "" : L.T("desactivee"));
             var lines = new List<(string Text, double Size, Typeface Face)>
             {
                 ($"{MissionTime.Format(mission.StartMinutes)} – {MissionTime.Format(mission.EndMinutes)}", 10, Typeface.Default),
@@ -442,7 +443,7 @@ public class TimelineControl : Control
     /// <summary>Trait et date à chaque minuit, pour les OP sur plusieurs jours.</summary>
     private void DrawDayBreaks(DrawingContext context, (int Start, int End) range)
     {
-        var french = CultureInfo.GetCultureInfo("fr-FR");
+        var french = AirsoftPlanner.Core.Localization.L.Culture;
         for (var midnight = (int)Math.Ceiling(range.Start / 1440.0) * 1440; midnight <= range.End; midnight += 1440)
         {
             if (midnight == range.Start)
@@ -485,12 +486,12 @@ public class TimelineControl : Control
                 var factionColor = team.Faction is { } faction && Color.TryParse(faction.Color, out var c) ? c : Colors.Gray;
                 context.FillRectangle(new SolidColorBrush(factionColor), new Rect(x + 1, 0, width - 2, 5));
                 context.DrawText(Format(team.Name, 13, Brushes.White, Bold, width - 12), new Point(x + 8, 9));
-                var subtitle = (team.Faction?.Name ?? "Sans faction") + (team.RadioFrequency.Length > 0 ? $"  ·  📻 {team.RadioFrequency}" : "");
+                var subtitle = (team.Faction?.Name ?? L.T("sans_faction")) + (team.RadioFrequency.Length > 0 ? $"  ·  📻 {team.RadioFrequency}" : "");
                 context.DrawText(Format(subtitle, 10, Brushes.LightGray, Typeface.Default, width - 12), new Point(x + 8, 27));
             }
         }
 
-        context.DrawText(Format("Heure", 11, Brushes.LightGray, Typeface.Default, GutterWidth), new Point(10, 16));
+        context.DrawText(Format(L.T("heure"), 11, Brushes.LightGray, Typeface.Default, GutterWidth), new Point(10, 16));
     }
 
     private static void DrawText(DrawingContext context, string text, Point origin, double size, IBrush brush, double maxWidth) =>

@@ -1,4 +1,5 @@
-﻿namespace AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Localization;
+namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>Nature d'une zone ou d'un point du terrain.</summary>
 /// <remarks>Stocké en texte ; Other vient en premier (zones créées avant cette option).</remarks>
@@ -34,16 +35,16 @@ public static class PoiCategories
 
     public static string Label(PoiCategory category) => category switch
     {
-        PoiCategory.Objective => "Objectif",
-        PoiCategory.Bivouac => "Bivouac",
-        PoiCategory.Camp => "Campement / base",
-        PoiCategory.Respawn => "Respawn",
-        PoiCategory.Medical => "Infirmerie / zone neutre",
-        PoiCategory.Supply => "Ravitaillement",
-        PoiCategory.Parking => "Parking",
-        PoiCategory.Command => "PC orga",
-        PoiCategory.Danger => "Danger / zone interdite",
-        _ => "Zone / point",
+        PoiCategory.Objective => L.T("objectif"),
+        PoiCategory.Bivouac => L.T("bivouac"),
+        PoiCategory.Camp => L.T("campement_base"),
+        PoiCategory.Respawn => L.T("respawn"),
+        PoiCategory.Medical => L.T("infirmerie_zone_neutre"),
+        PoiCategory.Supply => L.T("ravitaillement"),
+        PoiCategory.Parking => L.T("parking"),
+        PoiCategory.Command => L.T("pc_orga"),
+        PoiCategory.Danger => L.T("danger_zone_interdite"),
+        _ => L.T("zone_point"),
     };
 
     /// <summary>Symbole court affiché devant le nom (carte, téléphone).</summary>

@@ -1,4 +1,5 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Core.Planning;
 
@@ -44,7 +45,7 @@ public static class DelayPlanner
         disabled ??= new HashSet<Guid>();
         var active = missions.Where(m => m.IsEnabled && !disabled.Contains(m.Id)).ToList();
         var delayed = active.FirstOrDefault(m => m.Id == delayedMissionId)
-                      ?? throw new ArgumentException("La mission en retard doit être active.", nameof(delayedMissionId));
+                      ?? throw new ArgumentException(L.T("la_mission_en_retard_doit_etre_active"), nameof(delayedMissionId));
 
         var newStart = active.ToDictionary(m => m.Id, m => m.StartMinutes);
         newStart[delayed.Id] = delayed.StartMinutes + Math.Max(0, delayMinutes);

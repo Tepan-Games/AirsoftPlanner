@@ -1,4 +1,5 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -12,30 +13,30 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DockPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <RadioButton Content="Heure réelle" IsChecked="{Binding !IsSimulation}" GroupName="clock" />
-                    <RadioButton Content="Simulation" IsChecked="{Binding IsSimulation}" GroupName="clock" />
+                    <RadioButton Content="{l:T heure_reelle}" IsChecked="{Binding !IsSimulation}" GroupName="clock" />
+                    <RadioButton Content="{l:T simulation}" IsChecked="{Binding IsSimulation}" GroupName="clock" />
                     <Slider Minimum="{Binding SimulationStart}" Maximum="{Binding SimulationEnd}" Value="{Binding SimulatedMinutes}"
                             SmallChange="5" LargeChange="30" Width="260"
                             IsEnabled="{Binding IsSimulation}" VerticalAlignment="Center" />
                     <!-- Lecture de l'OP enregistrée : retour, pause, lecture, sauts de 5 min, vitesse -->
                     <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
-                        <Button Content="⏮" Command="{Binding StepCommand}" CommandParameter="-5" ToolTip.Tip="5 minutes en arrière" Padding="6,2" />
-                        <Button Content="⏪" Command="{Binding PlayBackwardCommand}" ToolTip.Tip="Retour (lecture à l'envers)" Padding="6,2" />
-                        <Button Content="⏸" Command="{Binding PausePlaybackCommand}" ToolTip.Tip="Pause" Padding="6,2" IsEnabled="{Binding IsPlaying}" />
-                        <Button Content="▶" Command="{Binding PlayForwardCommand}" ToolTip.Tip="Lecture / avance rapide selon la vitesse choisie" Padding="6,2" />
-                        <Button Content="⏭" Command="{Binding StepCommand}" CommandParameter="5" ToolTip.Tip="5 minutes en avant" Padding="6,2" />
+                        <Button Content="⏮" Command="{Binding StepCommand}" CommandParameter="-5" ToolTip.Tip="{l:T 5_minutes_en_arriere}" Padding="6,2" />
+                        <Button Content="⏪" Command="{Binding PlayBackwardCommand}" ToolTip.Tip="{l:T retour_lecture_a_l_envers}" Padding="6,2" />
+                        <Button Content="⏸" Command="{Binding PausePlaybackCommand}" ToolTip.Tip="{l:T pause}" Padding="6,2" IsEnabled="{Binding IsPlaying}" />
+                        <Button Content="▶" Command="{Binding PlayForwardCommand}" ToolTip.Tip="{l:T lecture_avance_rapide_selon_la_vitesse_choisie}" Padding="6,2" />
+                        <Button Content="⏭" Command="{Binding StepCommand}" CommandParameter="5" ToolTip.Tip="{l:T 5_minutes_en_avant}" Padding="6,2" />
                         <ComboBox ItemsSource="{Binding PlaybackSpeeds}" SelectedItem="{Binding PlaybackSpeed}" MinWidth="130" Margin="4,0,0,0"
-                                  ToolTip.Tip="Vitesse de lecture" />
+                                  ToolTip.Tip="{l:T vitesse_de_lecture}" />
                     </StackPanel>
                     <TextBlock Text="{Binding NowText}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" FontWeight="SemiBold" />
                     <Button Content="{Binding Gps.ServerStatus, FallbackValue='📡'}" Click="OnSettingsClick"
-                            ToolTip.Tip="Paramètres du suivi : serveur local, second poste, Meshtastic, Traccar, import de traces, journal de réception" />
-                    <Button Content="⧉ Mode éclaté" Click="OnExplodeClick"
-                            ToolTip.Tip="Carte, frise et état des équipes dans des fenêtres séparées, réparties sur les autres écrans (F11 : plein écran)" />
-                    <Button Content="Tout rattacher" Click="OnReattachClick" />
+                            ToolTip.Tip="{l:T parametres_du_suivi_serveur_local_second_poste_m}" />
+                    <Button Content="{l:T mode_eclate}" Click="OnExplodeClick"
+                            ToolTip.Tip="{l:T carte_frise_et_etat_des_equipes_dans_des_fenetre}" />
+                    <Button Content="{l:T tout_rattacher}" Click="OnReattachClick" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -45,14 +46,14 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                 Background="{DynamicResource SystemControlBackgroundBaseLowBrush}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="📻 Plan radio" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,12,0" />
+                <TextBlock DockPanel.Dock="Left" Text="{l:T plan_radio}" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,2,12,0" />
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" Margin="12,0,0,0">
                     <TextBlock Text="{Binding OrgaContact}" FontWeight="SemiBold" Foreground="#C62828" VerticalAlignment="Center" />
                     <ToggleButton IsChecked="{Binding IsRadioPlanExpanded}" Padding="6,1" FontSize="11"
-                                  ToolTip.Tip="Replier le plan radio sur quelques lignes (défilement) ou afficher toutes les équipes">
+                                  ToolTip.Tip="{l:T replier_le_plan_radio_sur_quelques_lignes_defile}">
                         <Panel>
-                            <TextBlock Text="▾ Tout afficher" IsVisible="{Binding !IsRadioPlanExpanded}" />
-                            <TextBlock Text="▴ Replier" IsVisible="{Binding IsRadioPlanExpanded}" />
+                            <TextBlock Text="{l:T tout_afficher_2}" IsVisible="{Binding !IsRadioPlanExpanded}" />
+                            <TextBlock Text="{l:T replier}" IsVisible="{Binding IsRadioPlanExpanded}" />
                         </Panel>
                     </ToggleButton>
                 </StackPanel>
@@ -110,7 +111,7 @@
         <Border DockPanel.Dock="Top" Padding="10,4" BorderThickness="0,0,0,1" BorderBrush="#1565C0" Background="#261565C0"
                 IsVisible="{Binding Dispatch.HasPrompts, FallbackValue=False}">
             <DockPanel>
-                <TextBlock DockPanel.Dock="Left" Text="📣 À diffuser" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,3,12,0" />
+                <TextBlock DockPanel.Dock="Left" Text="{l:T a_diffuser}" FontWeight="SemiBold" VerticalAlignment="Top" Margin="0,3,12,0" />
                 <ScrollViewer MaxHeight="110" VerticalScrollBarVisibility="Auto">
                     <ItemsControl ItemsSource="{Binding Dispatch.Prompts, FallbackValue={x:Null}}">
                         <ItemsControl.ItemTemplate>
@@ -120,11 +121,11 @@
                                     <Button Content="{Binding AcceptLabel}" Padding="8,1" Classes="accent"
                                             Command="{Binding $parent[ItemsControl].((vm:TrackingViewModel)DataContext).Dispatch.AcceptCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Terminer seulement" Padding="8,1" IsVisible="{Binding CanEndOnly}"
+                                    <Button Content="{l:T terminer_seulement}" Padding="8,1" IsVisible="{Binding CanEndOnly}"
                                             Command="{Binding $parent[ItemsControl].((vm:TrackingViewModel)DataContext).Dispatch.EndOnlyCommand}"
                                             CommandParameter="{Binding}" />
-                                    <Button Content="Plus tard" Padding="8,1"
-                                            ToolTip.Tip="La question reviendra dans 10 minutes"
+                                    <Button Content="{l:T plus_tard}" Padding="8,1"
+                                            ToolTip.Tip="{l:T la_question_reviendra_dans_10_minutes}"
                                             Command="{Binding $parent[ItemsControl].((vm:TrackingViewModel)DataContext).Dispatch.LaterCommand}"
                                             CommandParameter="{Binding}" />
                                 </StackPanel>
@@ -137,7 +138,7 @@
 
 
         <Grid ColumnDefinitions="*,6,*">
-            <controls:DetachableHost x:Name="TimelineHost" Title="Frise">
+            <controls:DetachableHost x:Name="TimelineHost" Title="{l:T frise}">
                 <controls:DetachableHost.Panel>
                     <views:TrackingTimelinePanel />
                 </controls:DetachableHost.Panel>
@@ -145,13 +146,13 @@
             <GridSplitter Grid.Column="1" ResizeDirection="Columns" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
 
             <Grid Grid.Column="2" RowDefinitions="*,6,280">
-                <controls:DetachableHost x:Name="MapHost" Title="Carte">
+                <controls:DetachableHost x:Name="MapHost" Title="{l:T carte}">
                     <controls:DetachableHost.Panel>
                         <views:TrackingMapPanel />
                     </controls:DetachableHost.Panel>
                 </controls:DetachableHost>
                 <GridSplitter Grid.Row="1" ResizeDirection="Rows" Background="{DynamicResource SystemControlForegroundBaseLowBrush}" />
-                <controls:DetachableHost x:Name="StatusHost" Grid.Row="2" Title="État des équipes">
+                <controls:DetachableHost x:Name="StatusHost" Grid.Row="2" Title="{l:T etat_des_equipes}">
                     <controls:DetachableHost.Panel>
                         <views:TrackingStatusPanel />
                     </controls:DetachableHost.Panel>

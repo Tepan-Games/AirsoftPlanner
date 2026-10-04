@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -8,6 +8,7 @@ using AirsoftPlanner.Core.Radio;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -92,7 +93,7 @@ public partial class RadioCheckViewModel : ViewModelBase
     {
         yield return new RadioUser("orga", "orga", _general.OrgaRadioFrequency);
         foreach (var organizer in _organizers.Items)
-            yield return new RadioUser("orga", $"orga ({organizer.Name})", organizer.RadioFrequency);
+            yield return new RadioUser("orga", L.F("orga_x_2", organizer.Name), organizer.RadioFrequency);
         foreach (var faction in _factions.Items)
             yield return new RadioUser(KeyOf(faction), $"faction {faction.Name}", faction.RadioFrequency);
         foreach (var team in _teams.Items)

@@ -50,6 +50,13 @@ internal static class Prefs
     }
 
     /// <summary>Mode nuit : texte rouge sur fond noir, carte assombrie, luminosité minimale.</summary>
+    /// <summary>Langue de l'application (« fr », « en »...) ; vide : langue du téléphone.</summary>
+    public static string Language { get => Get(nameof(Language)); set => Set(nameof(Language), value); }
+
+    /// <summary>Applique la langue choisie (ou celle du téléphone).</summary>
+    public static void ApplyLanguage() =>
+        AirsoftPlanner.Core.Localization.L.SetLanguage(Language.Length > 0 ? Language : AirsoftPlanner.Core.Localization.L.SystemLanguage());
+
     public static bool NightMode
     {
         get => Store.GetBoolean(nameof(NightMode), false);
@@ -112,7 +119,11 @@ internal static class Prefs
     {
         var server = ServerUrl;
         var device = DeviceName;
+        var language = Language;
+        var night = NightMode;
         Store.Edit()!.Clear()!.Apply();
+        Language = language;
+        NightMode = night;
         var photos = System.IO.Path.Combine(Application.Context.FilesDir!.AbsolutePath, "photos");
         if (Directory.Exists(photos))
             Directory.Delete(photos, recursive: true);

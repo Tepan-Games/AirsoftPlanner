@@ -11,6 +11,7 @@ using AirsoftPlanner.Core.Gps;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -18,9 +19,9 @@ public record AllyShareModeOption(AllyShareMode Value, string Label)
 {
     public static IReadOnlyList<AllyShareModeOption> All { get; } =
     [
-        new(AllyShareMode.None, "Rien (sa propre position seulement)"),
-        new(AllyShareMode.Coordinates, "Alliés en coordonnées (version difficile)"),
-        new(AllyShareMode.Map, "Alliés sur la carte"),
+        new(AllyShareMode.None, L.T("rien_sa_propre_position_seulement")),
+        new(AllyShareMode.Coordinates, L.T("allies_en_coordonnees_version_difficile")),
+        new(AllyShareMode.Map, L.T("allies_sur_la_carte")),
     ];
 
     public static AllyShareModeOption Of(AllyShareMode mode) => All.First(o => o.Value == mode);
@@ -87,11 +88,11 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _shareMode = AllyShareModeOption.Of(file.Operation.AllyShareMode);
         RefreshDevices();
         _upstream.FixReceived += OnFix;
-        _upstream.Error += message => Dispatcher.UIThread.Post(() => Log($"PC de l'OP : {message}"));
+        _upstream.Error += message => Dispatcher.UIThread.Post(() => Log(L.F("pc_de_l_op_x_2", message)));
         _upstreamUrl = settings.UpstreamUrl;
         _meshtastic.FixReceived += OnFix;
         _traccar.FixReceived += OnFix;
-        _traccar.Error += message => Dispatcher.UIThread.Post(() => Log($"Traccar : {message}"));
+        _traccar.Error += message => Dispatcher.UIThread.Post(() => Log(L.F("traccar_x", message)));
 
         // Démarrage automatique du serveur (réglage du poste, ou option de lancement « --serveur-gps »).
         // Lors d'un rechargement de l'OP, l'ancienne réception GPS est reprise : celle-ci ne démarre alors rien.
@@ -133,7 +134,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 await _server.StopAsync();
                 StopDynDns();
                 ServerAddresses = "";
-                Log("Serveur local arrêté.");
+                Log(L.T("serveur_local_arrete"));
             }
             else
             {
@@ -142,15 +143,15 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 AppSettings.Current.GpsServerPort = port;
                 AppSettings.Current.Save();
                 ServerAddresses = string.Join("   ", LocalGpsServer.LocalAddresses(port));
-                Log($"Serveur local démarré : {ServerAddresses}");
+                Log(L.F("serveur_local_demarre_x", ServerAddresses));
                 if (!_server.IsDiscoverable)
-                    Log($"Recherche automatique sur le Wi-Fi indisponible (port UDP {Discovery.Port} occupé).");
+                    Log(L.F("recherche_automatique_sur_le_wi_fi_indisponible", Discovery.Port));
                 StartDynDns();
             }
         }
         catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException)
         {
-            await _dialogs.ShowErrorAsync($"Impossible de démarrer le serveur (port déjà utilisé ?) : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("impossible_de_demarrer_le_serveur_port_deja_util", ex.Message));
         }
 
         IsServerRunning = _server.IsRunning;
@@ -185,8 +186,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     public ObservableCollection<EnrolledDeviceRow> OrganizerDevices { get; } = [];
 
     /// <summary>État du serveur, affiché dans le suivi (« 📡 Serveur actif · 3 téléphones »).</summary>
-    public string ServerStatus => (IsServerRunning ? "📡 Serveur actif" : "📡 Serveur arrêté")
-                                  + $" · {_devices.Count(d => !d.IsRevoked)} téléphone(s)";
+    public string ServerStatus => (IsServerRunning ? L.T("serveur_actif_2") : L.T("serveur_arrete"))
+                                  + L.F("x_telephone_s", _devices.Count(d => !d.IsRevoked));
 
     partial void OnIsServerRunningChanged(bool value) => OnPropertyChanged(nameof(ServerStatus));
 
@@ -194,7 +195,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private void GenerateOrganizerCode()
     {
         EnrollmentOrganizer!.EnrollmentCode = EnrollmentCodes.Generate(AllCodes());
-        Log($"Code d'enrôlement de l'orga {EnrollmentOrganizer.Name} : {EnrollmentOrganizer.EnrollmentCodeText}");
+        Log(L.F("code_d_enrolement_de_l_orga_x_x", EnrollmentOrganizer.Name, EnrollmentOrganizer.EnrollmentCodeText));
     }
 
     [RelayCommand(CanExecute = nameof(HasEnrollmentOrganizer))]
@@ -203,7 +204,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var organizer = EnrollmentOrganizer!;
         if (organizer.EnrollmentCode.Length == 0)
             GenerateOrganizerCode();
-        await ShowQrAsync($"Enrôlement orga — {organizer.Name}", organizer.EnrollmentCode, organizer.EnrollmentCodeText);
+        await ShowQrAsync(L.F("enrolement_orga_x", organizer.Name), organizer.EnrollmentCode, organizer.EnrollmentCodeText);
     }
 
     private bool HasEnrollmentOrganizer => EnrollmentOrganizer is not null;
@@ -237,7 +238,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private void GenerateCode()
     {
         EnrollmentTeam!.EnrollmentCode = EnrollmentCodes.Generate(AllCodes());
-        Log($"Code d'enrôlement de {EnrollmentTeam.Name} : {EnrollmentTeam.EnrollmentCodeText}");
+        Log(L.F("code_d_enrolement_de_x_x", EnrollmentTeam.Name, EnrollmentTeam.EnrollmentCodeText));
     }
 
     /// <summary>QR code à scanner avec l'application : adresse du serveur et code de l'équipe.</summary>
@@ -248,7 +249,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         if (team.EnrollmentCode.Length == 0)
             GenerateCode();
 
-        await ShowQrAsync($"Enrôlement — {team.Name}", team.EnrollmentCode, team.EnrollmentCodeText);
+        await ShowQrAsync(L.F("enrolement_x", team.Name), team.EnrollmentCode, team.EnrollmentCodeText);
     }
 
     private async Task ShowQrAsync(string title, string code, string codeText)
@@ -256,7 +257,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var address = PublishedAddress((int)(ServerPort ?? 5055));
         if (address is null)
         {
-            await _dialogs.ShowErrorAsync("Aucune connexion réseau active : reliez ce PC au Wi-Fi du terrain.");
+            await _dialogs.ShowErrorAsync(L.T("aucune_connexion_reseau_active_reliez_ce_pc_au_w"));
             return;
         }
 
@@ -265,9 +266,9 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         using var data = generator.CreateQrCode(link, QRCoder.QRCodeGenerator.ECCLevel.M);
         var png = new QRCoder.PngByteQRCode(data).GetGraphic(10);
         await _dialogs.ShowImageAsync(title,
-            $"Dans l'application Airsoft Planner : scanner ce QR code avec l'appareil photo, ou saisir :\n" +
-            $"Serveur : {address}\nCode : {codeText}" +
-            (IsServerRunning ? "" : "\n\n⚠ Pensez à activer le serveur local avant l'enrôlement."), png);
+            L.T("dans_l_application_airsoft_planner_scanner_ce_qr") +
+            L.F("serveur_x_code_x", address, codeText) +
+            (IsServerRunning ? "" : L.T("pensez_a_activer_le_serveur_local_avant_l_enrole")), png);
     }
 
     [RelayCommand]
@@ -276,7 +277,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         if (row is null || row.IsRevoked)
             return;
         row.Model.IsRevoked = true;
-        Log($"Téléphone « {row.Device} » révoqué.");
+        Log(L.F("telephone_x_revoque", row.Device));
         RefreshDevices();
     }
 
@@ -284,7 +285,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private void RevokeDevice()
     {
         SelectedDevice!.Model.IsRevoked = true;
-        Log($"Téléphone « {SelectedDevice.Device} » révoqué.");
+        Log(L.F("telephone_x_revoque", SelectedDevice.Device));
         RefreshDevices();
     }
 
@@ -311,7 +312,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             return EnrollOrganizer(organizer, request);
         if (team is null)
         {
-            Log($"Enrôlement refusé : code « {request.Code} » inconnu ({request.DeviceName}).");
+            Log(L.F("enrolement_refuse_code_x_inconnu_x", request.Code, request.DeviceName));
             return null;
         }
 
@@ -319,13 +320,13 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         {
             TeamId = team.Model.Id,
             Token = EnrollmentCodes.NewToken(),
-            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : "Téléphone",
+            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : L.T("telephone"),
             EnrolledAt = DateTimeOffset.Now,
         };
         _file.Add(device);
         _devices.Add(device);
         RefreshDevices();
-        Log($"Téléphone « {device.DeviceName} » enrôlé pour {team.Name}.");
+        Log(L.F("telephone_x_enrole_pour_x", device.DeviceName, team.Name));
         return new EnrollResponse(device.Token, team.Name, _file.Operation.Name, team.Faction?.Name ?? "",
             team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team), _file.Operation.Id);
     }
@@ -337,18 +338,18 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             TeamId = organizer.Model.Id,
             IsOrganizer = true,
             Token = EnrollmentCodes.NewToken(),
-            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : "Téléphone",
+            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : L.T("telephone"),
             EnrolledAt = DateTimeOffset.Now,
         };
         _file.Add(device);
         _devices.Add(device);
         RefreshDevices();
-        Log($"Téléphone « {device.DeviceName} » enrôlé pour l'orga {organizer.Name}.");
-        return new EnrollResponse(device.Token, organizer.Name, _file.Operation.Name, "Orga", organizer.RadioFrequency,
+        Log(L.F("telephone_x_enrole_pour_l_orga_x", device.DeviceName, organizer.Name));
+        return new EnrollResponse(device.Token, organizer.Name, _file.Operation.Name, L.T("orga_2"), organizer.RadioFrequency,
             _file.Operation.TrackingIntervalSeconds, AllyShareMode.Map, OrgaComms(), _file.Operation.Id);
     }
 
-    private Comms OrgaComms() => new("Orga", _file.Operation.OrgaRadioFrequency,
+    private Comms OrgaComms() => new(L.T("orga_2"), _file.Operation.OrgaRadioFrequency,
         _teams.Items.Select(t => new TeamFrequency(t.Name, t.RadioFrequency, t.Faction?.CommandTeam == t)).ToList(),
         _file.Operation.OrgaRadioFrequency, _file.Operation.EmergencyPhone);
 
@@ -450,10 +451,10 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         foreach (var device in _devices.OrderBy(d => d.IsRevoked).ThenByDescending(d => d.LastSeenAt ?? d.EnrolledAt))
         {
             var team = device.IsOrganizer
-                ? $"Orga {Organizers?.Items.FirstOrDefault(o => o.Model.Id == device.TeamId)?.Name ?? "supprimé"}"
-                : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name ?? "équipe supprimée";
-            var seen = device.IsRevoked ? "révoqué"
-                : device.LastSeenAt is { } at ? $"dernier envoi {at.LocalDateTime:HH:mm:ss}" : "enrôlé, aucun envoi";
+                ? L.F("orga_x", Organizers?.Items.FirstOrDefault(o => o.Model.Id == device.TeamId)?.Name ?? L.T("supprime"))
+                : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name ?? L.T("equipe_supprimee_2");
+            var seen = device.IsRevoked ? L.T("revoque")
+                : device.LastSeenAt is { } at ? L.F("dernier_envoi_x", at.LocalDateTime) : L.T("enrole_aucun_envoi");
             Devices.Add(new EnrolledDeviceRow(device, team, device.DeviceName, seen, device.IsRevoked));
         }
 
@@ -537,16 +538,16 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             if (DynDns.IsSuccess(response))
             {
                 _lastDynDnsIp = ip;
-                DynDnsStatus = $"✔ Nom DynDNS à jour ({ip}) à {DateTime.Now:HH:mm}";
+                DynDnsStatus = L.F("nom_dyndns_a_jour_x_a_x", ip, DateTime.Now);
             }
             else
             {
-                DynDnsStatus = $"⚠ Le service DynDNS refuse la mise à jour : {response.Trim()}";
+                DynDnsStatus = L.F("le_service_dyndns_refuse_la_mise_a_jour_x", response.Trim());
             }
         }
         catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or UriFormatException or InvalidOperationException)
         {
-            DynDnsStatus = $"⚠ Service DynDNS injoignable (pas d'Internet ?) : la recherche sur le Wi-Fi prend le relais. {ex.Message}";
+            DynDnsStatus = L.F("service_dyndns_injoignable_pas_d_internet_la_rec", ex.Message);
         }
 
         Log(DynDnsStatus);
@@ -569,7 +570,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             if (_upstream.IsConnected)
             {
                 _upstream.Disconnect();
-                Log("Déconnecté du PC de l'OP.");
+                Log(L.T("deconnecte_du_pc_de_l_op"));
             }
             else
             {
@@ -580,12 +581,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 AppSettings.Current.UpstreamUrl = url;
                 AppSettings.Current.Save();
                 UpstreamUrl = url;
-                Log($"Connecté au PC de l'OP : {url}");
+                Log(L.F("connecte_au_pc_de_l_op_x", url));
             }
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"Le PC de l'OP ne répond pas (adresse, même réseau, serveur actif, pare-feu ?) : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("le_pc_de_l_op_ne_repond_pas_adresse_meme_reseau", ex.Message));
         }
 
         IsUpstreamConnected = _upstream.IsConnected;
@@ -619,7 +620,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             if (_meshtastic.IsConnected)
             {
                 await _meshtastic.DisconnectAsync();
-                Log("Meshtastic déconnecté.");
+                Log(L.T("meshtastic_deconnecte"));
             }
             else
             {
@@ -628,13 +629,13 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 (settings.MqttHost, settings.MqttPort, settings.MqttTopic, settings.MqttUser) = (MqttHost.Trim(), (int)(MqttPort ?? 1883), MqttTopic.Trim(), MqttUser.Trim());
                 settings.MqttPasswordProtected = Secret.Protect(MqttPassword);
                 settings.Save();
-                Log($"Meshtastic connecté au broker {MqttHost} ({MqttTopic}).");
+                Log(L.F("meshtastic_connecte_au_broker_x_x", MqttHost, MqttTopic));
             }
         }
         catch (Exception ex)
         {
             // Erreurs réseau très variées selon le broker : toutes signalées, sans fermer le logiciel.
-            await _dialogs.ShowErrorAsync($"Connexion au broker MQTT impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("connexion_au_broker_mqtt_impossible_x", ex.Message));
         }
 
         IsMeshtasticConnected = _meshtastic.IsConnected;
@@ -662,7 +663,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             if (_traccar.IsConnected)
             {
                 _traccar.Disconnect();
-                Log("Serveur Traccar déconnecté.");
+                Log(L.T("serveur_traccar_deconnecte"));
             }
             else
             {
@@ -671,12 +672,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 (settings.TraccarUrl, settings.TraccarUser) = (TraccarUrl.Trim(), TraccarUser.Trim());
                 settings.TraccarPasswordProtected = Secret.Protect(TraccarPassword);
                 settings.Save();
-                Log($"Serveur Traccar connecté : {TraccarUrl}");
+                Log(L.F("serveur_traccar_connecte_x", TraccarUrl));
             }
         }
         catch (Exception ex)
         {
-            await _dialogs.ShowErrorAsync($"Connexion au serveur Traccar impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("connexion_au_serveur_traccar_impossible_x", ex.Message));
         }
 
         IsTraccarConnected = _traccar.IsConnected;
@@ -688,7 +689,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     [RelayCommand]
     private async Task ImportFileAsync()
     {
-        var path = await _dialogs.PickOpenFileAsync("Importer des positions", "Trace GPX ou fichier CSV", ["*.gpx", "*.csv", "*.txt"]);
+        var path = await _dialogs.PickOpenFileAsync(L.T("importer_des_positions"), L.T("trace_gpx_ou_fichier_csv"), ["*.gpx", "*.csv", "*.txt"]);
         if (path is null)
             return;
 
@@ -698,18 +699,18 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             var isGpx = Path.GetExtension(path).Equals(".gpx", StringComparison.OrdinalIgnoreCase);
             if (isGpx && _tracking.Selected is null)
             {
-                await _dialogs.ShowErrorAsync("Sélectionnez d'abord l'équipe à qui attribuer cette trace (onglet Équipes du suivi).");
+                await _dialogs.ShowErrorAsync(L.T("selectionnez_d_abord_l_equipe_a_qui_attribuer_ce"));
                 return;
             }
 
             var fixes = isGpx ? GpsParsers.FromGpx(text, _tracking.Selected!.Team.Name) : GpsParsers.FromCsv(text);
             foreach (var fix in fixes)
                 Apply(fix);
-            Log($"{fixes.Count} position(s) importée(s) depuis {Path.GetFileName(path)}.");
+            Log(L.F("x_position_s_importee_s_depuis_x", fixes.Count, Path.GetFileName(path)));
         }
         catch (Exception ex) when (ex is IOException or FormatException or System.Xml.XmlException)
         {
-            await _dialogs.ShowErrorAsync($"Import impossible : {ex.Message}");
+            await _dialogs.ShowErrorAsync(L.F("import_impossible_x", ex.Message));
         }
     }
 
@@ -721,7 +722,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var team = _tracking.Selected!.Team;
         team.GpsDeviceIds = string.Join(", ", GpsParsers.DeviceIds(team.Model).Append(device.DeviceId));
         UnknownDevices.Remove(device);
-        Log($"Appareil {device.DeviceId} associé à {team.Name}.");
+        Log(L.F("appareil_x_associe_a_x", device.DeviceId, team.Name));
     }
 
     private bool CanAssignDevice => SelectedUnknownDevice is not null && _tracking.Selected is not null;
@@ -761,7 +762,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         if (vehicle is not null)
         {
             _vehicles.Add(vehicle.Model, fix.Point, fix.Time ?? DateTimeOffset.Now);
-            Log($"{(fix.Time ?? DateTimeOffset.Now).LocalDateTime:HH:mm:ss} véhicule {vehicle.Kind} ({fix.Source}, {fix.DeviceId}) — {vehicle.KilometersText}");
+            Log(L.F("x_vehicule_x_x_x_x_2", (fix.Time ?? DateTimeOffset.Now).LocalDateTime, vehicle.Kind, fix.Source, fix.DeviceId, vehicle.KilometersText));
             _tracking.Refresh();
             return;
         }
@@ -769,10 +770,10 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var team = GpsParsers.FindTeam(_teams.Items.Select(t => t.Model), fix.DeviceId) is { } model
             ? _teams.Items.First(t => t.Model == model)
             : null;
-        if (team is null && fix.Source == "Appli Android" && Organizers?.Items.FirstOrDefault(o => o.Name == fix.DeviceId) is { } organizer)
+        if (team is null && fix.Source == L.T("appli_android") && Organizers?.Items.FirstOrDefault(o => o.Name == fix.DeviceId) is { } organizer)
         {
             _tracking.RecordOrganizerPosition(organizer, fix.Point, fix.Time);
-            Log($"{(fix.Time ?? DateTimeOffset.Now).LocalDateTime:HH:mm:ss} orga {organizer.Name} (téléphone)");
+            Log(L.F("x_orga_x_telephone_2", (fix.Time ?? DateTimeOffset.Now).LocalDateTime, organizer.Name));
             return;
         }
         var time = (fix.Time ?? DateTimeOffset.Now).LocalDateTime.ToString("HH:mm:ss");

@@ -1,7 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -126,15 +127,15 @@ public class FactionViewModel(Faction faction) : ViewModelBase
             var limits = (faction.MinPlayers, faction.MaxPlayers) switch
             {
                 (0, 0) => "",
-                (var min, 0) => $" (min {min})",
-                (0, var max) => $" (max {max})",
-                var (min, max) => $" (min {min}, max {max})",
+                (var min, 0) => L.F("min_x", min),
+                (0, var max) => L.F("max_x", max),
+                var (min, max) => L.F("min_x_max_x", min, max),
             };
-            var status = IsUnderstaffed ? $" — il manque {faction.MinPlayers - PlayerCount} joueur(s)"
-                : IsOverstaffed ? $" — {PlayerCount - faction.MaxPlayers} joueur(s) en trop"
+            var status = IsUnderstaffed ? L.F("il_manque_x_joueur_s", faction.MinPlayers - PlayerCount)
+                : IsOverstaffed ? L.F("x_joueur_s_en_trop", PlayerCount - faction.MaxPlayers)
                 : "";
-            var waiting = WaitingCount > 0 ? $" · {WaitingCount} équipe(s) en attente" : "";
-            return $"{PlayerCount} joueur(s) dans {teams} équipe(s){limits}{status}{waiting}";
+            var waiting = WaitingCount > 0 ? L.F("x_equipe_s_en_attente", WaitingCount) : "";
+            return L.F("x_joueur_s_dans_x_equipe_s_x_x_x", PlayerCount, teams, limits, status, waiting);
         }
     }
 

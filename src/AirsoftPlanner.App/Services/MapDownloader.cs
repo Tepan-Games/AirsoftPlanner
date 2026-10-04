@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
 using SkiaSharp;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.Services;
 
@@ -26,7 +27,7 @@ public class MapDownloader
         CancellationToken cancellationToken)
     {
         using var surface = SKSurface.Create(new SKImageInfo(plan.PixelWidth, plan.PixelHeight))
-            ?? throw new InvalidOperationException("Image trop grande pour être assemblée.");
+            ?? throw new InvalidOperationException(L.T("image_trop_grande_pour_etre_assemblee"));
         var canvas = surface.Canvas;
         canvas.Clear(new SKColor(0xE0, 0xE0, 0xE0));
 
@@ -51,7 +52,7 @@ public class MapDownloader
             });
 
         if (missing == plan.TileCount)
-            throw new HttpRequestException("Aucune tuile n'a pu être téléchargée pour cette zone (hors couverture ?).");
+            throw new HttpRequestException(L.T("aucune_tuile_n_a_pu_etre_telechargee_pour_cette"));
 
         using var snapshot = surface.Snapshot();
         using var encoded = snapshot.Encode(SKEncodedImageFormat.Jpeg, 88);

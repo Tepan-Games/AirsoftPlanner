@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -66,7 +67,7 @@ public class MemberViewModel(TeamMember member, Action<MemberViewModel> onLeader
 
 public class VehicleViewModel(TeamVehicle vehicle, VehicleTracker? tracker = null) : ViewModelBase
 {
-    private static readonly System.Globalization.CultureInfo French = System.Globalization.CultureInfo.GetCultureInfo("fr-FR");
+    private static System.Globalization.CultureInfo French => AirsoftPlanner.Core.Localization.L.Culture;
 
     public TeamVehicle Model => vehicle;
 
@@ -109,8 +110,8 @@ public class VehicleViewModel(TeamVehicle vehicle, VehicleTracker? tracker = nul
 
     /// <summary>« 61,7 km (GPS) » ou « 42 km (compteur) ».</summary>
     public string KilometersText => vehicle.OdometerStartKm is not null && vehicle.OdometerEndKm is not null
-        ? $"{Kilometers.ToString("0.#", French)} km (compteur)"
-        : $"{Kilometers.ToString("0.#", French)} km (GPS)";
+        ? L.F("x_km_compteur", Kilometers.ToString("0.#", French))
+        : L.F("x_km_gps", Kilometers.ToString("0.#", French));
 
     public void RefreshKilometers()
     {
@@ -122,7 +123,7 @@ public class VehicleViewModel(TeamVehicle vehicle, VehicleTracker? tracker = nul
         string.IsNullOrWhiteSpace(text) ? null
         : decimal.TryParse(text.Replace(" ", "").Replace(',', '.'), System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var km)
             ? km
-            : throw new FormatException("Kilométrage non reconnu.");
+            : throw new FormatException(L.T("kilometrage_non_reconnu"));
 
     public string Kind
     {

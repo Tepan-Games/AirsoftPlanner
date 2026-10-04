@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -8,6 +8,7 @@ using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
@@ -39,7 +40,7 @@ public partial class FactionsViewModel : ViewModelBase
     private void Add()
     {
         var unusedColor = ColorPalette.Colors.FirstOrDefault(c => Items.All(f => f.Color != c)) ?? ColorPalette.Colors[0];
-        var faction = new Faction { Name = $"Faction {Items.Count + 1}", Color = unusedColor };
+        var faction = new Faction { Name = L.F("faction_x", Items.Count + 1), Color = unusedColor };
         _file.Add(faction);
         var viewModel = new FactionViewModel(faction);
         if (_teams is { } teams)

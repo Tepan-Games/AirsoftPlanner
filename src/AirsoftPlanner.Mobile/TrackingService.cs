@@ -5,6 +5,7 @@ using Android.Locations;
 using Android.OS;
 using Android.Runtime;
 using Timer = System.Threading.Timer;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Mobile;
 
@@ -44,6 +45,7 @@ public class TrackingService : Service, ILocationListener
 
     public override StartCommandResult OnStartCommand(Intent? intent, StartCommandFlags flags, int startId)
     {
+        Prefs.ApplyLanguage();
         if (intent?.Action == ActionStop || !Prefs.IsEnrolled)
         {
             Prefs.IsTracking = false;
@@ -52,7 +54,7 @@ public class TrackingService : Service, ILocationListener
         }
 
         CreateChannel();
-        var notification = BuildNotification("Démarrage du suivi…");
+        var notification = BuildNotification(L.T("demarrage_du_suivi"));
         if (OperatingSystem.IsAndroidVersionAtLeast(29))
             StartForeground(NotificationId, notification, ForegroundService.TypeLocation);
         else
@@ -115,7 +117,7 @@ public class TrackingService : Service, ILocationListener
         }
         catch (Java.Lang.SecurityException)
         {
-            UpdateStatus("⚠ Autorisation de localisation refusée : ouvrez l'application pour l'accorder.");
+            UpdateStatus(L.T("autorisation_de_localisation_refusee_ouvrez_l_ap"));
         }
 
         _timer?.Dispose();
@@ -151,8 +153,8 @@ public class TrackingService : Service, ILocationListener
                 new Handler(Looper.MainLooper!).Post(() => StartLocationUpdates(response.IntervalSeconds));
             }
 
-            UpdateStatus($"Dernier envoi à {DateTime.Now:HH:mm:ss} · {response.Team}" +
-                         (response.Mission is { } m ? $" · {(m.IsCurrent ? "en cours" : "prochaine")} : {m.Name}" : ""));
+            UpdateStatus(L.F("dernier_envoi_a_x_x", DateTime.Now, response.Team) +
+                         (response.Mission is { } m ? $" · {(m.IsCurrent ? L.T("en_cours") : "prochaine")} : {m.Name}" : ""));
         }
         catch (ServerApi.RevokedException ex)
         {
@@ -167,7 +169,7 @@ public class TrackingService : Service, ILocationListener
                 && found != ServerApi.Normalize(Prefs.ServerUrl))
             {
                 Prefs.ServerUrl = found;
-                UpdateStatus($"PC de l'OP retrouvé sur le Wi-Fi : {found}");
+                UpdateStatus(L.F("pc_de_l_op_retrouve_sur_le_wi_fi_x", found));
                 _ = Task.Delay(500).ContinueWith(_ => SendAsync());
                 return;
             }
@@ -175,7 +177,7 @@ public class TrackingService : Service, ILocationListener
             int count;
             lock (_pending)
                 count = _pending.Count;
-            UpdateStatus($"⚠ PC de l'OP injoignable ({DateTime.Now:HH:mm}) · {count} position(s) en attente");
+            UpdateStatus(L.F("pc_de_l_op_injoignable_x_x_position_s_en_attente", DateTime.Now, count));
         }
         finally
         {
@@ -234,10 +236,10 @@ public class TrackingService : Service, ILocationListener
         {
             var title = message.Kind switch
             {
-                AirsoftPlanner.Core.Domain.MessageKind.MissionAssigned => "📣 Nouvelle mission",
-                AirsoftPlanner.Core.Domain.MessageKind.MissionEnded => "✔ Mission terminée",
-                _ when message.Sender == AirsoftPlanner.Core.Domain.MessageSender.Hq => $"📻 Message du QG · {message.Audience}",
-                _ => $"Message de l'orga · {message.Audience}",
+                AirsoftPlanner.Core.Domain.MessageKind.MissionAssigned => L.T("nouvelle_mission"),
+                AirsoftPlanner.Core.Domain.MessageKind.MissionEnded => L.T("mission_terminee_2"),
+                _ when message.Sender == AirsoftPlanner.Core.Domain.MessageSender.Hq => L.F("message_du_qg_x", message.Audience),
+                _ => L.F("message_de_l_orga_x", message.Audience),
             };
             Notify(title, message.Text, message.Id.GetHashCode());
         }
@@ -248,18 +250,18 @@ public class TrackingService : Service, ILocationListener
         if (previous is null)
             return;
         if (Describe(previous.Comms) != Describe(response.Comms))
-            Notify("📻 Plan radio mis à jour", response.Comms?.EmergencyPhone is { Length: > 0 } phone && phone != previous.Comms?.EmergencyPhone
-                ? $"Nouveau numéro d'urgence de l'orga : {phone}"
-                : "Les fréquences de la faction ou de l'orga ont changé.", 2);
+            Notify(L.T("plan_radio_mis_a_jour"), response.Comms?.EmergencyPhone is { Length: > 0 } phone && phone != previous.Comms?.EmergencyPhone
+                ? L.F("nouveau_numero_d_urgence_de_l_orga_x", phone)
+                : L.T("les_frequences_de_la_faction_ou_de_l_orga_ont_ch"), 2);
         if (string.Join("|", (previous.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}"))
             != string.Join("|", (response.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}")))
-            Notify("📍 Points d'intérêt mis à jour", string.Join(", ", (response.Points ?? []).Select(p => p.Name).Take(6)), 4);
+            Notify(L.T("points_d_interet_mis_a_jour"), string.Join(", ", (response.Points ?? []).Select(p => p.Name).Take(6)), 4);
         if (previous.ShareMode != response.ShareMode)
-            Notify("Partage des positions modifié", response.ShareMode switch
+            Notify(L.T("partage_des_positions_modifie"), response.ShareMode switch
             {
-                AllyShareMode.Map => "Positions des alliés sur la carte.",
-                AllyShareMode.Coordinates => "Positions des alliés en coordonnées.",
-                _ => "Positions des alliés non partagées.",
+                AllyShareMode.Map => L.T("positions_des_allies_sur_la_carte"),
+                AllyShareMode.Coordinates => L.T("positions_des_allies_en_coordonnees"),
+                _ => L.T("positions_des_allies_non_partagees"),
             }, 3);
     }
 
@@ -293,13 +295,13 @@ public class TrackingService : Service, ILocationListener
     {
         if (!OperatingSystem.IsAndroidVersionAtLeast(26))
             return;
-        var channel = new NotificationChannel(ChannelId, "Suivi de l'équipe", NotificationImportance.Low)
+        var channel = new NotificationChannel(ChannelId, L.T("suivi_de_l_equipe"), NotificationImportance.Low)
         {
-            Description = "Envoi de la position de l'équipe au PC de l'OP",
+            Description = L.T("envoi_de_la_position_de_l_equipe_au_pc_de_l_op"),
         };
-        var news = new NotificationChannel(NewsChannelId, "Informations de l'orga", NotificationImportance.High)
+        var news = new NotificationChannel(NewsChannelId, L.T("informations_de_l_orga"), NotificationImportance.High)
         {
-            Description = "Messages de l'orga, missions diffusées, plan radio",
+            Description = L.T("messages_de_l_orga_missions_diffusees_plan_radio"),
         };
         news.EnableVibration(true);
         var manager = (NotificationManager?)GetSystemService(NotificationService);
@@ -312,7 +314,7 @@ public class TrackingService : Service, ILocationListener
         var open = PendingIntent.GetActivity(this, 0, new Intent(this, typeof(MainActivity)), PendingIntentFlags.Immutable);
         var builder = OperatingSystem.IsAndroidVersionAtLeast(26) ? new Notification.Builder(this, ChannelId) : new Notification.Builder(this);
         return builder
-            .SetContentTitle($"Airsoft Planner — {Prefs.Team}")!
+            .SetContentTitle(L.F("airsoft_planner_x_2", Prefs.Team))!
             .SetContentText(text)!
             .SetSmallIcon(Resource.Drawable.ic_notification)!
             .SetOngoing(true)!

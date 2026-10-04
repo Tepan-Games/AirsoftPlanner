@@ -1,4 +1,5 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.Core.Symbols;
 
@@ -84,39 +85,39 @@ public static class MilitarySymbols
 
     public static string Label(MilSymbol symbol) => symbol switch
     {
-        MilSymbol.Auto => "Automatique (selon la catégorie)",
-        MilSymbol.Dot => "Simple point",
-        MilSymbol.Infantry => "Infanterie",
-        MilSymbol.MechanizedInfantry => "Infanterie mécanisée",
-        MilSymbol.Armour => "Blindé",
-        MilSymbol.Reconnaissance => "Reconnaissance",
-        MilSymbol.Headquarters => "QG / commandement",
-        MilSymbol.Logistics => "Logistique / ravitaillement",
-        MilSymbol.Medical => "Santé / infirmerie",
-        MilSymbol.Engineer => "Génie",
-        MilSymbol.Signal => "Transmissions",
-        MilSymbol.Artillery => "Appui feu / artillerie",
-        MilSymbol.WheeledVehicle => "Véhicule à roues",
-        MilSymbol.Helicopter => "Hélicoptère",
-        MilSymbol.Installation => "Installation / campement",
-        MilSymbol.Bivouac => "Bivouac",
-        MilSymbol.ObservationPost => "Poste d'observation",
-        MilSymbol.Objective => "Objectif",
-        MilSymbol.RallyPoint => "Point de rassemblement / respawn",
-        MilSymbol.Checkpoint => "Point de contrôle",
-        MilSymbol.Danger => "Danger / zone minée",
-        MilSymbol.LandingZone => "Zone de poser (hélicoptère)",
+        MilSymbol.Auto => L.T("automatique_selon_la_categorie"),
+        MilSymbol.Dot => L.T("simple_point"),
+        MilSymbol.Infantry => L.T("infanterie"),
+        MilSymbol.MechanizedInfantry => L.T("infanterie_mecanisee"),
+        MilSymbol.Armour => L.T("blinde"),
+        MilSymbol.Reconnaissance => L.T("reconnaissance"),
+        MilSymbol.Headquarters => L.T("qg_commandement"),
+        MilSymbol.Logistics => L.T("logistique_ravitaillement"),
+        MilSymbol.Medical => L.T("sante_infirmerie"),
+        MilSymbol.Engineer => L.T("genie"),
+        MilSymbol.Signal => L.T("transmissions"),
+        MilSymbol.Artillery => L.T("appui_feu_artillerie"),
+        MilSymbol.WheeledVehicle => L.T("vehicule_a_roues"),
+        MilSymbol.Helicopter => L.T("helicoptere"),
+        MilSymbol.Installation => L.T("installation_campement"),
+        MilSymbol.Bivouac => L.T("bivouac"),
+        MilSymbol.ObservationPost => L.T("poste_d_observation"),
+        MilSymbol.Objective => L.T("objectif"),
+        MilSymbol.RallyPoint => L.T("point_de_rassemblement_respawn"),
+        MilSymbol.Checkpoint => L.T("point_de_controle"),
+        MilSymbol.Danger => L.T("danger_zone_minee"),
+        MilSymbol.LandingZone => L.T("zone_de_poser_helicoptere"),
         _ => symbol.ToString(),
     };
 
     public static string Label(Echelon echelon) => echelon switch
     {
-        Echelon.Team => "Équipe (Ø)",
-        Echelon.Squad => "Groupe (•)",
-        Echelon.Section => "Section (••)",
-        Echelon.Platoon => "Peloton (•••)",
-        Echelon.Company => "Compagnie (I)",
-        _ => "Aucun",
+        Echelon.Team => L.T("equipe_3"),
+        Echelon.Squad => L.T("groupe"),
+        Echelon.Section => L.T("section"),
+        Echelon.Platoon => L.T("peloton"),
+        Echelon.Company => L.T("compagnie_i"),
+        _ => L.T("aucun"),
     };
 
     /// <summary>Symbole retenu pour une catégorie de point quand le symbole est « Automatique ».</summary>

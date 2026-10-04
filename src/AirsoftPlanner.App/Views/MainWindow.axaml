@@ -1,4 +1,5 @@
 ﻿<Window xmlns="https://github.com/avaloniaui"
+        xmlns:l="using:AirsoftPlanner.App.Localization"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:vm="using:AirsoftPlanner.App.ViewModels"
         xmlns:views="using:AirsoftPlanner.App.Views"
@@ -25,9 +26,9 @@
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
-                    <TextBlock Text="Coordonnées :" VerticalAlignment="Center" Opacity="0.8" />
+                    <TextBlock Text="{l:T coordonnees}" VerticalAlignment="Center" Opacity="0.8" />
                     <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding DisplayCoordinateFormat}" MinWidth="170"
-                              ToolTip.Tip="Format d'affichage des coordonnées GPS dans tout le logiciel">
+                              ToolTip.Tip="{l:T format_d_affichage_des_coordonnees_gps_dans_tout}">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:CoordinateFormatOption">
                                 <TextBlock Text="{Binding ShortLabel}" />
@@ -35,28 +36,35 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <Button Content="{Binding ThemeButtonText}" Command="{Binding ToggleThemeCommand}"
-                            ToolTip.Tip="Basculer entre le mode jour et le mode nuit (Ctrl+T)" />
-                    <Button Content="⋯" ToolTip.Tip="Plus d'options">
+                            ToolTip.Tip="{l:T basculer_entre_le_mode_jour_et_le_mode_nuit_ctrl}" />
+                    <Button Content="⋯" ToolTip.Tip="{l:T plus_d_options}">
                         <Button.Flyout>
                             <MenuFlyout>
-                                <MenuItem Header="Associer les fichiers .aop à Airsoft Planner" Command="{Binding AssociateFilesCommand}" />
-                                <MenuItem Header="Rechercher une mise à jour" Command="{Binding Updates.CheckCommand}" />
-                                <MenuItem Header="Site du projet (GitHub)" Command="{Binding OpenProjectSiteCommand}" />
-                                <MenuItem Header="À propos" Command="{Binding AboutCommand}" />
+                                <MenuItem Header="{l:T associer_les_fichiers_aop_a_airsoft_planner}" Command="{Binding AssociateFilesCommand}" />
+                                <MenuItem Header="{l:T langue_choisir}">
+                                    <MenuItem Header="Français" Command="{Binding ChangeLanguageCommand}" CommandParameter="fr" />
+                                    <MenuItem Header="English" Command="{Binding ChangeLanguageCommand}" CommandParameter="en" />
+                                    <MenuItem Header="Deutsch" Command="{Binding ChangeLanguageCommand}" CommandParameter="de" />
+                                    <MenuItem Header="Español" Command="{Binding ChangeLanguageCommand}" CommandParameter="es" />
+                                    <MenuItem Header="Italiano" Command="{Binding ChangeLanguageCommand}" CommandParameter="it" />
+                                </MenuItem>
+                                <MenuItem Header="{l:T rechercher_une_mise_a_jour}" Command="{Binding Updates.CheckCommand}" />
+                                <MenuItem Header="{l:T site_du_projet_github}" Command="{Binding OpenProjectSiteCommand}" />
+                                <MenuItem Header="{l:T a_propos}" Command="{Binding AboutCommand}" />
                             </MenuFlyout>
                         </Button.Flyout>
                     </Button>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                    <Button Content="Nouvelle OP" Command="{Binding NewOperationCommand}" ToolTip.Tip="Ctrl+N" />
-                    <Button Content="Ouvrir…" Command="{Binding OpenOperationCommand}" ToolTip.Tip="Ctrl+O" />
-                    <Button Content="Enregistrer" Command="{Binding SaveCommand}" ToolTip.Tip="Ctrl+S" />
-                    <Button Content="Fusionner une copie…" Command="{Binding MergeCopyCommand}"
-                            ToolTip.Tip="Intégrer les modifications d'une autre copie de cette OP (fichier reçu d'un autre orga)" />
-                    <Button Content="☁ Travail partagé…" Command="{Binding ConfigureSharingCommand}" IsVisible="{Binding !IsShared}"
-                            ToolTip.Tip="Travailler à plusieurs via un dossier synchronisé (OneDrive, Google Drive, Dropbox, partage réseau)" />
-                    <Button Content="⟳ Synchroniser" Command="{Binding SyncNowCommand}" IsVisible="{Binding IsShared}" />
-                    <Button Content="Arrêter le partage" Command="{Binding StopSharingCommand}" IsVisible="{Binding IsShared}" />
+                    <Button Content="{l:T nouvelle_op}" Command="{Binding NewOperationCommand}" ToolTip.Tip="{l:T ctrl_n}" />
+                    <Button Content="{l:T ouvrir}" Command="{Binding OpenOperationCommand}" ToolTip.Tip="{l:T ctrl_o}" />
+                    <Button Content="{l:T enregistrer}" Command="{Binding SaveCommand}" ToolTip.Tip="{l:T ctrl_s}" />
+                    <Button Content="{l:T fusionner_une_copie}" Command="{Binding MergeCopyCommand}"
+                            ToolTip.Tip="{l:T integrer_les_modifications_d_une_autre_copie_de}" />
+                    <Button Content="{l:T travail_partage}" Command="{Binding ConfigureSharingCommand}" IsVisible="{Binding !IsShared}"
+                            ToolTip.Tip="{l:T travailler_a_plusieurs_via_un_dossier_synchronis}" />
+                    <Button Content="{l:T synchroniser}" Command="{Binding SyncNowCommand}" IsVisible="{Binding IsShared}" />
+                    <Button Content="{l:T arreter_le_partage}" Command="{Binding StopSharingCommand}" IsVisible="{Binding IsShared}" />
                     <TextBlock Text="{Binding SharingStatus}" VerticalAlignment="Center" FontSize="12" Opacity="0.8" />
                 </StackPanel>
             </DockPanel>
@@ -67,11 +75,11 @@
                 BorderThickness="0,0,0,1" Padding="12,5">
             <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="{Binding Updates.Banner}" VerticalAlignment="Center" FontWeight="SemiBold" />
-                <Button Content="Mettre à jour" Command="{Binding Updates.InstallCommand}" Classes="accent" Padding="8,2"
-                        ToolTip.Tip="Télécharge la nouvelle version, l'installe et redémarre le logiciel (l'OP en cours est enregistrée d'abord)" />
-                <Button Content="Nouveautés" Command="{Binding Updates.ShowNotesCommand}" Padding="8,2" />
-                <Button Content="Plus tard" Command="{Binding Updates.LaterCommand}" Padding="8,2"
-                        ToolTip.Tip="Ne plus signaler cette version" />
+                <Button Content="{l:T mettre_a_jour}" Command="{Binding Updates.InstallCommand}" Classes="accent" Padding="8,2"
+                        ToolTip.Tip="{l:T telecharge_la_nouvelle_version_l_installe_et_red}" />
+                <Button Content="{l:T nouveautes}" Command="{Binding Updates.ShowNotesCommand}" Padding="8,2" />
+                <Button Content="{l:T plus_tard}" Command="{Binding Updates.LaterCommand}" Padding="8,2"
+                        ToolTip.Tip="{l:T ne_plus_signaler_cette_version}" />
                 <TextBlock Text="{Binding Updates.Status}" VerticalAlignment="Center" Opacity="0.8" />
             </StackPanel>
         </Border>
@@ -79,8 +87,8 @@
         <Panel>
             <StackPanel IsVisible="{Binding !HasOperation}" HorizontalAlignment="Center"
                         VerticalAlignment="Center" Spacing="8">
-                <TextBlock Text="Airsoft Planner" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
-                <TextBlock Text="Créez une nouvelle OP ou ouvrez un fichier d'OP (.aop) reçu d'un autre orga."
+                <TextBlock Text="{l:T airsoft_planner}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                <TextBlock Text="{l:T creez_une_nouvelle_op_ou_ouvrez_un_fichier_d_op}"
                            Opacity="0.7" HorizontalAlignment="Center" />
             </StackPanel>
 
@@ -95,13 +103,13 @@
                                     <DataTemplate x:DataType="radio:RadioConflict">
                                         <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,1">
                                             <TextBlock VerticalAlignment="Center">
-                                                <Run Text="⚠ Fréquence en double" FontWeight="SemiBold" Foreground="#E65100" />
+                                                <Run Text="{l:T frequence_en_double}" FontWeight="SemiBold" Foreground="#E65100" />
                                                 <Run Text="{Binding Description}" />
                                             </TextBlock>
-                                            <Button Content="C'est normal, ignorer" Padding="6,1" FontSize="11"
+                                            <Button Content="{l:T c_est_normal_ignorer}" Padding="6,1" FontSize="11"
                                                     Command="{Binding $parent[ItemsControl].((vm:WorkspaceViewModel)DataContext).RadioCheck.IgnoreCommand}"
                                                     CommandParameter="{Binding}"
-                                                    ToolTip.Tip="Doublon voulu (ex. faction et équipe de commandement) : il ne sera plus signalé, sauf si une autre équipe prend cette fréquence" />
+                                                    ToolTip.Tip="{l:T doublon_voulu_ex_faction_et_equipe_de_commandeme}" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
@@ -109,36 +117,36 @@
                         </ScrollViewer>
                     </Border>
                 <TabControl Padding="0">
-                    <TabItem Header="Général">
+                    <TabItem Header="{l:T general}">
                         <views:GeneralView DataContext="{Binding General}" />
                     </TabItem>
-                    <TabItem Header="Orgas">
+                    <TabItem Header="{l:T orgas}">
                         <views:OrganizersView DataContext="{Binding Organizers}" />
                     </TabItem>
-                    <TabItem Header="Factions">
+                    <TabItem Header="{l:T factions}">
                         <views:FactionsView DataContext="{Binding Factions}" />
                     </TabItem>
-                    <TabItem Header="Équipes">
+                    <TabItem Header="{l:T equipes}">
                         <views:TeamsView DataContext="{Binding Teams}" />
                     </TabItem>
-                    <TabItem Header="Terrain &amp; zones">
+                    <TabItem Header="{l:T terrain_zones}">
                         <views:TerrainView DataContext="{Binding Terrain}" />
                     </TabItem>
-                    <TabItem Header="Matériel de jeu">
+                    <TabItem Header="{l:T materiel_de_jeu}">
                         <views:GameItemsView DataContext="{Binding GameItems}" />
                     </TabItem>
-                    <TabItem Header="Finances">
+                    <TabItem Header="{l:T finances}">
                         <views:FinancesView DataContext="{Binding Finances}" />
                     </TabItem>
-                    <TabItem Header="Documents">
+                    <TabItem Header="{l:T documents}">
                         <views:DocumentsView DataContext="{Binding Documents}" />
                     </TabItem>
-                    <TabItem Header="Scénario">
+                    <TabItem Header="{l:T scenario}">
                         <TabControl Padding="0" TabStripPlacement="Top" Classes="modes">
-                            <TabItem Header="Organisation">
+                            <TabItem Header="{l:T organisation}">
                                 <views:MissionsView DataContext="{Binding Missions}" />
                             </TabItem>
-                            <TabItem Header="Suivi de l'OP">
+                            <TabItem Header="{l:T suivi_de_l_op}">
                                 <views:TrackingView DataContext="{Binding Tracking}" />
                             </TabItem>
                             <TabItem Header="RETEX">
