@@ -27,6 +27,9 @@ public partial class MessageRowViewModel(OrgaMessage message, string audience) :
 
     public string Audience => audience;
 
+    /// <summary>« QG » (ordre en jeu) ou « Orga ».</summary>
+    public string Sender => message.Sender == MessageSender.Hq ? "QG" : "Orga";
+
     public string Text => message.Text;
 
     public bool IsMission => message.Kind != MessageKind.Text;
@@ -119,13 +122,18 @@ public partial class DispatchViewModel : ViewModelBase
     [NotifyCanExecuteChangedFor(nameof(SendCommand))]
     private string _composeText = "";
 
+    /// <summary>Message du QG (ordre en jeu, roleplay) ; sinon message de l'orga (organisation, sécurité).</summary>
+    [ObservableProperty]
+    private bool _composeAsHq = true;
+
     /// <summary>Messages envoyés, du plus récent au plus ancien.</summary>
     public ObservableCollection<MessageRowViewModel> Messages { get; } = [];
 
     [RelayCommand(CanExecute = nameof(CanSend))]
     private void Send()
     {
-        AddMessage(ComposeText.Trim(), SelectedTarget!.Target, SelectedTarget.Id, MessageKind.Text, null);
+        AddMessage(ComposeText.Trim(), SelectedTarget!.Target, SelectedTarget.Id, MessageKind.Text, null,
+            ComposeAsHq ? MessageSender.Hq : MessageSender.Orga);
         ComposeText = "";
     }
 
@@ -134,7 +142,12 @@ public partial class DispatchViewModel : ViewModelBase
     /// <summary>Messages destinés à une équipe (les plus récents), pour son téléphone ; ils sont alors comptés comme reçus.</summary>
     public IReadOnlyList<PhoneMessage> PhoneMessagesFor(TeamViewModel team)
     {
-        var messages = _messages.Where(m => m.IsFor(team.Model)).OrderByDescending(m => m.SentAt).Take(30).ToList();
+        // Mission en cours au moment de chaque message (regroupement sur le téléphone), puis les plus récents.
+        var tagged = MessageHistory.TagMissions(_messages.Where(m => m.IsFor(team.Model)),
+                id => _missions.Missions.FirstOrDefault(m => m.Model.Id == id)?.Name ?? "Mission supprimée")
+            .TakeLast(100)
+            .ToList();
+        var messages = tagged.Select(t => t.Message).ToList();
         var changed = false;
         foreach (var message in messages)
         {
@@ -145,7 +158,8 @@ public partial class DispatchViewModel : ViewModelBase
 
         if (changed)
             RefreshDelivery();
-        return messages.Select(m => new PhoneMessage(m.Id, m.SentAt, m.Text, AudienceOf(m), m.Kind)).ToList();
+        return tagged.Select(t => new PhoneMessage(t.Message.Id, t.Message.SentAt, t.Message.Text, AudienceOf(t.Message), t.Message.Kind,
+            t.Message.Sender, t.Mission)).ToList();
     }
 
     // ----- Missions -----
@@ -221,7 +235,7 @@ public partial class DispatchViewModel : ViewModelBase
         var text = (previous is not null && previous.Id != mission.Id ? $"Mission « {previous.Name} » terminée. " : "")
                    + $"Nouvelle mission : {mission.Name} ({MissionTime.Format(mission.StartMinutes)}–{MissionTime.Format(mission.EndMinutes)}"
                    + (zone is null ? ")" : $", {zone})");
-        AddMessage(text, MessageTarget.Team, model.Id, MessageKind.MissionAssigned, mission.Id);
+        AddMessage(text, MessageTarget.Team, model.Id, MessageKind.MissionAssigned, mission.Id, MessageSender.Hq);
     }
 
     /// <summary>Termine la mission diffusée : l'équipe attend les ordres.</summary>
@@ -233,8 +247,8 @@ public partial class DispatchViewModel : ViewModelBase
         if (!model.CompletedMissionIds.Contains(current.Id))
             model.CompletedMissionIds = [.. model.CompletedMissionIds, current.Id];
         model.PublishedMissionId = null;
-        AddMessage($"Mission « {current.Name} » terminée. Attendez les ordres de l'orga.", MessageTarget.Team, model.Id,
-            MessageKind.MissionEnded, current.Id);
+        AddMessage($"Mission « {current.Name} » terminée. Attendez les ordres.", MessageTarget.Team, model.Id,
+            MessageKind.MissionEnded, current.Id, MessageSender.Hq);
     }
 
     /// <summary>Mission diffusée à une équipe, pour son téléphone.</summary>
@@ -313,7 +327,7 @@ public partial class DispatchViewModel : ViewModelBase
         };
     }
 
-    private void AddMessage(string text, MessageTarget target, Guid? targetId, MessageKind kind, Guid? missionId)
+    private void AddMessage(string text, MessageTarget target, Guid? targetId, MessageKind kind, Guid? missionId, MessageSender sender)
     {
         var message = new OrgaMessage
         {
@@ -322,6 +336,7 @@ public partial class DispatchViewModel : ViewModelBase
             TargetId = targetId,
             Kind = kind,
             MissionId = missionId,
+            Sender = sender,
             SentAt = DateTimeOffset.Now,
         };
         _file.Add(message);

@@ -128,6 +128,7 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         message.HasQueryFilter(e => !e.IsDeleted);
         message.Property(m => m.Target).HasConversion<string>();
         message.Property(m => m.Kind).HasConversion<string>();
+        message.Property(m => m.Sender).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

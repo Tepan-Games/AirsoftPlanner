@@ -21,7 +21,7 @@ public sealed class OperationFile : IDisposable
     /// 12 = enrôlement de l'application Android.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 15;
+    public const int CurrentFormatVersion = 16;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;

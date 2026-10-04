@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace AirsoftPlanner.Core.Gps;
 
@@ -12,4 +12,5 @@ namespace AirsoftPlanner.Core.Gps;
 [JsonSerializable(typeof(EnrollResponse))]
 [JsonSerializable(typeof(TrackRequest))]
 [JsonSerializable(typeof(TrackResponse))]
+[JsonSerializable(typeof(List<PhoneMessage>))]
 public partial class ProtocolJson : JsonSerializerContext;

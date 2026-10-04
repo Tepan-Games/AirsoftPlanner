@@ -33,6 +33,10 @@ public class MainActivity : Activity
     private Button? _toggle;
     private TextView? _mission;
     private TextView? _messages;
+    private Button? _history;
+    private bool _showHistory;
+    private TextView? _orgaComms;
+    private TextView? _orgaMessages;
     private TextView? _comms;
     private Button? _emergency;
     private TextView? _allies;
@@ -206,18 +210,19 @@ public class MainActivity : Activity
         Section("Mission");
         _mission = Text("", 15);
 
-        Section("Messages de l'orga");
+        // Ordres du QG (en jeu) : groupés par mission, historique complet à la demande.
+        Section("Messages du QG");
         _messages = Text("", 15);
-
-        Section("Radio et urgence");
-        _comms = Text("", 15);
-        _emergency = PrimaryButton("", Color.Rgb(198, 40, 40));
-        _emergency.Click += (_, _) =>
+        _history = new Button(this) { TextSize = 13 };
+        _history.Click += (_, _) =>
         {
-            var phone = (Prefs.LastResponse?.Comms ?? Prefs.EnrollComms)?.EmergencyPhone;
-            if (!string.IsNullOrWhiteSpace(phone))
-                StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
+            _showHistory = !_showHistory;
+            RefreshDashboard();
         };
+        _root.AddView(_history, Spaced(4));
+
+        Section("Radio");
+        _comms = Text("", 15);
 
         Section("Points d'intérêt");
         _points = Text("", 15);
@@ -229,6 +234,18 @@ public class MainActivity : Activity
         _map = new MapCanvasView(this) { ContentDescription = "Carte du terrain" };
         _root.AddView(_map, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
         _allies = Text("", 15);
+
+        // Organisation (hors jeu) : contacts de l'orga, urgence et messages de l'orga.
+        Section("Orga");
+        _orgaComms = Text("", 15);
+        _emergency = PrimaryButton("", Color.Rgb(198, 40, 40));
+        _emergency.Click += (_, _) =>
+        {
+            var phone = (Prefs.LastResponse?.Comms ?? Prefs.EnrollComms)?.EmergencyPhone;
+            if (!string.IsNullOrWhiteSpace(phone))
+                StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
+        };
+        _orgaMessages = Text("", 15);
 
         var leave = new Button(this) { Text = "Se désenrôler" };
         leave.Click += (_, _) =>
@@ -272,11 +289,22 @@ public class MainActivity : Activity
             : response is null ? "En attente du premier échange avec le PC de l'OP."
             : "Aucune mission diffusée par l'orga : attendez les ordres.";
 
-        var messages = response?.Messages ?? [];
-        _messages!.Text = messages.Count == 0
-            ? "Aucun message."
-            : string.Join("\n\n", messages.Take(8).Select(x =>
-                $"{x.SentAt.LocalDateTime:HH:mm} · {x.Audience}\n{x.Text}"));
+        var archive = Prefs.MessageArchive;
+        var groups = MessageHistory.Group(archive.Where(x => x.Sender == MessageSender.Hq));
+        var shown = _showHistory ? groups : groups.Take(1);
+        _messages!.Text = groups.Count == 0
+            ? "Aucun message du QG."
+            : string.Join("\n\n", shown.Select(g =>
+                (g.Mission.Length > 0 ? $"— Mission « {g.Mission} » —" : "— Hors mission —") + "\n" +
+                string.Join("\n\n", g.Messages.Reverse().Select(x => $"{x.SentAt.LocalDateTime:HH:mm} · {x.Audience}\n{x.Text}"))));
+        _history!.Visibility = groups.Count > 1 ? ViewStates.Visible : ViewStates.Gone;
+        _history.Text = _showHistory ? "Masquer l'historique" : $"Historique des messages ({groups.Count - 1} mission(s) précédente(s))";
+
+        var orgaMessages = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
+        _orgaMessages!.Text = orgaMessages.Count == 0
+            ? "Aucun message de l'orga."
+            : "Messages de l'orga :\n\n" + string.Join("\n\n", (_showHistory ? orgaMessages : orgaMessages.Take(5))
+                .Select(x => $"{x.SentAt.LocalDateTime:ddd HH:mm} · {x.Audience}\n{x.Text}"));
 
         var comms = response?.Comms ?? Prefs.EnrollComms;
         _comms!.Text = comms is null
@@ -284,8 +312,8 @@ public class MainActivity : Activity
             : string.Join("\n", new[]
             {
                 comms.Faction.Length > 0 ? $"Faction {comms.Faction} : {Freq(comms.FactionFrequency)}" : null,
-                comms.OrgaFrequency.Length > 0 ? $"Orga : {comms.OrgaFrequency}" : null,
             }.OfType<string>().Concat(comms.Teams.Select(t => $"{t.Team}{(t.IsCommand ? " ★" : "")} : {Freq(t.Frequency)}")));
+        _orgaComms!.Text = comms is null ? "" : $"Fréquence orga : {Freq(comms.OrgaFrequency)}";
         _emergency!.Visibility = comms?.EmergencyPhone is { Length: > 0 } ? ViewStates.Visible : ViewStates.Gone;
         _emergency.Text = $"☎ Urgence orga : {comms?.EmergencyPhone}";
 

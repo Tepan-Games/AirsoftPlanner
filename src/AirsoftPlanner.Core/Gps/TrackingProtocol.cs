@@ -55,7 +55,10 @@ public record PoiInfo(string Name, string Category, string Symbol, string Coordi
 
 /// <summary>Message de l'orga reçu par le téléphone (texte libre ou annonce de mission).</summary>
 /// <param name="Audience">« Toutes les équipes », « Faction OTAN » ou « Équipe ».</param>
-public record PhoneMessage(Guid Id, DateTimeOffset SentAt, string Text, string Audience, AirsoftPlanner.Core.Domain.MessageKind Kind);
+/// <param name="Sender">Orga (organisation) ou QG (ordres en jeu).</param>
+/// <param name="Mission">Mission diffusée à l'équipe au moment du message (vide : hors mission).</param>
+public record PhoneMessage(Guid Id, DateTimeOffset SentAt, string Text, string Audience, AirsoftPlanner.Core.Domain.MessageKind Kind,
+    AirsoftPlanner.Core.Domain.MessageSender Sender = AirsoftPlanner.Core.Domain.MessageSender.Orga, string Mission = "");
 
 /// <summary>Fond de carte partagé avec les téléphones (mode carte) : l'image s'obtient par <c>GET /api/map/image</c>.</summary>
 public record MapInfo(string Name, string Attribution, double North, double South, double West, double East);

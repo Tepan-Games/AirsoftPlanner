@@ -82,6 +82,12 @@
         <ScrollViewer DataContext="{Binding Dispatch}" x:DataType="vm:DispatchViewModel">
             <StackPanel Margin="8,4" Spacing="6">
                 <TextBlock Text="Message aux téléphones des équipes" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <RadioButton Content="QG (ordre en jeu)" IsChecked="{Binding ComposeAsHq}" GroupName="sender"
+                                 ToolTip.Tip="Affiché dans la partie principale de l'application, comme un ordre du commandement (roleplay)" />
+                    <RadioButton Content="Orga (organisation, sécurité)" IsChecked="{Binding !ComposeAsHq}" GroupName="sender"
+                                 ToolTip.Tip="Affiché dans la section Orga de l'application, avec les contacts de l'orga" />
+                </StackPanel>
                 <DockPanel>
                     <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}" MinWidth="190" Margin="0,0,6,0" />
                     <Button DockPanel.Dock="Right" Content="Envoyer" Command="{Binding SendCommand}" Margin="6,0,0,0" Classes="accent" />
@@ -93,6 +99,8 @@
                             <StackPanel Margin="0,3">
                                 <TextBlock TextWrapping="Wrap">
                                     <Run Text="{Binding Time}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding Sender}" FontWeight="SemiBold" />
+                                    <Run Text="→" Foreground="Gray" />
                                     <Run Text="{Binding Audience}" Foreground="Gray" />
                                     <Run Text="  " />
                                     <Run Text="{Binding Text}" />

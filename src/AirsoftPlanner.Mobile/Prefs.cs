@@ -69,6 +69,15 @@ internal static class Prefs
         set => Set(nameof(LastResponse), value is null ? "" : JsonSerializer.Serialize(value, ProtocolJson.Default.TrackResponse));
     }
 
+    /// <summary>Historique des messages reçus depuis l'enrôlement (conservé sur le téléphone, consultable hors réseau).</summary>
+    public static IReadOnlyList<PhoneMessage> MessageArchive
+    {
+        get => Get(nameof(MessageArchive)) is { Length: > 0 } json
+            ? JsonSerializer.Deserialize(json, ProtocolJson.Default.ListPhoneMessage) ?? []
+            : [];
+        set => Set(nameof(MessageArchive), JsonSerializer.Serialize(value.ToList(), ProtocolJson.Default.ListPhoneMessage));
+    }
+
     /// <summary>Plan radio reçu à l'enrôlement (avant le premier envoi).</summary>
     public static Comms? EnrollComms
     {

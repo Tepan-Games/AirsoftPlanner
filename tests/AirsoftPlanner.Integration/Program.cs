@@ -94,6 +94,17 @@ dispatch.SendCommand.Execute(null);
 Check("Message de faction affiché sur le téléphone", () => Screen().Contains("Regroupement au point Bravo à 11 h"), 25);
 Check("Message de faction notifié", () => Notifications().Contains("Regroupement au point Bravo"), 10);
 
+Check("Messages du QG regroupés sous la mission en cours", () => Screen().Contains("— Mission « Reconnaissance du village » —"), 10);
+
+// Message de l'orga (hors jeu) : section Orga
+dispatch.ComposeAsHq = false;
+dispatch.SelectedTarget = dispatch.Targets.First(t => t.Target == MessageTarget.AllTeams);
+dispatch.ComposeText = "Fin de partie à 17 h, retour au parking";
+dispatch.SendCommand.Execute(null);
+Check("Message de l'orga dans la section Orga", () => Screen().Contains("Messages de l'orga :") && Screen().Contains("Fin de partie à 17 h"), 25);
+Check("Message de l'orga notifié comme tel", () => Notifications().Contains("Message de l'orga"), 10);
+dispatch.ComposeAsHq = true;
+
 // Fin de mission décidée par l'orga
 dispatch.End(alpha);
 Check("Mission terminée : le téléphone attend les ordres", () => Screen().Contains("Aucune mission diffusée par l'orga"), 25);

@@ -141,6 +141,7 @@ public class TrackingService : Service, ILocationListener
 
             var previous = Prefs.LastResponse;
             Prefs.LastResponse = response;
+            Prefs.MessageArchive = MessageHistory.Merge(Prefs.MessageArchive, response.Messages ?? []);
             NotifyNews(previous, response);
             await DownloadMapIfNeededAsync(response);
             if (response.IntervalSeconds != _interval)
@@ -218,6 +219,7 @@ public class TrackingService : Service, ILocationListener
             {
                 AirsoftPlanner.Core.Domain.MessageKind.MissionAssigned => "📣 Nouvelle mission",
                 AirsoftPlanner.Core.Domain.MessageKind.MissionEnded => "✔ Mission terminée",
+                _ when message.Sender == AirsoftPlanner.Core.Domain.MessageSender.Hq => $"📻 Message du QG · {message.Audience}",
                 _ => $"Message de l'orga · {message.Audience}",
             };
             Notify(title, message.Text, message.Id.GetHashCode());
