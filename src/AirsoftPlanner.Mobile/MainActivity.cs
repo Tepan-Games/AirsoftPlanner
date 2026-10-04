@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
 using AirsoftPlanner.Core.Gps;
@@ -275,7 +275,21 @@ public class MainActivity : Activity
     {
         try
         {
-            var response = await ServerApi.EnrollAsync(server, EnrollmentCodes.Normalize(code), deviceName.Trim());
+            EnrollResponse? response;
+            try
+            {
+                response = await ServerApi.EnrollAsync(server, EnrollmentCodes.Normalize(code), deviceName.Trim());
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                // Adresse du package périmée (IP du PC changée, pas d'Internet pour le nom DynDNS) : recherche sur le Wi-Fi.
+                Toast.MakeText(this, "PC de l'OP injoignable : recherche sur le Wi-Fi…", ToastLength.Short)!.Show();
+                if (await ServerApi.DiscoverAsync(null, server) is not { } found)
+                    throw;
+                server = found;
+                response = await ServerApi.EnrollAsync(server, EnrollmentCodes.Normalize(code), deviceName.Trim());
+            }
+
             if (response is null)
             {
                 Toast.MakeText(this, "Code inconnu : vérifiez-le auprès de l'orga.", ToastLength.Long)!.Show();
@@ -290,6 +304,7 @@ public class MainActivity : Activity
             Prefs.Faction = response.Faction;
             Prefs.IntervalSeconds = response.IntervalSeconds;
             Prefs.EnrollComms = response.Comms;
+            Prefs.OperationId = response.OperationId;
             Prefs.Status = "Enrôlé : démarrage du suivi.";
             Show();
         }

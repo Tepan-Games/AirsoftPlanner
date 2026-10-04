@@ -1,4 +1,4 @@
-namespace AirsoftPlanner.Core.Gps;
+﻿namespace AirsoftPlanner.Core.Gps;
 
 // Messages JSON échangés entre l'application Android et le serveur du PC de l'OP.
 // Partagés par les deux programmes : une modification ici s'applique des deux côtés.
@@ -7,8 +7,9 @@ namespace AirsoftPlanner.Core.Gps;
 public record EnrollRequest(string Code, string DeviceName);
 
 /// <summary>Réponse à l'enrôlement : jeton à conserver et rappel de l'équipe, de l'OP et de la radio.</summary>
+/// <param name="OperationId">Identifiant de l'OP : permet au téléphone de retrouver le PC de son OP sur le Wi-Fi (<see cref="Discovery"/>).</param>
 public record EnrollResponse(string Token, string Team, string Operation, string Faction, string RadioFrequency, int IntervalSeconds,
-    AllyShareMode ShareMode = AllyShareMode.Coordinates, Comms? Comms = null);
+    AllyShareMode ShareMode = AllyShareMode.Coordinates, Comms? Comms = null, Guid OperationId = default);
 
 /// <summary>Fréquence d'une équipe de la faction.</summary>
 public record TeamFrequency(string Team, string Frequency, bool IsCommand);
@@ -65,6 +66,23 @@ public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode Shar
 public static class EnrollmentLink
 {
     public const string Scheme = "airsoftplanner";
+
+    /// <summary>
+    /// Adresse complète du serveur à partir de ce que l'orga a saisi (« monop.duckdns.org », « 192.168.1.20:5055 »,
+    /// « http://... ») : schéma http et port du serveur ajoutés s'ils manquent.
+    /// </summary>
+    public static string ServerUrl(string address, int defaultPort)
+    {
+        var text = address.Trim().TrimEnd('/');
+        if (text.Length == 0)
+            return "";
+        if (!text.Contains("://", StringComparison.Ordinal))
+            text = "http://" + text;
+        if (!Uri.TryCreate(text, UriKind.Absolute, out var uri))
+            return text;
+        var hasPort = uri.Authority.Contains(':', StringComparison.Ordinal) && !uri.Authority.EndsWith(']');
+        return $"{uri.Scheme}://{uri.Host}:{(hasPort ? uri.Port : defaultPort)}";
+    }
 
     public static string Create(string serverUrl, string code) =>
         $"{Scheme}://enroll?server={Uri.EscapeDataString(serverUrl)}&code={Uri.EscapeDataString(code)}";

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -44,6 +44,12 @@ public class AppSettings
 
     /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
     public static bool StartGpsServerOnce { get; set; }
+
+    /// <summary>
+    /// Adresse de mise à jour du nom DynDNS (contient le jeton du compte, chiffrée pour l'utilisateur Windows),
+    /// avec le repère {ip} remplacé par l'adresse du PC. Ex. https://www.duckdns.org/update?domains=monop&amp;token=...&amp;ip={ip}
+    /// </summary>
+    public string DynDnsUpdateUrlProtected { get; set; } = "";
 
     public string MqttHost { get; set; } = "localhost";
 

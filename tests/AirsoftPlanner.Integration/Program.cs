@@ -1,4 +1,4 @@
-// Tests d'interaction entre l'application Android (émulateur, pilotée par adb) et le logiciel
+﻿// Tests d'interaction entre l'application Android (émulateur, pilotée par adb) et le logiciel
 // (code réel, piloté par programme comme le ferait l'orga).
 using System.Diagnostics;
 using System.Reflection;
@@ -135,6 +135,24 @@ Check("Révocation : PC indique le téléphone révoqué", () => gps.Devices.Any
 var link = EnrollmentLink.Create($"http://10.0.2.2:{Port}", "K7P4QZ");
 Adb($"shell am start -a android.intent.action.VIEW -d '{link}' {Package}");
 Check("Lien du QR code : nouvel enrôlement accepté", () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && Screen().Contains("Suivi actif"), 30);
+
+// 12. Le PC change d'adresse (ici de port) : le téléphone le retrouve sur le Wi-Fi
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+gps.ServerPort = Port - 1;
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+var moved = DateTimeOffset.Now;
+Check("Changement d'adresse du PC : le téléphone le retrouve et reprend l'envoi",
+    () => AlphaPositions().Any(p => p.ReceivedAt >= moved) && gps.Devices.First(d => !d.IsRevoked).LastSeen.StartsWith("dernier envoi"), 45);
+
+// 13. Enrôlement avec une adresse périmée (package imprimé avant le changement) : recherche sur le Wi-Fi
+gps.SelectedDevice = gps.Devices.First(d => !d.IsRevoked);
+gps.RevokeDeviceCommand.Execute(null);
+Check("Révocation avant le test d'adresse périmée", () => Screen().Contains("S'enrôler"), 30);
+var staleLink = EnrollmentLink.Create($"http://10.0.2.2:{Port}", "K7P4QZ");
+Adb($"shell am start -a android.intent.action.VIEW -d '{staleLink}' {Package}");
+Check("Adresse périmée : PC retrouvé sur le Wi-Fi et enrôlement accepté",
+    () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && Screen().Contains("Suivi actif"), 40);
+gps.ServerPort = Port;
 
 // ----- Bilan -----
 Console.WriteLine();

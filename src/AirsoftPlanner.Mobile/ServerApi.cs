@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using AirsoftPlanner.Core.Gps;
 
@@ -38,6 +38,38 @@ internal static class ServerApi
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadFromJsonAsync(ProtocolJson.Default.TrackResponse)
                ?? throw new HttpRequestException("Réponse vide du PC de l'OP.");
+    }
+
+    /// <summary>
+    /// Cherche le PC de l'OP sur le Wi-Fi (son IP a changé, nom DynDNS injoignable sans Internet) :
+    /// diffusion sur le réseau local, plus un appel direct à la dernière adresse connue (port du serveur changé).
+    /// </summary>
+    /// <returns>Nouvelle adresse du serveur, ou null si aucun PC de cette OP ne répond.</returns>
+    public static async Task<string?> DiscoverAsync(Guid? operationId, string lastServer)
+    {
+        var targets = new List<IPEndPoint> { new(IPAddress.Broadcast, Discovery.Port) };
+        try
+        {
+            var host = new Uri(Normalize(lastServer)).Host;
+            var address = IPAddress.TryParse(host, out var ip) ? ip
+                : (await Dns.GetHostAddressesAsync(host).WaitAsync(TimeSpan.FromSeconds(3)))
+                    .FirstOrDefault(a => a.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
+            if (address is not null)
+                targets.Add(new IPEndPoint(address, Discovery.Port));
+        }
+        catch (Exception ex) when (ex is UriFormatException or System.Net.Sockets.SocketException or TimeoutException)
+        {
+            // Dernière adresse inutilisable : la diffusion suffit.
+        }
+
+        try
+        {
+            return (await Discovery.FindAsync(operationId, TimeSpan.FromSeconds(3), targets))?.Server;
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return null; // pas de réseau
+        }
     }
 
     public static async Task<byte[]?> MapImageAsync(string server, string token)

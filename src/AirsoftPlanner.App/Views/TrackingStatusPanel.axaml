@@ -124,6 +124,19 @@
                     <ComboBox ItemsSource="{Binding ShareModes}" SelectedItem="{Binding ShareMode}" MinWidth="280" Margin="0,0,6,4"
                               ToolTip.Tip="Positions des équipes alliées (même faction) renvoyées à l'application, avec le récap de leur mission" />
                 </WrapPanel>
+                <WrapPanel>
+                    <TextBlock Text="Adresse publiée" VerticalAlignment="Center" Margin="0,0,6,4" />
+                    <TextBox Text="{Binding ServerAddress}" Width="240" PlaceholderText="IP du PC (ou monop.duckdns.org)" Margin="0,0,6,4"
+                             ToolTip.Tip="Nom DynDNS (ou adresse fixe) imprimé dans les packages et les QR codes. Vide : adresse IP actuelle de ce PC." />
+                    <TextBox Text="{Binding DynDnsUpdateUrl}" Width="320" Margin="0,0,6,4" PasswordChar="•" RevealPassword="{Binding #RevealDynDns.IsChecked}"
+                             PlaceholderText="Adresse de mise à jour DynDNS, avec {ip}"
+                             ToolTip.Tip="Ex. DuckDNS : https://www.duckdns.org/update?domains=monop&amp;token=VOTRE-JETON&amp;ip={ip} — mise à jour au démarrage du serveur puis dès que l'IP du PC change (vérifiée toutes les 5 min). Réglage de ce PC, jeton chiffré." />
+                    <CheckBox Name="RevealDynDns" Content="Afficher" Margin="0,0,6,4" />
+                    <Button Content="Mettre à jour" Command="{Binding UpdateDynDnsCommand}" Margin="0,0,6,4" />
+                </WrapPanel>
+                <TextBlock Text="{Binding DynDnsStatus}" IsVisible="{Binding DynDnsStatus.Length}" FontSize="11" TextWrapping="Wrap" />
+                <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
+                           Text="Si l'adresse du PC a changé (autre box, IP différente, pas d'Internet sur le terrain), l'application retrouve seule ce PC sur le Wi-Fi. Le nom DynDNS reçoit l'IP locale du PC : il sert quand le terrain a Internet (certaines box bloquent ces noms : la recherche sur le Wi-Fi prend alors le relais)." />
                 <WrapPanel IsVisible="{Binding Devices.Count}">
                     <ComboBox ItemsSource="{Binding Devices}" SelectedItem="{Binding SelectedDevice}" MinWidth="320" Margin="0,0,6,4" PlaceholderText="Téléphones enrôlés…">
                         <ComboBox.ItemTemplate>

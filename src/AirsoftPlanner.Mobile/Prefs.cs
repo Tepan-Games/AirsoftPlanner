@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AirsoftPlanner.Core.Gps;
 using Android.Content;
 
@@ -18,6 +18,13 @@ internal static class Prefs
     public static string Operation { get => Get(nameof(Operation)); set => Set(nameof(Operation), value); }
 
     public static string Faction { get => Get(nameof(Faction)); set => Set(nameof(Faction), value); }
+
+    /// <summary>Identifiant de l'OP (recherche du PC sur le Wi-Fi) ; null pour un enrôlement antérieur à cette option.</summary>
+    public static Guid? OperationId
+    {
+        get => Guid.TryParse(Get(nameof(OperationId)), out var id) && id != Guid.Empty ? id : null;
+        set => Set(nameof(OperationId), value?.ToString() ?? "");
+    }
 
     public static string DeviceName { get => Get(nameof(DeviceName)); set => Set(nameof(DeviceName), value); }
 

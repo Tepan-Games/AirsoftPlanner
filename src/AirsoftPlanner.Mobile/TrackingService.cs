@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Gps;
+﻿using AirsoftPlanner.Core.Gps;
 using Android.Content;
 using Android.Content.PM;
 using Android.Locations;
@@ -157,6 +157,16 @@ public class TrackingService : Service, ILocationListener
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)
         {
+            // L'IP ou le port du PC a pu changer : on le cherche sur le Wi-Fi (seulement le PC de notre OP).
+            if (Prefs.OperationId is { } operation && await ServerApi.DiscoverAsync(operation, Prefs.ServerUrl) is { } found
+                && found != ServerApi.Normalize(Prefs.ServerUrl))
+            {
+                Prefs.ServerUrl = found;
+                UpdateStatus($"PC de l'OP retrouvé sur le Wi-Fi : {found}");
+                _ = Task.Delay(500).ContinueWith(_ => SendAsync());
+                return;
+            }
+
             int count;
             lock (_pending)
                 count = _pending.Count;

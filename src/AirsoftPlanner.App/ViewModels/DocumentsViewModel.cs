@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -391,6 +391,14 @@ public partial class DocumentsViewModel : ViewModelBase
         var faction = team.Faction;
         var commandTeam = faction?.CommandTeam;
         var missions = _missions.Missions.Select(m => m.Model).ToList();
+
+        // Enrôlement de l'application Android : code de l'équipe (créé au besoin) et adresse publiée du PC de l'OP.
+        if (team.EnrollmentCode.Length == 0)
+            team.EnrollmentCode = Core.Gps.EnrollmentCodes.Generate(_teams.Items.Select(t => t.EnrollmentCode).Where(c => c.Length > 0).ToList());
+        var port = AppSettings.Current.GpsServerPort;
+        var server = _file.Operation.ServerAddress.Length > 0
+            ? Core.Gps.EnrollmentLink.ServerUrl(_file.Operation.ServerAddress, port)
+            : Services.Gps.LocalGpsServer.LocalAddresses(port).FirstOrDefault();
         return new PackageInput(
             _file.Operation,
             team.Model,
@@ -403,7 +411,8 @@ public partial class DocumentsViewModel : ViewModelBase
             _terrain.Zones.ToDictionary(z => z.Model.Id, z => z.Model),
             _items.Items.ToDictionary(i => i.Model.Id, i => i.Model),
             Rules.Select(r => r.Model).ToList(),
-            (_terrain.SelectedLayer ?? _terrain.Layers.FirstOrDefault())?.Model);
+            (_terrain.SelectedLayer ?? _terrain.Layers.FirstOrDefault())?.Model,
+            server);
     }
 
     private string Fingerprint(TeamViewModel team) => PackageFingerprint.Compute(

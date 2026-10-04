@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -30,6 +30,7 @@ namespace AirsoftPlanner.App.Services.Gps;
 public sealed class LocalGpsServer : IAsyncDisposable
 {
     private WebApplication? _app;
+    private DiscoveryResponder? _discovery;
 
     public event Action<GpsFix>? FixReceived;
 
@@ -48,6 +49,12 @@ public sealed class LocalGpsServer : IAsyncDisposable
     /// <summary>Image du fond de carte pour un jeton autorisé en mode carte, sinon null.</summary>
     public Func<string, byte[]?> MapImage { get; set; } = _ => null;
 
+    /// <summary>OP menée par ce PC, annoncée aux téléphones qui le cherchent sur le Wi-Fi.</summary>
+    public Func<(string Name, Guid Id)> OperationInfo { get; set; } = () => ("", Guid.Empty);
+
+    /// <summary>Recherche sur le Wi-Fi active (port UDP libre).</summary>
+    public bool IsDiscoverable => _discovery is not null;
+
     public bool IsRunning => _app is not null;
 
     public int Port { get; private set; }
@@ -61,6 +68,29 @@ public sealed class LocalGpsServer : IAsyncDisposable
             .Select(a => $"http://{a.Address}:{port}")
             .Distinct()
             .ToList();
+
+    /// <summary>
+    /// Adresse du serveur à donner à un téléphone : celle de la carte réseau du même sous-réseau que lui
+    /// (PC relié à plusieurs réseaux), sinon la première adresse locale.
+    /// </summary>
+    public static string? AddressFor(IPAddress phone, int port)
+    {
+        var addresses = NetworkInterface.GetAllNetworkInterfaces()
+            .Where(n => n.OperationalStatus == OperationalStatus.Up && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+            .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+            .Where(a => a.Address.AddressFamily == AddressFamily.InterNetwork)
+            .ToList();
+        var same = addresses.FirstOrDefault(a => SameSubnet(a.Address, phone, a.IPv4Mask)) ?? addresses.FirstOrDefault();
+        return same is null ? null : $"http://{same.Address}:{port}";
+    }
+
+    private static bool SameSubnet(IPAddress a, IPAddress b, IPAddress? mask)
+    {
+        if (mask is null || b.AddressFamily != AddressFamily.InterNetwork)
+            return false;
+        var (x, y, m) = (a.GetAddressBytes(), b.MapToIPv4().GetAddressBytes(), mask.GetAddressBytes());
+        return Enumerable.Range(0, 4).All(i => (x[i] & m[i]) == (y[i] & m[i]));
+    }
 
     public async Task StartAsync(int port)
     {
@@ -129,6 +159,20 @@ public sealed class LocalGpsServer : IAsyncDisposable
         await app.StartAsync();
         _app = app;
         Port = port;
+
+        // Recherche par les téléphones sur le Wi-Fi (IP du PC changée depuis l'enrôlement) : facultative.
+        try
+        {
+            _discovery = new DiscoveryResponder(phone =>
+            {
+                var (name, id) = OperationInfo();
+                return AddressFor(phone, port) is { } address ? new DiscoveryReply(address, name, id) : null;
+            });
+        }
+        catch (SocketException)
+        {
+            _discovery = null; // port UDP occupé (autre logiciel ouvert) : le reste fonctionne
+        }
     }
 
     public async Task StopAsync()
@@ -136,6 +180,8 @@ public sealed class LocalGpsServer : IAsyncDisposable
         if (_app is null)
             return;
 
+        _discovery?.Dispose();
+        _discovery = null;
         await _app.StopAsync();
         await _app.DisposeAsync();
         _app = null;

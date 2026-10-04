@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Geo;
+﻿using AirsoftPlanner.Core.Geo;
 
 namespace AirsoftPlanner.Core.Domain;
 
@@ -35,6 +35,12 @@ public class Operation : Entity
 
     /// <summary>Intervalle d'envoi des positions par l'application Android (secondes).</summary>
     public int TrackingIntervalSeconds { get; set; } = 30;
+
+    /// <summary>
+    /// Adresse publiée du PC de l'OP pour les téléphones (nom DynDNS, ex. « monop.duckdns.org:5055 ») :
+    /// imprimée dans les packages et les QR codes. Vide : adresse IP actuelle du PC sur le réseau local.
+    /// </summary>
+    public string ServerAddress { get; set; } = "";
 
     /// <summary>Ce que l'application Android montre des équipes alliées.</summary>
     public AirsoftPlanner.Core.Gps.AllyShareMode AllyShareMode { get; set; } = AirsoftPlanner.Core.Gps.AllyShareMode.Coordinates;

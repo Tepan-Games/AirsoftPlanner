@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -72,7 +72,10 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _traccarUser = settings.TraccarUser;
         _traccarPassword = Secret.Unprotect(settings.TraccarPasswordProtected);
 
+        _dynDnsUpdateUrl = Secret.Unprotect(settings.DynDnsUpdateUrlProtected);
+        _serverAddress = file.Operation.ServerAddress;
         _server.FixReceived += OnFix;
+        _server.OperationInfo = () => (_file.Operation.Name, _file.Operation.Id);
         _server.Positions = () => _tracking.PublishedPositions;
         _server.TeamNames = () => _tracking.PublishedTeamNames;
         // Appelés depuis le fil du serveur : le travail se fait sur le fil de l'interface (données de l'OP).
@@ -126,6 +129,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             if (_server.IsRunning)
             {
                 await _server.StopAsync();
+                StopDynDns();
                 ServerAddresses = "";
                 Log("Serveur local arrêté.");
             }
@@ -137,6 +141,9 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 AppSettings.Current.Save();
                 ServerAddresses = string.Join("   ", LocalGpsServer.LocalAddresses(port));
                 Log($"Serveur local démarré : {ServerAddresses}");
+                if (!_server.IsDiscoverable)
+                    Log($"Recherche automatique sur le Wi-Fi indisponible (port UDP {Discovery.Port} occupé).");
+                StartDynDns();
             }
         }
         catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidOperationException)
@@ -193,7 +200,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         if (team.EnrollmentCode.Length == 0)
             GenerateCode();
 
-        var address = LocalGpsServer.LocalAddresses((int)(ServerPort ?? 5055)).FirstOrDefault();
+        var address = PublishedAddress((int)(ServerPort ?? 5055));
         if (address is null)
         {
             await _dialogs.ShowErrorAsync("Aucune connexion réseau active : reliez ce PC au Wi-Fi du terrain.");
@@ -254,7 +261,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         RefreshDevices();
         Log($"Téléphone « {device.DeviceName} » enrôlé pour {team.Name}.");
         return new EnrollResponse(device.Token, team.Name, _file.Operation.Name, team.Faction?.Name ?? "",
-            team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team));
+            team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team), _file.Operation.Id);
     }
 
     private TrackResponse? AuthorizeDevice(string token)
@@ -314,6 +321,91 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         }
 
         SelectedDevice = Devices.FirstOrDefault(d => d.Model == selected);
+    }
+
+    // ----- Adresse publiée et DynDNS -----
+
+    /// <summary>Nom DynDNS (ou adresse fixe) donné aux équipes dans les QR codes et les packages ; vide : IP locale du PC.</summary>
+    [ObservableProperty]
+    private string _serverAddress;
+
+    partial void OnServerAddressChanged(string value) => _file.Operation.ServerAddress = value.Trim();
+
+    /// <summary>Adresse de mise à jour du service DynDNS (réglage du poste, avec le jeton du compte).</summary>
+    [ObservableProperty]
+    private string _dynDnsUpdateUrl;
+
+    [ObservableProperty]
+    private string _dynDnsStatus = "";
+
+    partial void OnDynDnsUpdateUrlChanged(string value)
+    {
+        AppSettings.Current.DynDnsUpdateUrlProtected = Secret.Protect(value.Trim());
+        AppSettings.Current.Save();
+        _lastDynDnsIp = null;
+    }
+
+    private System.Threading.Timer? _dynDnsTimer;
+    private string? _lastDynDnsIp;
+    private static readonly System.Net.Http.HttpClient DynDnsHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    /// <summary>Adresse à donner aux téléphones : nom publié de l'OP, sinon IP locale actuelle du PC.</summary>
+    public string? PublishedAddress(int port) =>
+        _file.Operation.ServerAddress.Length > 0
+            ? EnrollmentLink.ServerUrl(_file.Operation.ServerAddress, port)
+            : LocalGpsServer.LocalAddresses(port).FirstOrDefault();
+
+    /// <summary>Met à jour le nom DynDNS tout de suite (puis toutes les 5 minutes tant que le serveur tourne, si l'IP change).</summary>
+    [RelayCommand]
+    private async Task UpdateDynDnsAsync()
+    {
+        _lastDynDnsIp = null;
+        await RefreshDynDnsAsync();
+    }
+
+    private void StartDynDns()
+    {
+        _dynDnsTimer?.Dispose();
+        _dynDnsTimer = new System.Threading.Timer(_ => Dispatcher.UIThread.Post(async () => await RefreshDynDnsAsync()),
+            null, TimeSpan.Zero, TimeSpan.FromMinutes(5));
+    }
+
+    private void StopDynDns()
+    {
+        _dynDnsTimer?.Dispose();
+        _dynDnsTimer = null;
+    }
+
+    private async Task RefreshDynDnsAsync()
+    {
+        var template = DynDnsUpdateUrl.Trim();
+        if (template.Length == 0)
+            return;
+
+        var local = LocalGpsServer.LocalAddresses(80).FirstOrDefault();
+        var ip = local is null ? "" : new Uri(local).Host;
+        if (ip.Length == 0 || ip == _lastDynDnsIp)
+            return;
+
+        try
+        {
+            var response = await DynDnsHttp.GetStringAsync(DynDns.BuildUrl(template, ip));
+            if (DynDns.IsSuccess(response))
+            {
+                _lastDynDnsIp = ip;
+                DynDnsStatus = $"✔ Nom DynDNS à jour ({ip}) à {DateTime.Now:HH:mm}";
+            }
+            else
+            {
+                DynDnsStatus = $"⚠ Le service DynDNS refuse la mise à jour : {response.Trim()}";
+            }
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or UriFormatException or InvalidOperationException)
+        {
+            DynDnsStatus = $"⚠ Service DynDNS injoignable (pas d'Internet ?) : la recherche sur le Wi-Fi prend le relais. {ex.Message}";
+        }
+
+        Log(DynDnsStatus);
     }
 
     // ----- Second poste : connexion au PC de l'OP -----
@@ -494,6 +586,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     public void Rebind(Data.OperationFile file, TrackingViewModel tracking, TeamsViewModel teams, VehicleTracker vehicles)
     {
         _file = file;
+        ServerAddress = file.Operation.ServerAddress;
         _devices.Clear();
         _devices.AddRange(file.LoadEnrolledDevices());
         RefreshDevices();
@@ -506,6 +599,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
+        StopDynDns();
         await _server.DisposeAsync();
         await _meshtastic.DisposeAsync();
         _traccar.Dispose();

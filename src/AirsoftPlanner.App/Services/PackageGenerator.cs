@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -26,7 +26,8 @@ public record PackageInput(
     IReadOnlyDictionary<Guid, Zone> Zones,
     IReadOnlyDictionary<Guid, GameItem> Items,
     IReadOnlyList<RuleDocument> Rules,
-    MapLayer? Map);
+    MapLayer? Map,
+    string? EnrollmentServer = null);
 
 /// <summary>
 /// Produit le package d'une équipe : un dossier contenant l'ordre de mission initial (PDF, avec carte),
@@ -161,6 +162,9 @@ public static class PackageGenerator
                             }
                         })));
 
+                    if (input.EnrollmentServer is { Length: > 0 } server && input.Team.EnrollmentCode.Length > 0)
+                        col.Item().Element(c => EnrollmentBlock(c, server, input.Team.EnrollmentCode));
+
                     col.Item().PaddingTop(6).Text("Missions").FontSize(14).Bold();
                     if (input.Missions.Count == 0)
                         col.Item().Text("Aucune mission assignée pour le moment.").Italic();
@@ -188,6 +192,27 @@ public static class PackageGenerator
                 });
             }
         });
+    }
+
+    /// <summary>QR code et code pour enrôler le téléphone du chef d'équipe dans l'application Android.</summary>
+    private static void EnrollmentBlock(IContainer container, string server, string code)
+    {
+        using var generator = new QRCoder.QRCodeGenerator();
+        using var data = generator.CreateQrCode(Core.Gps.EnrollmentLink.Create(server, code), QRCoder.QRCodeGenerator.ECCLevel.M);
+        var png = new QRCoder.PngByteQRCode(data).GetGraphic(8);
+        container.Element(c => Box(c, "Application Android — suivi de l'équipe", b => b.Item().Row(row =>
+        {
+            row.ConstantItem(3.2f, Unit.Centimetre).Image(png);
+            row.RelativeItem().PaddingLeft(10).Column(text =>
+            {
+                text.Spacing(2);
+                text.Item().Text("Chef d'équipe : installez l'application Airsoft Planner, puis scannez ce QR code avec l'appareil photo (ou « Scanner le QR code » dans l'application).");
+                text.Item().Text(t => { t.Span("Ou saisissez — serveur : ").SemiBold(); t.Span(server).FontFamily("Consolas"); });
+                text.Item().Text(t => { t.Span("Code d'équipe : ").SemiBold(); t.Span(Core.Gps.EnrollmentCodes.Format(code)).FontSize(14).Bold().FontFamily("Consolas"); });
+                text.Item().Text("Le jour de l'OP, connectez-vous au Wi-Fi du terrain : si l'adresse du PC a changé, l'application le retrouve seule.")
+                    .FontSize(8).FontColor(Colors.Grey.Darken1);
+            });
+        })));
     }
 
     private static void MissionBlock(IContainer container, Mission mission, PackageInput input, CoordinateFormat format, DateTime day)
