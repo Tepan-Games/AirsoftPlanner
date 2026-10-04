@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
@@ -91,6 +91,13 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
     }
 
     public string ZoneName => Zone?.Name ?? "";
+
+    /// <summary>Points d'intérêt diffusés aux équipes seulement pendant cette mission.</summary>
+    public string MissionPoints => string.Join(", ", owner.Zones
+        .Where(z => z.Model.Visibility == ZoneVisibility.DuringMission && z.Model.VisibleMissionId == mission.Id)
+        .Select(z => z.DisplayName));
+
+    public bool HasMissionPoints => MissionPoints.Length > 0;
 
     /// <summary>Couleur de la mission sur la frise : celle de sa zone.</summary>
     public string Color => Zone?.Color ?? DefaultColor;
@@ -222,6 +229,12 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
             : mission.PredecessorIds.Where(id => id != missionId).ToList();
         OnPropertyChanged(nameof(PredecessorIds));
         owner.OnScheduleChanged();
+    }
+
+    public void RefreshPoints()
+    {
+        OnPropertyChanged(nameof(MissionPoints));
+        OnPropertyChanged(nameof(HasMissionPoints));
     }
 
     public void RefreshZone()

@@ -110,6 +110,18 @@
                     <TextBlock Text="Visible par (téléphones des équipes, ordres de mission)" Classes="label" />
                     <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding SelectedZoneVisibility}" MinWidth="240"
                               ToolTip.Tip="Bivouac d'une faction, campement, respawn… : affiché sur la carte et dans la liste de l'application des équipes concernées" />
+                    <ComboBox ItemsSource="{Binding Missions}" SelectedItem="{Binding SelectedZoneMission}" MinWidth="240"
+                              IsVisible="{Binding IsMissionVisibility}" PlaceholderText="Mission…"
+                              ToolTip.Tip="Le point n'est envoyé aux téléphones des équipes de cette mission que pendant qu'elle leur est diffusée (dépôt d'armes, point de contact…)">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:MissionViewModel">
+                                <TextBlock>
+                                    <Run Text="{Binding StartText}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding Name}" />
+                                </TextBlock>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                     <TextBlock Text="Couleur" Classes="label" />
                     <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding SelectedZone.Color, FallbackValue={x:Null}}" Width="120">
                         <ComboBox.ItemTemplate>

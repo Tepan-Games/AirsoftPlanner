@@ -170,7 +170,7 @@ public static class PackageGenerator
                     if (input.EnrollmentServer is { Length: > 0 } server && input.Team.EnrollmentCode.Length > 0)
                         col.Item().Element(c => EnrollmentBlock(c, server, input.Team.EnrollmentCode));
 
-                    var points = input.Zones.Values.Where(z => z.Points.Count > 0 && z.IsVisibleTo(input.Team))
+                    var points = input.Zones.Values.Where(z => z.Points.Count > 0 && z.Visibility != ZoneVisibility.DuringMission && z.IsVisibleTo(input.Team))
                         .OrderBy(z => z.Category).ThenBy(z => z.Name, StringComparer.CurrentCulture).ToList();
                     if (points.Count > 0)
                         col.Item().Element(c => Box(c, "Points d'intérêt", b =>
@@ -199,7 +199,8 @@ public static class PackageGenerator
             {
                 var missionZones = input.Missions.Select(m => m.ZoneId).OfType<Guid>().ToHashSet();
                 // Les points réservés à l'orga ou à une autre faction (bivouac adverse...) ne figurent pas sur la carte de l'équipe.
-                var shown = input.Zones.Values.Where(z => missionZones.Contains(z.Id) || z.IsVisibleTo(input.Team));
+                var shown = input.Zones.Values.Where(z => missionZones.Contains(z.Id)
+                    || (z.Visibility != ZoneVisibility.DuringMission && z.IsVisibleTo(input.Team))); // points de mission : secrets jusqu'à la mission
                 var image = MapSnapshot.Render(map, shown.Select(z => (z, missionZones.Contains(z.Id))),
                     factionColor: id => input.FactionColors?.GetValueOrDefault(id));
                 container.Page(page =>

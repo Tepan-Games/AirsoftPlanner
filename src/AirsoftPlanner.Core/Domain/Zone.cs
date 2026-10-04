@@ -31,6 +31,9 @@ public class Zone : Entity
 
     public Guid? VisibleFactionId { get; set; }
 
+    /// <summary>Mission pendant laquelle le point est diffusé (visibilité « pendant une mission »).</summary>
+    public Guid? VisibleMissionId { get; set; }
+
     /// <summary>Symbole militaire du point (Auto : selon la catégorie).</summary>
     public AirsoftPlanner.Core.Symbols.MilSymbol Symbol { get; set; }
 

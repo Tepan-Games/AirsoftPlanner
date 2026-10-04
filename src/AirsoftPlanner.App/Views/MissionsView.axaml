@@ -114,6 +114,11 @@
                             <Button Content="Retirer" Command="{Binding ClearZoneCommand}" />
                         </StackPanel>
 
+                        <TextBlock IsVisible="{Binding Selected.HasMissionPoints, FallbackValue=False}" TextWrapping="Wrap" FontSize="12"
+                                   ToolTip.Tip="Points dont la visibilité est « pendant une mission » (onglet Terrain &amp; zones) : envoyés aux téléphones seulement pendant cette mission">
+                            <Run Text="Points diffusés avec la mission :" FontWeight="SemiBold" />
+                            <Run Text="{Binding Selected.MissionPoints, FallbackValue=''}" />
+                        </TextBlock>
                         <TextBlock Text="Équipes" Classes="label" />
                         <ItemsControl ItemsSource="{Binding TeamChoices}">
                             <ItemsControl.ItemTemplate>

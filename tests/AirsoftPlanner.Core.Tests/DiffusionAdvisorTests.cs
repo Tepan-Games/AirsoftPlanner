@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Planning;
 
 namespace AirsoftPlanner.Core.Tests;
@@ -65,5 +65,17 @@ public class DiffusionAdvisorTests
         Assert.False(new OrgaMessage { Target = MessageTarget.Faction, TargetId = faction }.IsFor(other));
         Assert.True(new OrgaMessage { Target = MessageTarget.Team, TargetId = team.Id }.IsFor(team));
         Assert.False(new OrgaMessage { Target = MessageTarget.Team, TargetId = team.Id }.IsFor(other));
+    }
+
+    [Fact]
+    public void Mission_points_are_visible_only_while_the_mission_is_published()
+    {
+        var team = new Team();
+        var depot = new Zone { Visibility = ZoneVisibility.DuringMission, VisibleMissionId = Recon.Id };
+        Assert.False(depot.IsVisibleTo(team));
+        team.PublishedMissionId = Recon.Id;
+        Assert.True(depot.IsVisibleTo(team));
+        team.PublishedMissionId = Assault.Id;
+        Assert.False(depot.IsVisibleTo(team));
     }
 }

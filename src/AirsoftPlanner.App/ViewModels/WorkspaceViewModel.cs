@@ -18,6 +18,7 @@ public class WorkspaceViewModel : ViewModelBase
         Terrain.AttachFactions(Factions);
         GameItems = new GameItemsViewModel(file);
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
+        Terrain.AttachMissions(Missions);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Tracking.Vehicles = Vehicles;
         Tracking.Organizers = Organizers;

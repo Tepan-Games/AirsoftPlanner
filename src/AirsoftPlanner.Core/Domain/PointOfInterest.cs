@@ -1,4 +1,4 @@
-namespace AirsoftPlanner.Core.Domain;
+﻿namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>Nature d'une zone ou d'un point du terrain.</summary>
 /// <remarks>Stocké en texte ; Other vient en premier (zones créées avant cette option).</remarks>
@@ -23,6 +23,9 @@ public enum ZoneVisibility
     Orga,
     AllTeams,
     Faction,
+
+    /// <summary>Seulement pendant une mission (dépôt d'armes, point de contact...) : visible par les équipes de la mission tant qu'elle leur est diffusée.</summary>
+    DuringMission,
 }
 
 public static class PoiCategories
@@ -66,6 +69,7 @@ public static class ZoneVisibilityRules
     {
         ZoneVisibility.AllTeams => true,
         ZoneVisibility.Faction => zone.VisibleFactionId is not null && zone.VisibleFactionId == team.FactionId,
+        ZoneVisibility.DuringMission => zone.VisibleMissionId is not null && zone.VisibleMissionId == team.PublishedMissionId,
         _ => false,
     };
 }

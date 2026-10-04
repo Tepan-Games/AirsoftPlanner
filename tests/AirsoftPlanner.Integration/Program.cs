@@ -86,7 +86,18 @@ var dispatch = tracking.Dispatch!;
 Check("Aucune mission tant que l'orga n'a rien diffusé", () => Screen().Contains("Aucune mission diffusée par l'orga"), 15);
 Check("Le logiciel propose de diffuser la mission d'Alpha",
     () => dispatch.Prompts.FirstOrDefault(p => p.Team == alpha) is { } p && p.Question.Contains("Reconnaissance du village"), 5);
+// Point de mission : dépôt d'armes visible seulement pendant la mission d'Alpha
+var reconMission = ws.Missions.Missions.First(m => m.Name == "Reconnaissance du village");
+ws.Terrain.AddPointCommand.Execute(null);
+var depot = ws.Terrain.SelectedZone!;
+depot.Name = "Dépôt d'armes";
+depot.PositionText = "43.6480, 5.9920";
+ws.Terrain.SelectedZoneVisibility = ws.Terrain.VisibilityOptions.First(o => o.Value == ZoneVisibility.DuringMission);
+ws.Terrain.SelectedZoneMission = reconMission;
+ws.Terrain.IsDrawing = false;
+Check("Point de mission caché avant la diffusion", () => !Screen().Contains("Dépôt d'armes"), 10);
 dispatch.AcceptCommand.Execute(dispatch.Prompts.First(p => p.Team == alpha));
+Check("Point de mission visible pendant la mission", () => Screen().Contains("Dépôt d'armes"), 25);
 Check("Mission diffusée affichée sur le téléphone", () => Screen().Contains("MISSION : Reconnaissance du village"), 25);
 Check("Notification « Nouvelle mission » sur le téléphone", () => Notifications().Contains("Nouvelle mission"), 10);
 Wait(7); // la notification affichée en haut de l'écran disparaît
@@ -107,7 +118,7 @@ dispatch.ComposeText = "Photo de reconnaissance du village";
 dispatch.ComposePhoto = AirsoftPlanner.App.Services.PhotoResizer.ToJpeg(
     AirsoftPlanner.App.Services.MapSnapshot.Render(ws.Terrain.Layers.First().Model, [], maxSide: 800));
 dispatch.SendCommand.Execute(null);
-Check("Photo jointe affichée sur le téléphone", () => { Swipe(up: true); Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Photo jointe"); }, 40);
+Check("Photo jointe affichée sur le téléphone", () => ScrollUntil(n => n.Desc == "Photo jointe"), 40);
 Wait(7);
 Capture("android-3-photo.png");
 
@@ -136,6 +147,7 @@ dispatch.ComposeAsHq = true;
 // Fin de mission décidée par l'orga
 dispatch.End(alpha);
 Check("Mission terminée : le téléphone attend les ordres", () => Screen().Contains("Aucune mission diffusée par l'orga"), 25);
+Check("Point de mission retiré après la mission", () => !Screen().Contains("Dépôt d'armes"), 25);
 Check("Notification « Mission terminée »", () => Notifications().Contains("Mission terminée"), 10);
 
 // Points d'intérêt : bivouac de la faction d'Alpha, visible sur son téléphone
@@ -351,6 +363,20 @@ string Screen()
     Swipe(up: false);
     var bottom = ScreenNodes().Select(n => n.Text).Where(t => t.Length > 0).ToList();
     return string.Join("\n", top.Concat(bottom.Where(t => !top.Contains(t))));
+}
+
+// Fait défiler l'écran par étapes depuis le haut jusqu'à trouver l'élément (reste affiché à cet endroit).
+bool ScrollUntil(Func<(string Text, string Class, string Desc, int X, int Y), bool> match)
+{
+    Swipe(up: true);
+    for (var step = 0; step < 6; step++)
+    {
+        if (ScreenNodes().Any(match))
+            return true;
+        Adb("shell input swipe 540 1700 540 1100 200");
+        Wait(0.5);
+    }
+    return ScreenNodes().Any(match);
 }
 
 void Swipe(bool up) => Adb(up ? "shell input swipe 540 700 540 2000 120" : "shell input swipe 540 2000 540 700 120");

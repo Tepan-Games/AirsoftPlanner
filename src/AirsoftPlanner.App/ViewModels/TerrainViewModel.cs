@@ -147,6 +147,34 @@ public partial class TerrainViewModel : ViewModelBase
         }
     }
 
+    private MissionsViewModel? _missions;
+
+    /// <summary>Missions de l'OP (points diffusés seulement pendant une mission).</summary>
+    public void AttachMissions(MissionsViewModel missions)
+    {
+        _missions = missions;
+        OnPropertyChanged(nameof(Missions));
+    }
+
+    public IEnumerable<MissionViewModel> Missions => _missions?.Missions.OrderBy(m => m.StartMinutes) ?? Enumerable.Empty<MissionViewModel>();
+
+    /// <summary>Visibilité « pendant une mission » : choix de la mission.</summary>
+    public bool IsMissionVisibility => SelectedZone?.Model.Visibility == ZoneVisibility.DuringMission;
+
+    public MissionViewModel? SelectedZoneMission
+    {
+        get => SelectedZone?.Model.VisibleMissionId is { } id ? _missions?.Missions.FirstOrDefault(m => m.Model.Id == id) : null;
+        set
+        {
+            if (SelectedZone?.Model is not { } zone)
+                return;
+            zone.VisibleMissionId = value?.Model.Id;
+            OnPropertyChanged();
+            foreach (var mission in _missions?.Missions ?? [])
+                mission.RefreshPoints();
+        }
+    }
+
     private string? FactionColor(Guid id) => _factions?.Items.FirstOrDefault(f => f.Model.Id == id)?.Color;
 
     private FactionsViewModel? _factions;
@@ -181,7 +209,11 @@ public partial class TerrainViewModel : ViewModelBase
             if (value is null || SelectedZone?.Model is not { } zone)
                 return;
             (zone.Visibility, zone.VisibleFactionId) = (value.Value, value.Value == ZoneVisibility.Faction ? value.FactionId : null);
+            if (value.Value != ZoneVisibility.DuringMission)
+                zone.VisibleMissionId = null;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsMissionVisibility));
+            OnPropertyChanged(nameof(SelectedZoneMission));
         }
     }
 
@@ -190,6 +222,7 @@ public partial class TerrainViewModel : ViewModelBase
         VisibilityOptions.Clear();
         VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Orga, null, "Orga seulement"));
         VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.AllTeams, null, "Toutes les équipes"));
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.DuringMission, null, "Pendant une mission…"));
         foreach (var faction in _factions?.Items ?? [])
             VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Faction, faction.Model.Id, $"Faction {faction.Name}"));
         OnPropertyChanged(nameof(SelectedZoneVisibility));
@@ -356,6 +389,8 @@ public partial class TerrainViewModel : ViewModelBase
     {
         OnPropertyChanged(nameof(SelectedZoneVisibility));
         OnPropertyChanged(nameof(SelectedZoneOwner));
+        OnPropertyChanged(nameof(IsMissionVisibility));
+        OnPropertyChanged(nameof(SelectedZoneMission));
         if (value is null || value.IsComplete)
             IsDrawing = false;
     }
