@@ -43,6 +43,16 @@ public record AllyPosition(string Team, double Latitude, double Longitude, strin
 public record MissionBrief(string Name, bool IsCurrent, DateTimeOffset Start, DateTimeOffset End, string Zone, string ZoneCoordinates,
     double? ZoneLatitude, double? ZoneLongitude, string Briefing, string Equipment, Guid Id = default);
 
+/// <summary>Coordonnées d'un sommet.</summary>
+public record LatLon(double Latitude, double Longitude);
+
+/// <summary>Point d'intérêt communiqué à l'équipe (bivouac, campement, respawn...), selon la visibilité choisie par l'orga.</summary>
+/// <param name="Symbol">Symbole court (⛺, ✚...).</param>
+/// <param name="Coordinates">Coordonnées du centre, déjà formatées selon l'OP.</param>
+/// <param name="Outline">Contour d'une zone (vide pour un point).</param>
+public record PoiInfo(string Name, string Category, string Symbol, string Coordinates, double Latitude, double Longitude,
+    string Description, string Color, IReadOnlyList<LatLon> Outline);
+
 /// <summary>Message de l'orga reçu par le téléphone (texte libre ou annonce de mission).</summary>
 /// <param name="Audience">« Toutes les équipes », « Faction OTAN » ou « Équipe ».</param>
 public record PhoneMessage(Guid Id, DateTimeOffset SentAt, string Text, string Audience, AirsoftPlanner.Core.Domain.MessageKind Kind);
@@ -66,7 +76,7 @@ public record TrackRequest(string Token, IReadOnlyList<TrackPoint> Positions);
 public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode ShareMode = AllyShareMode.Coordinates,
     IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null,
     AirsoftPlanner.Core.Geo.CoordinateFormat CoordinateFormat = AirsoftPlanner.Core.Geo.CoordinateFormat.Utm,
-    IReadOnlyList<PhoneMessage>? Messages = null);
+    IReadOnlyList<PhoneMessage>? Messages = null, IReadOnlyList<PoiInfo>? Points = null);
 
 /// <summary>Contenu du QR code d'enrôlement : <c>airsoftplanner://enroll?server=...&amp;code=...</c>.</summary>
 public static class EnrollmentLink

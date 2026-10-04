@@ -1,4 +1,4 @@
-namespace AirsoftPlanner.Core.Domain;
+﻿namespace AirsoftPlanner.Core.Domain;
 
 public enum ZoneKind
 {
@@ -22,4 +22,12 @@ public class Zone : Entity
 
     /// <summary>Sommets du polygone (Area) ou position unique (Point).</summary>
     public List<GeoPoint> Points { get; set; } = [];
+
+    /// <summary>Nature : bivouac, campement, respawn, objectif...</summary>
+    public PoiCategory Category { get; set; }
+
+    /// <summary>Orga seulement, toutes les équipes ou une faction (voir <see cref="VisibleFactionId"/>).</summary>
+    public ZoneVisibility Visibility { get; set; }
+
+    public Guid? VisibleFactionId { get; set; }
 }

@@ -36,6 +36,7 @@ public class MainActivity : Activity
     private TextView? _comms;
     private Button? _emergency;
     private TextView? _allies;
+    private TextView? _points;
     private TextView? _ownPosition;
     private MapCanvasView? _map;
     private Bitmap? _mapBitmap;
@@ -218,6 +219,9 @@ public class MainActivity : Activity
                 StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
         };
 
+        Section("Points d'intérêt");
+        _points = Text("", 15);
+
         Section("Position");
         _ownPosition = Text("", 15);
 
@@ -285,6 +289,12 @@ public class MainActivity : Activity
         _emergency!.Visibility = comms?.EmergencyPhone is { Length: > 0 } ? ViewStates.Visible : ViewStates.Gone;
         _emergency.Text = $"☎ Urgence orga : {comms?.EmergencyPhone}";
 
+        var points = response?.Points ?? [];
+        _points!.Text = points.Count == 0
+            ? "Aucun point communiqué par l'orga."
+            : string.Join("\n\n", points.Select(p =>
+                $"{p.Symbol} {p.Name} — {p.Category}\n{p.Coordinates}" + (p.Description.Length > 0 ? $"\n{p.Description}" : "")));
+
         GeoPoint? own = Prefs.LastLatitude is { } lat && Prefs.LastLongitude is { } lon ? new GeoPoint(lat, lon) : null;
         _ownPosition!.Text = own is { } p ? Coordinates.Format(p, format) : "En attente du GPS…";
 
@@ -319,7 +329,7 @@ public class MainActivity : Activity
         }
 
         var target = response!.Mission is { ZoneLatitude: { } zLat, ZoneLongitude: { } zLon } ? new GeoPoint(zLat, zLon) : (GeoPoint?)null;
-        _map.Update(_mapBitmap, response.Map, own, allies, target);
+        _map.Update(_mapBitmap, response.Map, own, allies, target, response.Points ?? []);
     }
 
     private void ScheduleRefresh()

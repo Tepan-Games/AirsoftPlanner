@@ -99,6 +99,19 @@ dispatch.End(alpha);
 Check("Mission terminée : le téléphone attend les ordres", () => Screen().Contains("Aucune mission diffusée par l'orga"), 25);
 Check("Notification « Mission terminée »", () => Notifications().Contains("Mission terminée"), 10);
 
+// Points d'intérêt : bivouac de la faction d'Alpha, visible sur son téléphone
+var terrain = ws.Terrain;
+terrain.AddPointCommand.Execute(null);
+var bivouac = terrain.SelectedZone!;
+bivouac.Name = "Bivouac nord";
+bivouac.Category = PoiCategoryOption.All.First(c => c.Value == PoiCategory.Bivouac);
+bivouac.PositionText = "43.6600, 5.9900";
+terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.FactionId == alpha.Model.FactionId);
+Check("Point d'intérêt de faction affiché sur le téléphone", () => Screen().Contains("Bivouac nord — Bivouac"), 25);
+Check("Point d'intérêt notifié", () => Notifications().Contains("Points d'intérêt mis à jour"), 10);
+terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.Value == ZoneVisibility.Orga);
+Check("Point repassé « orga seulement » : retiré du téléphone", () => !Screen().Contains("Bivouac nord"), 25);
+
 // 5. Intervalle modifié par l'orga
 gps.IntervalSeconds = 8;
 Check("Intervalle 8 s appliqué par le téléphone", () => Screen().Contains("envoi toutes les 8 s"), 30);

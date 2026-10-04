@@ -192,7 +192,7 @@ public class TerrainMapControl : Control
         foreach (var zone in ZoneItems.Where(z => !z.IsArea))
             DrawPoint(context, view, zone);
         foreach (var zone in ZoneItems.Where(z => z.Points.Count > 0))
-            DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.Name);
+            DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.DisplayName);
 
         foreach (var trail in Trails ?? [])
             DrawTrail(context, view, trail);

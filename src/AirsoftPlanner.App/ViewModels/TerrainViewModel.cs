@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
@@ -124,6 +124,47 @@ public partial class TerrainViewModel : ViewModelBase
     private ZoneViewModel? _selectedZone;
 
     public bool HasSelectedZone => SelectedZone is not null;
+
+    public IReadOnlyList<PoiCategoryOption> Categories => PoiCategoryOption.All;
+
+    private FactionsViewModel? _factions;
+
+    /// <summary>Choix « Visible par » : orga seulement, toutes les équipes, ou une faction.</summary>
+    public ObservableCollection<ZoneVisibilityOption> VisibilityOptions { get; } = [];
+
+    /// <summary>Factions de l'OP, pour la visibilité des zones (téléphones, ordres de mission).</summary>
+    public void AttachFactions(FactionsViewModel factions)
+    {
+        _factions = factions;
+        factions.Items.CollectionChanged += (_, _) => RefreshVisibilityOptions();
+        foreach (var faction in factions.Items)
+            faction.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(FactionViewModel.Name)) RefreshVisibilityOptions(); };
+        RefreshVisibilityOptions();
+    }
+
+    public ZoneVisibilityOption? SelectedZoneVisibility
+    {
+        get => SelectedZone?.Model is { } zone
+            ? VisibilityOptions.FirstOrDefault(o => o.Value == zone.Visibility && (o.Value != ZoneVisibility.Faction || o.FactionId == zone.VisibleFactionId))
+            : null;
+        set
+        {
+            if (value is null || SelectedZone?.Model is not { } zone)
+                return;
+            (zone.Visibility, zone.VisibleFactionId) = (value.Value, value.Value == ZoneVisibility.Faction ? value.FactionId : null);
+            OnPropertyChanged();
+        }
+    }
+
+    private void RefreshVisibilityOptions()
+    {
+        VisibilityOptions.Clear();
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Orga, null, "Orga seulement"));
+        VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.AllTeams, null, "Toutes les équipes"));
+        foreach (var faction in _factions?.Items ?? [])
+            VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Faction, faction.Model.Id, $"Faction {faction.Name}"));
+        OnPropertyChanged(nameof(SelectedZoneVisibility));
+    }
 
     /// <summary>En mode tracé, chaque clic sur la carte ajoute un sommet à la zone sélectionnée.</summary>
     [ObservableProperty]
@@ -279,6 +320,7 @@ public partial class TerrainViewModel : ViewModelBase
 
     partial void OnSelectedZoneChanged(ZoneViewModel? value)
     {
+        OnPropertyChanged(nameof(SelectedZoneVisibility));
         if (value is null || value.IsComplete)
             IsDrawing = false;
     }

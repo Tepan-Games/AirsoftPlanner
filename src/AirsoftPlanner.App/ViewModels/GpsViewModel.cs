@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using AirsoftPlanner.App.Services;
 using AirsoftPlanner.App.Services.Gps;
+using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Gps;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -284,9 +285,19 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var map = mode == AllyShareMode.Map && layer is not null
             ? new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East)
             : null;
+        var points = _tracking.Terrain.Zones
+            .Where(z => z.IsComplete && z.Model.IsVisibleTo(team.Model))
+            .Select(z =>
+            {
+                var center = z.IsArea ? Core.Geo.GeoMath.Centroid(z.Points) : z.Points[0];
+                return new PoiInfo(z.Name, PoiCategories.Label(z.Model.Category), PoiCategories.Symbol(z.Model.Category),
+                    Core.Geo.Coordinates.Format(center, format), center.Latitude, center.Longitude, z.Description, z.Color,
+                    z.IsArea ? z.Points.Select(p => new LatLon(p.Latitude, p.Longitude)).ToList() : []);
+            })
+            .ToList();
         var dispatch = _tracking.Dispatch;
         return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, dispatch?.MissionBriefFor(team, format), map,
-            CommsFor(team), format, dispatch?.PhoneMessagesFor(team) ?? []);
+            CommsFor(team), format, dispatch?.PhoneMessagesFor(team) ?? [], points);
     }
 
     /// <summary>Fréquences de la faction, des équipes alliées et de l'orga, numéro d'urgence.</summary>

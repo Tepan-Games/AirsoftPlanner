@@ -49,12 +49,30 @@ public class MapCanvasView(Context context) : View(context)
     private GeoPoint? _own;
     private IReadOnlyList<AllyPosition> _allies = [];
     private GeoPoint? _target;
+    private IReadOnlyList<PoiInfo> _points = [];
+    private readonly Paint _outlinePaint = new(PaintFlags.AntiAlias) { StrokeWidth = 5 };
+    private readonly Paint _poiPaint = new(PaintFlags.AntiAlias);
 
-    public void Update(Bitmap? bitmap, MapInfo? map, GeoPoint? own, IReadOnlyList<AllyPosition> allies, GeoPoint? target)
+    public void Update(Bitmap? bitmap, MapInfo? map, GeoPoint? own, IReadOnlyList<AllyPosition> allies, GeoPoint? target,
+        IReadOnlyList<PoiInfo> points)
     {
         _bitmap = bitmap;
-        (_map, _own, _allies, _target) = (map, own, allies, target);
+        (_map, _own, _allies, _target, _points) = (map, own, allies, target, points);
         Invalidate();
+    }
+
+    private Color PoiColor(PoiInfo poi)
+    {
+        if (_nightMode)
+            return Color.Rgb(170, 20, 20);
+        try
+        {
+            return Color.ParseColor(poi.Color);
+        }
+        catch (Java.Lang.IllegalArgumentException)
+        {
+            return Color.Rgb(249, 168, 37);
+        }
     }
 
     protected override void OnMeasure(int widthMeasureSpec, int heightMeasureSpec)
@@ -81,6 +99,35 @@ public class MapCanvasView(Context context) : View(context)
         {
             var (x, y) = bounds.ToRelative(p);
             return new PointF((float)(x * Width), (float)(y * Height));
+        }
+
+        // Points d'intérêt communiqués par l'orga : contour des zones, repère et nom.
+        foreach (var poi in _points)
+        {
+            var color = PoiColor(poi);
+            if (poi.Outline.Count >= 3)
+            {
+                using var path = new Android.Graphics.Path();
+                var first = ToScreen(new GeoPoint(poi.Outline[0].Latitude, poi.Outline[0].Longitude));
+                path.MoveTo(first.X, first.Y);
+                foreach (var vertex in poi.Outline.Skip(1))
+                {
+                    var v = ToScreen(new GeoPoint(vertex.Latitude, vertex.Longitude));
+                    path.LineTo(v.X, v.Y);
+                }
+
+                path.Close();
+                _outlinePaint.Color = color;
+                _outlinePaint.SetStyle(Paint.Style.Stroke);
+                canvas.DrawPath(path, _outlinePaint);
+            }
+
+            var p = ToScreen(new GeoPoint(poi.Latitude, poi.Longitude));
+            _poiPaint.Color = color;
+            canvas.DrawRoundRect(p.X - 16, p.Y - 16, p.X + 16, p.Y + 16, 6, 6, _poiPaint);
+            _ringPaint.SetStyle(Paint.Style.Stroke);
+            canvas.DrawRoundRect(p.X - 16, p.Y - 16, p.X + 16, p.Y + 16, 6, 6, _ringPaint);
+            Label(canvas, $"{poi.Symbol} {poi.Name}".Trim(), p.X, p.Y - 30);
         }
 
         if (_target is { } target)

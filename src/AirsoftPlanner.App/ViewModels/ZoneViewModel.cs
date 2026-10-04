@@ -1,9 +1,25 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Geo;
 
 namespace AirsoftPlanner.App.ViewModels;
+
+public record PoiCategoryOption(PoiCategory Value)
+{
+    public static IReadOnlyList<PoiCategoryOption> All { get; } = PoiCategories.All.Select(c => new PoiCategoryOption(c)).ToList();
+
+    public string Label => $"{PoiCategories.Symbol(Value)} {PoiCategories.Label(Value)}".Trim();
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Qui voit la zone : l'orga seulement, toutes les équipes ou une faction.</summary>
+public record ZoneVisibilityOption(ZoneVisibility Value, Guid? FactionId, string Label)
+{
+    public override string ToString() => Label;
+}
 
 public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) : ViewModelBase
 {
@@ -12,7 +28,11 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) :
     public string Name
     {
         get => zone.Name;
-        set => SetProperty(zone.Name, value, zone, (z, v) => z.Name = v);
+        set
+        {
+            if (SetProperty(zone.Name, value, zone, (z, v) => z.Name = v))
+                OnPropertyChanged(nameof(DisplayName));
+        }
     }
 
     public string Description
@@ -20,6 +40,22 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) :
         get => zone.Description;
         set => SetProperty(zone.Description, value, zone, (z, v) => z.Description = v);
     }
+
+    public PoiCategoryOption Category
+    {
+        get => PoiCategoryOption.All.First(o => o.Value == zone.Category);
+        set
+        {
+            if (value is null || value.Value == zone.Category)
+                return;
+            zone.Category = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DisplayName));
+        }
+    }
+
+    /// <summary>Nom précédé du symbole de la catégorie (⛺ Bivouac nord).</summary>
+    public string DisplayName => $"{PoiCategories.Symbol(zone.Category)} {zone.Name}".Trim();
 
     public string Color
     {

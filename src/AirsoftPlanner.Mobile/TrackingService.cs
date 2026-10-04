@@ -232,6 +232,9 @@ public class TrackingService : Service, ILocationListener
             Notify("📻 Plan radio mis à jour", response.Comms?.EmergencyPhone is { Length: > 0 } phone && phone != previous.Comms?.EmergencyPhone
                 ? $"Nouveau numéro d'urgence de l'orga : {phone}"
                 : "Les fréquences de la faction ou de l'orga ont changé.", 2);
+        if (string.Join("|", (previous.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}"))
+            != string.Join("|", (response.Points ?? []).Select(p => $"{p.Name}{p.Coordinates}")))
+            Notify("📍 Points d'intérêt mis à jour", string.Join(", ", (response.Points ?? []).Select(p => p.Name).Take(6)), 4);
         if (previous.ShareMode != response.ShareMode)
             Notify("Partage des positions modifié", response.ShareMode switch
             {

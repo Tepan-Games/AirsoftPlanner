@@ -167,6 +167,22 @@ public static class PackageGenerator
                     if (input.EnrollmentServer is { Length: > 0 } server && input.Team.EnrollmentCode.Length > 0)
                         col.Item().Element(c => EnrollmentBlock(c, server, input.Team.EnrollmentCode));
 
+                    var points = input.Zones.Values.Where(z => z.Points.Count > 0 && z.IsVisibleTo(input.Team))
+                        .OrderBy(z => z.Category).ThenBy(z => z.Name, StringComparer.CurrentCulture).ToList();
+                    if (points.Count > 0)
+                        col.Item().Element(c => Box(c, "Points d'intérêt", b =>
+                        {
+                            foreach (var point in points)
+                                b.Item().Text(t =>
+                                {
+                                    t.Span($"{PoiCategories.Label(point.Category)} : ").SemiBold();
+                                    t.Span(point.Name);
+                                    t.Span($" — {Coordinates.Format(point.Kind == ZoneKind.Area ? GeoMath.Centroid(point.Points) : point.Points[0], format)}");
+                                    if (point.Description.Length > 0)
+                                        t.Span($" · {point.Description}").FontColor(Colors.Grey.Darken2);
+                                });
+                        }));
+
                     col.Item().PaddingTop(6).Text("Missions").FontSize(14).Bold();
                     if (input.Missions.Count == 0)
                         col.Item().Text("Aucune mission assignée pour le moment.").Italic();

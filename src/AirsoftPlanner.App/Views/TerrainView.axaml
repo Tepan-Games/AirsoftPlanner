@@ -74,7 +74,7 @@
                                 <Border Width="14" Height="14" CornerRadius="3"
                                         Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
                                 <StackPanel>
-                                    <TextBlock Text="{Binding Name}" />
+                                    <TextBlock Text="{Binding DisplayName}" />
                                     <TextBlock Text="{Binding Summary}" FontSize="11" Opacity="0.6" />
                                 </StackPanel>
                             </StackPanel>
@@ -85,6 +85,11 @@
                 <StackPanel IsVisible="{Binding HasSelectedZone}" Spacing="6">
                     <TextBlock Text="Nom" Classes="label" />
                     <TextBox Text="{Binding SelectedZone.Name, FallbackValue=''}" />
+                    <TextBlock Text="Catégorie" Classes="label" />
+                    <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedZone.Category, FallbackValue={x:Null}}" MinWidth="240" />
+                    <TextBlock Text="Visible par (téléphones des équipes, ordres de mission)" Classes="label" />
+                    <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding SelectedZoneVisibility}" MinWidth="240"
+                              ToolTip.Tip="Bivouac d'une faction, campement, respawn… : affiché sur la carte et dans la liste de l'application des équipes concernées" />
                     <TextBlock Text="Couleur" Classes="label" />
                     <ComboBox ItemsSource="{x:Static app:ColorPalette.Colors}" SelectedItem="{Binding SelectedZone.Color, FallbackValue={x:Null}}" Width="120">
                         <ComboBox.ItemTemplate>
