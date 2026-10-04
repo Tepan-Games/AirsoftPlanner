@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -19,7 +19,7 @@ using Avalonia.Media.Imaging;
 namespace AirsoftPlanner.App.Controls;
 
 /// <summary>
-/// Carte du terrain hors ligne : fond calé en GPS, zones, quadrillage UTM.
+/// Carte du terrain hors ligne : fond calé en GPS, zones, quadrillage (UTM par fuseau, ou degrés).
 /// Molette = zoom, glisser = déplacer, clic = sélectionner ou ajouter un sommet en mode tracé,
 /// glisser un sommet de la zone sélectionnée = le déplacer, double-clic = vue d'ensemble.
 /// </summary>
@@ -70,6 +70,8 @@ public class TerrainMapControl : Control
     private static readonly IBrush EmptyBackground = new SolidColorBrush(Color.FromRgb(0x2B, 0x2F, 0x33));
     private static readonly IPen GridPen = new Pen(new SolidColorBrush(Color.FromArgb(0xB0, 0x00, 0x00, 0x00)), 1);
     private static readonly IPen GridHaloPen = new Pen(new SolidColorBrush(Color.FromArgb(0x70, 0xFF, 0xFF, 0xFF)), 3);
+    private static readonly IPen ZoneBoundaryPen = new Pen(new SolidColorBrush(Color.FromRgb(0xFF, 0xD6, 0x00)), 2.5, new DashStyle([6, 3], 0));
+    private static readonly IPen ZoneBoundaryHaloPen = new Pen(new SolidColorBrush(Color.FromArgb(0x90, 0x00, 0x00, 0x00)), 5);
     private static readonly IPen AreaPen = new Pen(Brushes.White, 1.5, new DashStyle([6, 4], 0));
     private static readonly IBrush LabelBackground = new SolidColorBrush(Color.FromArgb(0xC0, 0x10, 0x10, 0x10));
     private static readonly Typeface LabelTypeface = new(FontFamily.Default, weight: FontWeight.SemiBold);
@@ -132,6 +134,18 @@ public class TerrainMapControl : Control
         InvalidateVisual();
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        AppSettings.CoordinateFormatChanged += InvalidateVisual;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        AppSettings.CoordinateFormatChanged -= InvalidateVisual;
+        base.OnDetachedFromVisualTree(e);
+    }
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
@@ -168,7 +182,7 @@ public class TerrainMapControl : Control
         }
 
         if (ShowUtmGrid)
-            DrawUtmGrid(context, view);
+            DrawGrid(context, view);
 
         if (Area is { IsValid: true } area && Layer is null)
             context.DrawRectangle(null, AreaPen, ToScreenRect(view, area));
@@ -417,30 +431,73 @@ public class TerrainMapControl : Control
         DrawLabel(context, center + new Vector(0, radius + 12), marker.Label);
     }
 
-    private void DrawUtmGrid(DrawingContext context, GeoBounds view)
+    /// <summary>Quadrillage dans le format de coordonnées affiché : UTM (un quadrillage par fuseau) ou degrés.</summary>
+    private void DrawGrid(DrawingContext context, GeoBounds view)
     {
         var topLeft = ToGeo(view, new Point(0, 0));
         var bottomRight = ToGeo(view, new Point(Bounds.Width, Bounds.Height));
-        var center = new GeoPoint((topLeft.Latitude + bottomRight.Latitude) / 2, (topLeft.Longitude + bottomRight.Longitude) / 2);
-        if (!center.IsValid)
+        if (!topLeft.IsValid || !bottomRight.IsValid || Bounds.Width < 1 || Bounds.Height < 1)
             return;
 
-        var zone = UtmCoordinate.ZoneOf(center);
-        var corners = new[]
+        if (AppSettings.Current.CoordinateFormat == CoordinateFormat.Utm)
+            DrawUtmGrids(context, view, topLeft, bottomRight);
+        else
+            DrawGraticule(context, view, topLeft, bottomRight, AppSettings.Current.CoordinateFormat == CoordinateFormat.DegreesMinutesSeconds);
+    }
+
+    /// <summary>
+    /// Terrain à cheval sur deux fuseaux UTM : chaque fuseau a son propre quadrillage (orientations différentes),
+    /// limité à sa bande de longitude ; la limite entre fuseaux est tracée en jaune.
+    /// </summary>
+    private void DrawUtmGrids(DrawingContext context, GeoBounds view, GeoPoint topLeft, GeoPoint bottomRight)
+    {
+        var midLatitude = (topLeft.Latitude + bottomRight.Latitude) / 2;
+        static int StandardZone(double longitude) => Math.Clamp((int)Math.Floor((longitude + 180) / 6) + 1, 1, 60);
+        static double ZoneWest(int zone) => -180 + (zone - 1) * 6.0;
+        var firstZone = StandardZone(topLeft.Longitude);
+        var lastZone = StandardZone(bottomRight.Longitude);
+
+        // Pas du quadrillage commun à tous les fuseaux : environ une ligne tous les 80 pixels.
+        var left = UtmCoordinate.FromGeo(new GeoPoint(midLatitude, topLeft.Longitude), firstZone);
+        var right = UtmCoordinate.FromGeo(new GeoPoint(midLatitude, bottomRight.Longitude), firstZone);
+        var metersPerPixel = Math.Abs(right.Easting - left.Easting) / Bounds.Width;
+        var spacing = new[] { 10.0, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000 }
+            .FirstOrDefault(s => s / metersPerPixel >= 80, 100000);
+
+        var zones = new List<string>();
+        for (var zone = firstZone; zone <= lastZone; zone++)
         {
-            topLeft, bottomRight,
-            new GeoPoint(topLeft.Latitude, bottomRight.Longitude), new GeoPoint(bottomRight.Latitude, topLeft.Longitude),
-        }.Select(p => UtmCoordinate.FromGeo(p, zone)).ToList();
+            var x0 = Math.Max(0, ToScreen(view, new GeoPoint(midLatitude, ZoneWest(zone))).X);
+            var x1 = Math.Min(Bounds.Width, ToScreen(view, new GeoPoint(midLatitude, ZoneWest(zone + 1))).X);
+            if (x1 - x0 < 1)
+                continue;
+            using (context.PushClip(new Rect(x0, 0, x1 - x0, Bounds.Height)))
+                zones.Add(DrawUtmZoneGrid(context, view, zone, x0, x1, spacing));
+        }
+
+        for (var zone = firstZone + 1; zone <= lastZone; zone++)
+        {
+            var x = ToScreen(view, new GeoPoint(midLatitude, ZoneWest(zone))).X;
+            context.DrawLine(ZoneBoundaryHaloPen, new Point(x, 0), new Point(x, Bounds.Height));
+            context.DrawLine(ZoneBoundaryPen, new Point(x, 0), new Point(x, Bounds.Height));
+            DrawText(context, new Point(x, 20), $"◄ {zone - 1} | {zone} ►", 11);
+        }
+
+        DrawText(context, new Point(6, Bounds.Height - 6),
+            $"Quadrillage UTM {string.Join(" | ", zones)} · {(spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m")}"
+            + (zones.Count > 1 ? " · limite de fuseau en jaune" : ""), 10, alignBottom: true);
+    }
+
+    /// <returns>Nom du fuseau (ex. « 31U »).</returns>
+    private string DrawUtmZoneGrid(DrawingContext context, GeoBounds view, int zone, double x0, double x1, double spacing)
+    {
+        var corners = new[] { new Point(x0, 0), new Point(x1, 0), new Point(x0, Bounds.Height), new Point(x1, Bounds.Height) }
+            .Select(p => UtmCoordinate.FromGeo(ToGeo(view, p), zone)).ToList();
         var minE = corners.Min(c => c.Easting);
         var maxE = corners.Max(c => c.Easting);
         var minN = corners.Min(c => c.Northing);
         var maxN = corners.Max(c => c.Northing);
-
-        // Pas du quadrillage : environ une ligne tous les 80 pixels.
-        var metersPerPixel = (maxE - minE) / Math.Max(1, Bounds.Width);
-        var spacing = new[] { 10.0, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000 }
-            .FirstOrDefault(s => s / metersPerPixel >= 80, 10000);
-        var band = UtmCoordinate.FromGeo(center).Band;
+        var band = UtmCoordinate.FromGeo(ToGeo(view, new Point((x0 + x1) / 2, Bounds.Height / 2)), zone).Band;
         UtmCoordinate Utm(double easting, double northing) => new(zone, band, easting, northing);
 
         for (var easting = Math.Ceiling(minE / spacing) * spacing; easting <= maxE; easting += spacing)
@@ -450,7 +507,8 @@ public class TerrainMapControl : Control
             DrawGridLine(context, start, end);
             // Étiquette là où la ligne croise le haut de la carte.
             var topX = start.X + (end.X - start.X) * (start.Y / Math.Max(1, start.Y - end.Y));
-            DrawText(context, new Point(topX + 3, 2), GridLabel(easting, spacing), 10);
+            if (topX >= x0 && topX <= x1)
+                DrawText(context, new Point(topX + 3, 2), GridLabel(easting, spacing), 10);
         }
 
         for (var northing = Math.Ceiling(minN / spacing) * spacing; northing <= maxN; northing += spacing)
@@ -458,13 +516,64 @@ public class TerrainMapControl : Control
             var start = ToScreen(view, Utm(minE, northing).ToGeo());
             var end = ToScreen(view, Utm(maxE, northing).ToGeo());
             DrawGridLine(context, start, end);
-            // Étiquette là où la ligne croise le bord gauche de la carte.
-            var leftY = start.Y + (end.Y - start.Y) * (-start.X / Math.Max(1, end.X - start.X));
-            DrawText(context, new Point(3, leftY - 14), GridLabel(northing, spacing), 10);
+            // Étiquette là où la ligne croise le bord gauche du fuseau visible.
+            var leftY = start.Y + (end.Y - start.Y) * ((x0 - start.X) / Math.Max(1, end.X - start.X));
+            DrawText(context, new Point(x0 + 3, leftY - 14), GridLabel(northing, spacing), 10);
         }
 
-        DrawText(context, new Point(6, Bounds.Height - 6),
-            $"Quadrillage UTM {zone}{band} · {(spacing >= 1000 ? $"{spacing / 1000:0} km" : $"{spacing:0} m")}", 10, alignBottom: true);
+        return $"{zone}{band}";
+    }
+
+    /// <summary>Méridiens et parallèles, étiquetés en degrés décimaux ou en degrés-minutes-secondes.</summary>
+    private void DrawGraticule(DrawingContext context, GeoBounds view, GeoPoint topLeft, GeoPoint bottomRight, bool dms)
+    {
+        var (west, east) = (topLeft.Longitude, bottomRight.Longitude);
+        var (south, north) = (bottomRight.Latitude, topLeft.Latitude);
+        var pixelsPerDegree = Bounds.Width / Math.Max(1e-9, east - west);
+        double[] candidates = dms
+            ? [1 / 3600.0, 2 / 3600.0, 5 / 3600.0, 10 / 3600.0, 15 / 3600.0, 30 / 3600.0, 1 / 60.0, 2 / 60.0, 5 / 60.0, 10 / 60.0, 15 / 60.0, 30 / 60.0, 1, 2, 5]
+            : [0.00001, 0.00002, 0.00005, 0.0001, 0.0002, 0.0005, 0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1, 2, 5];
+        var spacing = candidates.FirstOrDefault(c => c * pixelsPerDegree >= 90, 5);
+
+        for (var k = Math.Ceiling(west / spacing); k * spacing <= east; k++)
+        {
+            var longitude = k * spacing;
+            var x = ToScreen(view, new GeoPoint(north, longitude)).X;
+            DrawGridLine(context, new Point(x, 0), new Point(x, Bounds.Height));
+            DrawText(context, new Point(x + 3, 2), AngleLabel(longitude, spacing, dms, 'E', 'O'), 10);
+        }
+
+        for (var k = Math.Ceiling(south / spacing); k * spacing <= north; k++)
+        {
+            var latitude = k * spacing;
+            var y = ToScreen(view, new GeoPoint(latitude, west)).Y;
+            DrawGridLine(context, new Point(0, y), new Point(Bounds.Width, y));
+            DrawText(context, new Point(3, y - 14), AngleLabel(latitude, spacing, dms, 'N', 'S'), 10);
+        }
+
+        var step = dms
+            ? spacing >= 1 ? $"{spacing:0}°" : spacing >= 1 / 60.0 ? $"{Math.Round(spacing * 60):0}'" : $"{Math.Round(spacing * 3600):0}\""
+            : AngleNumber(spacing, spacing) + "°";
+        DrawText(context, new Point(6, Bounds.Height - 6), $"Quadrillage {(dms ? "degrés-minutes-secondes" : "degrés décimaux")} · {step}", 10, alignBottom: true);
+    }
+
+    private static string AngleLabel(double value, double spacing, bool dms, char positive, char negative)
+    {
+        var hemisphere = value >= 0 ? positive : negative;
+        if (!dms)
+            return $"{AngleNumber(Math.Abs(value), spacing)}° {hemisphere}";
+
+        var totalSeconds = (long)Math.Round(Math.Abs(value) * 3600);
+        var (degrees, minutes, seconds) = (totalSeconds / 3600, totalSeconds % 3600 / 60, totalSeconds % 60);
+        return spacing >= 1 ? $"{degrees}° {hemisphere}"
+            : spacing >= 1 / 60.0 ? $"{degrees}°{minutes:00}' {hemisphere}"
+            : $"{degrees}°{minutes:00}'{seconds:00}\" {hemisphere}";
+    }
+
+    private static string AngleNumber(double value, double spacing)
+    {
+        var decimals = Math.Clamp((int)Math.Ceiling(-Math.Log10(spacing) - 1e-9), 0, 6);
+        return value.ToString("F" + decimals, CultureInfo.GetCultureInfo("fr-FR"));
     }
 
     private static string GridLabel(double value, double spacing) => spacing >= 1000

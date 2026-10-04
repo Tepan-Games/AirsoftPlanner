@@ -51,7 +51,7 @@ List<TeamPosition> AlphaPositions() => ((List<TeamPosition>)positionsField.GetVa
 Adb($"shell pm clear {Package}");
 foreach (var permission in new[] { "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "POST_NOTIFICATIONS" })
     Adb($"shell pm grant {Package} android.permission.{permission}");
-Geo(48.4060, 2.6965);
+Geo(43.6492, 5.9871);
 
 // 1. Code faux saisi à la main
 Adb($"shell am start -n {Activity}");
@@ -70,11 +70,11 @@ Check("Saisie manuelle : téléphone enrôlé côté PC", () => gps.Devices.Coun
 Check("Saisie manuelle : écran de suivi de l'équipe Alpha", () => Screen().Contains("Suivi actif"), 20);
 
 // 3. Positions reçues par le PC
-Geo(48.4062, 2.6970);
+Geo(43.6502, 5.9896);
 Check("Positions du téléphone reçues par le PC", () => AlphaPositions().Count >= 1, 25);
-Geo(48.4070, 2.6980);
-Check("Nouvelle position transmise (≈ 48.4070, 2.6980)",
-    () => AlphaPositions().LastOrDefault() is { } p && Math.Abs(p.Latitude - 48.4070) < 1e-4 && Math.Abs(p.Longitude - 2.6980) < 1e-4, 25);
+Geo(43.6542, 5.9946);
+Check("Nouvelle position transmise (≈ 43.6542, 5.9946)",
+    () => AlphaPositions().LastOrDefault() is { } p && Math.Abs(p.Latitude - 43.6542) < 1e-4 && Math.Abs(p.Longitude - 5.9946) < 1e-4, 25);
 Check("PC : téléphone vu récemment", () => gps.Devices.First(d => !d.IsRevoked).LastSeen.StartsWith("dernier envoi"), 10);
 
 // 4. Mission diffusée sur décision de l'orga (jamais automatiquement), notifiée sur le téléphone
@@ -109,7 +109,7 @@ Check("Intervalle 5 s rétabli", () => Screen().Contains("envoi toutes les 5 s")
 Check("Mode carte : carte affichée", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Coordinates);
 Check("Mode coordonnées : plus de carte, alliés en coordonnées",
-    () => { Swipe(up: false); return !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*31U \d{6} \d{7}"); }, 25);
+    () => { Swipe(up: false); return !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*3[12][A-Z] \d{6} \d{7}"); }, 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.None);
 Check("Mode rien : alliés non partagés", () => Screen().Contains("non partagées par l'orga"), 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
@@ -123,9 +123,9 @@ Check("Changement du numéro d'urgence notifié", () => Notifications().Contains
 Pump(gps.ToggleServerCommand.ExecuteAsync(null));
 var outageStart = DateTimeOffset.Now;
 Check("Serveur coupé : le téléphone signale le PC injoignable", () => Screen().Contains("injoignable"), 30);
-Geo(48.4080, 2.6990);
+Geo(43.6592, 5.9996);
 Wait(7);
-Geo(48.4090, 2.7000);
+Geo(43.6642, 6.0046);
 Wait(7);
 Check("Serveur coupé : positions mises en attente", () => Regex.Match(Screen(), @"(\d+) position\(s\) en attente") is { Success: true } m && int.Parse(m.Groups[1].Value) >= 2, 20);
 var beforeReconnect = AlphaPositions().Count;
@@ -138,7 +138,7 @@ Check("Retour du serveur : téléphone de nouveau à jour", () => Screen().Conta
 Tap("Arrêter l'envoi de la position");
 Check("Téléphone : suivi arrêté", () => Screen().Contains("Suivi arrêté"), 15);
 var stoppedCount = AlphaPositions().Count;
-Geo(48.4100, 2.7010);
+Geo(43.6692, 6.0096);
 Wait(12);
 Check("PC : plus aucune position reçue après l'arrêt", () => AlphaPositions().Count == stoppedCount, 1);
 Tap("Démarrer l'envoi de la position");
