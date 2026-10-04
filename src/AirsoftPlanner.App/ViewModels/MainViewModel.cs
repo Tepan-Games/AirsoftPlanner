@@ -247,8 +247,27 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         }
     }
 
+    /// <summary>Dépôt du projet : code source, nouvelles versions, signalement de problèmes.</summary>
+    public const string ProjectSite = "https://github.com/Tepan-Games/AirsoftPlanner";
+
     [RelayCommand]
-    private async Task AboutAsync() => await dialogs.ShowInfoAsync("À propos", $"{VersionText}\nLogiciel de préparation et de suivi d'OP d'airsoft.\nCartes : IGN (Géoplateforme, Licence Ouverte). PDF : QuestPDF (licence Community).");
+    private async Task AboutAsync() => await dialogs.ShowInfoAsync("À propos",
+        $"{VersionText} — Tepan Games\nLogiciel de préparation et de suivi d'OP d'airsoft (Windows) et application Android du chef d'équipe.\n\n"
+        + $"Code source et nouvelles versions : {ProjectSite}\n\n"
+        + "Cartes : IGN (Géoplateforme, Licence Ouverte). PDF : QuestPDF (licence Community).");
+
+    [RelayCommand]
+    private void OpenProjectSite()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ProjectSite) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Pas de navigateur par défaut : l'adresse reste indiquée dans « À propos ».
+        }
+    }
 
     // ----- Fichier -----
 

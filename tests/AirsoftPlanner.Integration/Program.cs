@@ -59,6 +59,7 @@ Geo(43.6492, 5.9871);
 // 1. Code faux saisi à la main
 Adb($"shell am start -n {Activity}");
 Check("Écran d'enrôlement affiché", () => Screen().Contains("S'enrôler"), 15);
+Capture("android-1-enrolement.png");
 TypeInto(0, $"10.0.2.2:{Port}");
 TypeInto(1, "ZZZ-ZZZ");
 Tap("S'enrôler");
@@ -88,6 +89,9 @@ Check("Le logiciel propose de diffuser la mission d'Alpha",
 dispatch.AcceptCommand.Execute(dispatch.Prompts.First(p => p.Team == alpha));
 Check("Mission diffusée affichée sur le téléphone", () => Screen().Contains("MISSION : Reconnaissance du village"), 25);
 Check("Notification « Nouvelle mission » sur le téléphone", () => Notifications().Contains("Nouvelle mission"), 10);
+Wait(7); // la notification affichée en haut de l'écran disparaît
+Swipe(up: true);
+Capture("android-2-mission.png");
 Check("Le logiciel indique le message reçu par Alpha", () => dispatch.Messages.First().Delivery.Contains("reçu"), 10);
 
 // Message à toute la faction d'Alpha
@@ -104,6 +108,8 @@ dispatch.ComposePhoto = AirsoftPlanner.App.Services.PhotoResizer.ToJpeg(
     AirsoftPlanner.App.Services.MapSnapshot.Render(ws.Terrain.Layers.First().Model, [], maxSide: 800));
 dispatch.SendCommand.Execute(null);
 Check("Photo jointe affichée sur le téléphone", () => { Swipe(up: true); Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Photo jointe"); }, 40);
+Wait(7);
+Capture("android-3-photo.png");
 
 Check("Messages du QG regroupés sous la mission en cours", () => Screen().Contains("— Mission « Reconnaissance du village » —"), 10);
 
@@ -116,6 +122,13 @@ Check("Message de l'orga signalé sur l'onglet ORGA", () => Screen().Contains("O
 Check("Message de l'orga absent de l'onglet QG", () => !Screen().Contains("Fin de partie à 17 h"), 1);
 Tap("ORGA");
 Check("Onglet ORGA : message et contacts de l'orga", () => Screen().Contains("Fin de partie à 17 h") && Screen().Contains("Fréquence orga : PMR 446 canal 8"), 10);
+Swipe(up: true);
+Capture("android-4-orga.png");
+Adb("shell cmd statusbar expand-notifications");
+Wait(2);
+Capture("android-6-notifications.png");
+Adb("shell cmd statusbar collapse");
+Wait(1);
 Tap("QG");
 Check("Message de l'orga notifié comme tel", () => Notifications().Contains("Message de l'orga"), 10);
 dispatch.ComposeAsHq = true;
@@ -136,7 +149,7 @@ terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.FactionI
 Check("Point d'intérêt de faction affiché sur le téléphone", () => Screen().Contains("Bivouac nord — Bivouac"), 25);
 Check("Point d'intérêt notifié", () => Notifications().Contains("Points d'intérêt mis à jour"), 10);
 Swipe(up: false);
-Capture("android-carte.png");
+Capture("android-5-carte.png");
 terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.Value == ZoneVisibility.Orga);
 Check("Point repassé « orga seulement » : retiré du téléphone", () => !Screen().Contains("Bivouac nord"), 25);
 
@@ -234,10 +247,13 @@ Geo(43.6450, 5.9950);
 tracking.IsSimulation = false; // position reçue maintenant : visible en heure réelle
 Check("Position de l'orga sur la carte du suivi", () => tracking.Markers.Any(m => m.Label.StartsWith("★ Sophie")), 30);
 Check("Téléphone d'orga : voit les équipes sur la carte", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 30);
+Capture("android-8-telephone-orga.png");
 
 // 14. Mode nuit de l'application
 Tap("Mode nuit");
 Check("Mode nuit activé (bouton « Mode jour » affiché)", () => Screen().Contains("Mode jour") && Screen().Contains("Suivi actif"), 15);
+Swipe(up: true);
+Capture("android-7-nuit.png");
 Tap("Mode jour");
 Check("Retour au mode jour", () => Screen().Contains("Mode nuit"), 15);
 

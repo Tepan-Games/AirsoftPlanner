@@ -33,7 +33,12 @@ parallèle par des orgas différents.
 | — | Suivi de l'OP : effectifs, hors-jeu, objets d'objectif, trajets, mission urgente, mode éclaté | ✅ |
 | — | Fusion de copies et travail partagé (OneDrive, Google Drive, Dropbox, dossier réseau) | ✅ |
 | — | Version autonome Windows, association des fichiers `.aop` | ✅ |
-| 7 | Application Android (enrôlement par code, envoi des positions, alliés, mission, plan radio) | Serveur prêt, application à construire |
+| 7 | Application Android (enrôlement par code ou QR, positions, alliés, mission, plan radio, onglets QG / ORGA, mode nuit) | ✅ |
+| — | Messages QG / Orga avec photos, diffusion des missions décidée par l'orga, notifications | ✅ |
+| — | Points d'intérêt par faction, symboles militaires (APP-6) aux couleurs des factions, quadrillage par fuseau UTM | ✅ |
+| — | DynDNS et recherche du PC sur le Wi-Fi, téléphones des orgas, RETEX (global et par équipe), relecture de la simulation | ✅ |
+| — | Documentation PDF avec captures, archive de distribution complète | ✅ |
+| 8 | Multilingue (anglais, allemand, espagnol, italien) | À faire |
 
 ## Cartes et coordonnées
 
@@ -123,14 +128,30 @@ Enrôlement (code faux, saisie manuelle, lien du QR code), positions reçues, mi
 intervalle et partage des alliés modifiés par l'orga, numéro d'urgence, coupure du serveur et
 rattrapage des positions, arrêt de l'envoi, révocation.
 
+## Documentation
+
+[`docs/Airsoft Planner - Guide d'utilisation.pdf`](docs/) : tous les écrans du logiciel et de
+l'application, la diffusion des missions, les messages, toutes les sources de positions GPS, les
+documents imprimés et le RETEX. Régénérée par l'outil `tools/AirsoftPlanner.Docs` (captures du
+logiciel sur une OP de démonstration) et les captures du téléphone produites par les tests
+d'interaction :
+
+```bash
+dotnet run --project tools/AirsoftPlanner.Docs -- "exemple.aop" "<dossier des captures Android>" "docs/Airsoft Planner - Guide d'utilisation.pdf"
+```
+
+L'icône de l'application est générée par `tools/make_icons.py` (Windows et Android).
+
 ## Distribution
 
 ```bash
-powershell -ExecutionPolicy Bypass -File scripts/publish.ps1
+powershell -ExecutionPolicy Bypass -File scripts/release.ps1 -Exemple "exemple.aop"
 ```
 
-produit `artifacts/AirsoftPlanner-<version>-win-x64.zip` : un `AirsoftPlanner.exe` autonome (sans
-installation de .NET). Menu « ⋯ » → « Associer les fichiers .aop » pour les ouvrir par double-clic.
+produit `artifacts/AirsoftPlanner-<version>.zip` : logiciel Windows autonome (sans installation de
+.NET) avec `Installer.cmd` (installation pour l'utilisateur, raccourcis, fichiers `.aop` ouverts par
+double-clic), application Android (`AirsoftPlanner.apk`), guide d'utilisation PDF et OP d'exemple.
+`scripts/publish.ps1` seul produit uniquement le logiciel Windows.
 
 ## Structure
 

@@ -4,7 +4,7 @@
         x:Class="AirsoftPlanner.App.Views.TrackingSettingsWindow"
         x:DataType="vm:GpsViewModel"
         Title="Paramètres du suivi — réception des positions"
-        Width="880" Height="760" WindowStartupLocation="CenterOwner">
+        Width="880" Height="760" WindowStartupLocation="CenterOwner" Icon="/Assets/airsoftplanner.ico">
     <ScrollViewer>
         <StackPanel Margin="16" Spacing="6">
             <TextBlock Text="Paramètres du suivi" Classes="h1" />

@@ -19,7 +19,11 @@ public static class RetexGenerator
 {
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
 
-    static RetexGenerator() => QuestPDF.Settings.License = LicenseType.Community;
+    static RetexGenerator()
+    {
+        QuestPDF.Settings.License = LicenseType.Community;
+        QuestPDF.Settings.UseSystemFonts = true;
+    }
 
     public static void WriteGlobal(OperationRetex retex, RetexContext context, string path) => Document.Create(container =>
     {

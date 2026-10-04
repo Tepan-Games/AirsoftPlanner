@@ -42,6 +42,8 @@ public static class PackageGenerator
     {
         // Licence Community : gratuite pour les particuliers, associations et structures de moins d'1 M$ de CA annuel.
         QuestPDF.Settings.License = LicenseType.Community;
+        // Polices Windows en secours : symboles et emojis saisis dans les noms (★, ⛺...).
+        QuestPDF.Settings.UseSystemFonts = true;
     }
 
     /// <returns>Chemin du dossier du package (l'archive ZIP porte le même nom).</returns>

@@ -6,4 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Traductions : un fichier par langue, embarqué (logiciel, documents et application Android). -->
+    <EmbeddedResource Include="Localization\*.json" LogicalName="AirsoftPlanner.Core.Localization.%(Filename).json" />
+  </ItemGroup>
 </Project>

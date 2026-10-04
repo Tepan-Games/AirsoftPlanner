@@ -1,0 +1,28 @@
+AIRSOFT PLANNER — Tepan Games
+Préparer, mener et analyser une opération d'airsoft.
+Code source et nouvelles versions : https://github.com/Tepan-Games/AirsoftPlanner
+
+CONTENU DE L'ARCHIVE
+
+1 - Logiciel Windows
+    Double-cliquer sur Installer.cmd : le logiciel est installé pour votre compte Windows
+    (aucun droit administrateur), avec un raccourci dans le menu Démarrer et sur le bureau,
+    et les fichiers .aop s'ouvrent par double-clic.
+    Sans installation : lancer directement AirsoftPlanner.exe depuis ce dossier.
+    Au premier démarrage du serveur de positions, autoriser le logiciel dans le pare-feu
+    Windows (réseaux privés).
+
+2 - Application Android
+    Copier AirsoftPlanner.apk sur le téléphone du chef d'équipe (ou de l'orga) et l'ouvrir
+    pour l'installer (autoriser l'installation d'applications externes). Accorder la
+    localisation « toujours » et les notifications.
+
+3 - Guide d'utilisation.pdf
+    Tous les écrans du logiciel et de l'application, la diffusion des missions, les
+    messages, la collecte des positions GPS (application, Traccar, OsmAnd, Meshtastic,
+    second poste, fichiers), les documents imprimés et le RETEX.
+
+4 - Exemple
+    OP d'exemple.aop : une OP complète pour découvrir le logiciel (factions, équipes,
+    terrain avec cartes IGN, missions, matériel, finances, messages). Ouvrir le fichier
+    avec Airsoft Planner (bouton « Ouvrir… » ou double-clic après l'installation).

@@ -219,6 +219,7 @@ public class MainActivity : Activity
             await EnrollAsync(serverInput.Text ?? "", codeInput.Text ?? "", nameInput.Text ?? "");
             enroll.Enabled = true;
         };
+        About();
     }
 
     private void BuildDashboard()
@@ -295,6 +296,7 @@ public class MainActivity : Activity
             Show();
         };
         _target.AddView(leave, Spaced(24));
+        About();
         _target = _root;
 
         SelectTab(_orgaSelected);
@@ -590,6 +592,14 @@ public class MainActivity : Activity
 
     private void Section(string text) =>
         _target.AddView(new TextView(this) { Text = text.ToUpperInvariant(), TextSize = 13, Typeface = Typeface.DefaultBold, LetterSpacing = 0.08f }, Spaced(20));
+
+    /// <summary>À propos : version et adresse du projet.</summary>
+    private void About()
+    {
+        var version = PackageManager?.GetPackageInfo(PackageName!, 0)?.VersionName ?? "";
+        Text($"À propos — Airsoft Planner {version}, Tepan Games\nCode source et nouvelles versions : https://github.com/Tepan-Games/AirsoftPlanner", 12, secondary: true)
+            .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
+    }
 
     private void Label(string text) => _target.AddView(new TextView(this) { Text = text, TextSize = 13 }, Spaced(12));
 

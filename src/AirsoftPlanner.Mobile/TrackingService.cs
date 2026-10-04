@@ -275,7 +275,7 @@ public class TrackingService : Service, ILocationListener
             .SetContentTitle(title)!
             .SetContentText(text)!
             .SetStyle(new Notification.BigTextStyle().BigText(text))!
-            .SetSmallIcon(Resource.Mipmap.appicon)!
+            .SetSmallIcon(Resource.Drawable.ic_notification)!
             .SetAutoCancel(true)!
             .SetContentIntent(open)!
             .Build()!;
@@ -314,7 +314,7 @@ public class TrackingService : Service, ILocationListener
         return builder
             .SetContentTitle($"Airsoft Planner — {Prefs.Team}")!
             .SetContentText(text)!
-            .SetSmallIcon(Resource.Mipmap.appicon)!
+            .SetSmallIcon(Resource.Drawable.ic_notification)!
             .SetOngoing(true)!
             .SetContentIntent(open)!
             .Build()!;
