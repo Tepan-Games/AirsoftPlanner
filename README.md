@@ -176,8 +176,8 @@ sans eux, aucune mise à jour de l'application ne pourra plus être installée s
 Airsoft Planner est un logiciel libre distribué sous licence **GNU GPL v3.0 ou ultérieure** (voir [LICENSE](LICENSE)) :
 chacun peut l'utiliser, l'étudier, le modifier et le redistribuer, à condition que les versions redistribuées
 restent sous la même licence, avec leur code source. Une permission supplémentaire (section 7) autorise la
-combinaison avec QuestPDF, distribuée sous sa propre licence ; le fichier LICENSE liste aussi les composants
-tiers et l'attribution des fonds de carte IGN.
+combinaison avec QuestPDF, distribuée sous sa propre licence. Le copyright, cette permission, les composants
+tiers et l'attribution des fonds de carte IGN sont dans [NOTICE](NOTICE).
 
 ## Structure
 

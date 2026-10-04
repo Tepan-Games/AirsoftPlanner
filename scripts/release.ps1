@@ -66,6 +66,7 @@ Copy-Item $Documentation (Join-Path $stage "3 - Guide d'utilisation.pdf")
 Copy-Item $Exemple (Join-Path $example "OP d'exemple.aop")
 Copy-Item (Join-Path $PSScriptRoot "LISEZ-MOI.txt") $stage
 Copy-Item (Join-Path $root "LICENSE") (Join-Path $stage "LICENSE.txt")
+Copy-Item (Join-Path $root "NOTICE") (Join-Path $stage "NOTICE.txt")
 
 $zip = Join-Path $root "artifacts\$name.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
