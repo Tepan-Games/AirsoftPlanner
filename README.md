@@ -155,6 +155,26 @@ désinstallation depuis Paramètres › Applications), application Android (`Air
 d'utilisation PDF et OP d'exemple.
 `scripts/publish.ps1` seul produit uniquement le logiciel Windows.
 
+## Signature de l'application Android
+
+Les mises à jour de l'APK doivent toujours être signées avec la même clé : Android refuse sinon de les
+installer par-dessus la version précédente. La clé de publication se crée une fois (mot de passe choisi et
+conservé par le mainteneur, jamais dans le dépôt) :
+
+```powershell
+& "$env:LOCALAPPDATA\Android\jdk\bin\keytool.exe" -genkeypair -v -keystore "$env:USERPROFILE\AirsoftPlanner-signature\airsoftplanner.keystore" -alias airsoftplanner -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=Tepan Games, O=Tepan Games, C=FR"
+```
+
+`scripts/release.ps1` signe ensuite l'APK avec cette clé (mot de passe demandé à chaque publication, ou lu dans
+la variable d'environnement `AIRSOFTPLANNER_KEYSTORE_PASS`). Sauvegarder ce fichier et son mot de passe hors du PC :
+sans eux, aucune mise à jour de l'application ne pourra plus être installée sur les téléphones existants.
+
+## Licence
+
+Airsoft Planner est un logiciel libre distribué sous licence **GNU GPL v3.0** (voir [LICENSE](LICENSE)) :
+chacun peut l'utiliser, l'étudier, le modifier et le redistribuer, à condition que les versions redistribuées
+restent sous la même licence, avec leur code source.
+
 ## Structure
 
 ```

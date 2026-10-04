@@ -1,6 +1,7 @@
 ﻿AIRSOFT PLANNER — Tepan Games
 Préparer, mener et analyser une opération d'airsoft.
 Code source et nouvelles versions : https://github.com/Tepan-Games/AirsoftPlanner
+Logiciel libre sous licence GNU GPL v3.0 (fichier LICENSE).
 
 CONTENU DE L'ARCHIVE
 

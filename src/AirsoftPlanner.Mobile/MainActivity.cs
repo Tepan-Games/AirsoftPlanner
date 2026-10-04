@@ -652,7 +652,7 @@ public class MainActivity : Activity
     private void About()
     {
         var version = PackageManager?.GetPackageInfo(PackageName!, 0)?.VersionName ?? "";
-        Text(L.F("a_propos_airsoft_planner_x_tepan_games_code_sour", version, AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl), 12, secondary: true)
+        Text(L.F("a_propos_airsoft_planner_x_tepan_games_code_sour", version, AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl) + "\n" + L.T("licence_gpl"), 12, secondary: true)
             .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
         var update = PrimaryButton("", Color.Rgb(46, 125, 50));
         update.Visibility = ViewStates.Gone;

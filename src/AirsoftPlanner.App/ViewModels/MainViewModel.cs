@@ -261,6 +261,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     private async Task AboutAsync() => await dialogs.ShowInfoAsync(L.T("a_propos"),
         L.F("x_tepan_games_logiciel_de_preparation_et_de_suiv", VersionText)
         + L.F("code_source_et_nouvelles_versions_x", ProjectSite)
+        + L.T("licence_gpl") + "\n\n"
         + L.T("cartes_ign_geoplateforme_licence_ouverte_pdf_que"));
 
     /// <summary>Change la langue : enregistrée pour ce poste, appliquée en redémarrant le logiciel (l'OP ouverte est rouverte).</summary>

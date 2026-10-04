@@ -9,7 +9,11 @@ param(
     [Parameter(Mandatory = $true)][string]$Exemple,
     [string]$Documentation = "",
     # Publie la version sur GitHub (release v<version> avec l'archive, le Setup.exe et l'APK) : nécessite l'outil gh connecté.
-    [switch]$Publier
+    [switch]$Publier,
+    # Clé de publication de l'application Android (voir README, « Signature de l'application Android »).
+    [string]$CleAndroid = (Join-Path $env:USERPROFILE "AirsoftPlanner-signature\airsoftplanner.keystore"),
+    # Construit l'APK avec la clé de développement du poste (essais seulement : jamais pour une version publiée).
+    [switch]$SansCleAndroid
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,8 +35,21 @@ if (-not $iscc) { throw "Inno Setup 6 introuvable : winget install JRSoftware.In
 if ($LASTEXITCODE -ne 0) { throw "La création du programme d'installation a échoué." }
 $setup = Join-Path $root "artifacts\AirsoftPlanner-$version-Setup.exe"
 
-# 2. Application Android
-dotnet build (Join-Path $root "src\AirsoftPlanner.Mobile\AirsoftPlanner.Mobile.csproj") -c Release
+# 2. Application Android, signée avec la clé de publication (les mises à jour doivent toujours l'être avec la même).
+$signing = @()
+if (-not $SansCleAndroid) {
+    if (-not (Test-Path $CleAndroid)) {
+        throw "Clé de publication Android introuvable : $CleAndroid (voir README, « Signature de l'application Android »), ou -SansCleAndroid pour un essai."
+    }
+    if (-not $env:AIRSOFTPLANNER_KEYSTORE_PASS) {
+        $secure = Read-Host "Mot de passe de la clé Android" -AsSecureString
+        $env:AIRSOFTPLANNER_KEYSTORE_PASS = [Runtime.InteropServices.Marshal]::PtrToStringBSTR([Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure))
+    }
+    # Mot de passe transmis par variable d'environnement (« env: ») : absent de la ligne de commande et des journaux.
+    $signing = @("-p:AndroidKeyStore=true", "-p:AndroidSigningKeyStore=$CleAndroid", "-p:AndroidSigningKeyAlias=airsoftplanner",
+        "-p:AndroidSigningStorePass=env:AIRSOFTPLANNER_KEYSTORE_PASS", "-p:AndroidSigningKeyPass=env:AIRSOFTPLANNER_KEYSTORE_PASS")
+}
+dotnet build (Join-Path $root "src\AirsoftPlanner.Mobile\AirsoftPlanner.Mobile.csproj") -c Release @signing
 if ($LASTEXITCODE -ne 0) { throw "La compilation de l'application Android a échoué." }
 $apk = Join-Path $root "src\AirsoftPlanner.Mobile\bin\Release\net10.0-android\com.tepangames.airsoftplanner-Signed.apk"
 
@@ -48,6 +65,7 @@ Copy-Item $apk (Join-Path $android "AirsoftPlanner.apk")
 Copy-Item $Documentation (Join-Path $stage "3 - Guide d'utilisation.pdf")
 Copy-Item $Exemple (Join-Path $example "OP d'exemple.aop")
 Copy-Item (Join-Path $PSScriptRoot "LISEZ-MOI.txt") $stage
+Copy-Item (Join-Path $root "LICENSE") (Join-Path $stage "LICENSE.txt")
 
 $zip = Join-Path $root "artifacts\$name.zip"
 if (Test-Path $zip) { Remove-Item -Force $zip }
