@@ -79,7 +79,11 @@ if ($Publier) {
     # Notes de version : docs/versions/<version>.md s'il existe.
     $notes = Join-Path $root "docs\versions\$version.md"
     $notesArgs = if (Test-Path $notes) { @("--notes-file", $notes) } else { @("--notes", "Airsoft Planner $version") }
-    gh release create "v$version" $zip $setup $apkRelease --repo Tepan-Games/AirsoftPlanner --title "Airsoft Planner $version" @notesArgs
+    # GitHub CLI : dans le PATH, sinon à son emplacement d'installation (winget install GitHub.cli, puis gh auth login).
+    $gh = (Get-Command gh -ErrorAction SilentlyContinue).Source
+    if (-not $gh) { $gh = @("$env:ProgramFiles\GitHub CLI\gh.exe", "$env:LOCALAPPDATA\Programs\GitHub CLI\gh.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1 }
+    if (-not $gh) { throw "GitHub CLI (gh) introuvable : winget install GitHub.cli, puis gh auth login." }
+    & $gh release create "v$version" $zip $setup $apkRelease --repo Tepan-Games/AirsoftPlanner --title "Airsoft Planner $version" @notesArgs
     if ($LASTEXITCODE -ne 0) { throw "La publication sur GitHub a échoué." }
     Write-Host "Version v$version publiée sur GitHub."
 }
