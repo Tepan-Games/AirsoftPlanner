@@ -174,6 +174,12 @@ Check("Adresse périmée : PC retrouvé sur le Wi-Fi et enrôlement accepté",
     () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && Screen().Contains("Suivi actif"), 40);
 gps.ServerPort = Port;
 
+// 14. Mode nuit de l'application
+Tap("Mode nuit");
+Check("Mode nuit activé (bouton « Mode jour » affiché)", () => Screen().Contains("Mode jour") && Screen().Contains("Suivi actif"), 15);
+Tap("Mode jour");
+Check("Retour au mode jour", () => Screen().Contains("Mode nuit"), 15);
+
 // ----- Bilan -----
 Console.WriteLine();
 Console.WriteLine("=== RÉSULTATS ===");

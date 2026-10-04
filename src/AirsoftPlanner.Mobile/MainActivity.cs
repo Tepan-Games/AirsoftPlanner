@@ -54,7 +54,9 @@ public class MainActivity : Activity
         scroll.SetOnApplyWindowInsetsListener(new InsetsListener(_root, Dp(16), Dp(24)));
         SetContentView(scroll);
         Show();
-        HandleLink(Intent);
+        // Écran recréé (passage jour/nuit, rotation) : le lien d'enrôlement d'origine a déjà été traité.
+        if (savedInstanceState is null)
+            HandleLink(Intent);
     }
 
     protected override void OnNewIntent(Intent? intent)
@@ -89,10 +91,76 @@ public class MainActivity : Activity
     private void Show()
     {
         _root.RemoveAllViews();
+        AddNightToggle();
         if (Prefs.IsEnrolled)
             BuildDashboard();
         else
             BuildEnrollment(Prefs.ServerUrl, "");
+        ApplyNightMode();
+    }
+
+    // ----- Mode nuit -----
+
+    // Rouge sombre : préserve la vision de nuit et reste discret sur le terrain.
+    private static readonly Color NightText = Color.Rgb(200, 30, 30);
+    private static readonly Color NightBackground = Color.Black;
+
+    private void AddNightToggle()
+    {
+        var toggle = new Button(this) { Text = Prefs.NightMode ? "☀ Mode jour" : "🌙 Mode nuit", TextSize = 12 };
+        toggle.Click += (_, _) =>
+        {
+            Prefs.NightMode = !Prefs.NightMode;
+            // Les couleurs par défaut du thème sont rétablies en recréant l'écran.
+            Recreate();
+        };
+        _root.AddView(toggle, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent)
+        {
+            Gravity = GravityFlags.End,
+        });
+    }
+
+    /// <summary>Texte rouge sur fond noir, carte assombrie en rouge, luminosité de l'écran au minimum.</summary>
+    private void ApplyNightMode()
+    {
+        var attributes = Window!.Attributes!;
+        attributes.ScreenBrightness = Prefs.NightMode ? 0.01f : WindowManagerLayoutParams.BrightnessOverrideNone;
+        Window.Attributes = attributes;
+        if (_map is not null)
+            _map.NightMode = Prefs.NightMode;
+        if (!Prefs.NightMode)
+            return;
+
+        Window.DecorView.SetBackgroundColor(NightBackground);
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            Window.InsetsController?.SetSystemBarsAppearance(0, (int)(WindowInsetsControllerAppearance.LightStatusBars | WindowInsetsControllerAppearance.LightNavigationBars));
+        Paint(_root);
+    }
+
+    private void Paint(ViewGroup group)
+    {
+        for (var i = 0; i < group.ChildCount; i++)
+        {
+            switch (group.GetChildAt(i))
+            {
+                case Button button:
+                    var isEmergency = button == _emergency;
+                    button.SetBackgroundColor(isEmergency ? Color.Rgb(70, 0, 0) : Color.Rgb(28, 4, 4));
+                    button.SetTextColor(isEmergency ? Color.Rgb(255, 82, 82) : NightText);
+                    break;
+                case EditText input:
+                    input.SetTextColor(NightText);
+                    input.SetHintTextColor(Color.Rgb(90, 20, 20));
+                    input.BackgroundTintList = Android.Content.Res.ColorStateList.ValueOf(Color.Rgb(110, 20, 20));
+                    break;
+                case TextView text:
+                    text.SetTextColor(NightText);
+                    break;
+                case ViewGroup child:
+                    Paint(child);
+                    break;
+            }
+        }
     }
 
     private void BuildEnrollment(string server, string code)

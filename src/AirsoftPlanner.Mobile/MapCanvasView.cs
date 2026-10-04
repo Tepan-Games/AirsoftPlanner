@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Domain;
+﻿using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Core.Gps;
 using Android.Content;
 using Android.Graphics;
@@ -15,6 +15,34 @@ public class MapCanvasView(Context context) : View(context)
     private readonly Paint _ringPaint = new(PaintFlags.AntiAlias) { Color = Color.White, StrokeWidth = 4 };
     private readonly Paint _textPaint = new(PaintFlags.AntiAlias) { Color = Color.White, TextSize = 34, FakeBoldText = true };
     private readonly Paint _labelBackground = new(PaintFlags.AntiAlias) { Color = Color.Argb(190, 20, 20, 20) };
+
+    // Mode nuit : carte en niveaux de rouge, assombrie.
+    private static readonly ColorMatrix NightMatrix = new([
+        0.12f, 0.24f, 0.04f, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0,
+        0, 0, 0, 1, 0,
+    ]);
+
+    private readonly Paint _nightBitmapPaint = new() { };
+    private bool _nightMode;
+
+    /// <summary>Mode nuit : carte rouge sombre, repères en rouge.</summary>
+    public bool NightMode
+    {
+        get => _nightMode;
+        set
+        {
+            _nightMode = value;
+            _nightBitmapPaint.SetColorFilter(value ? new ColorMatrixColorFilter(NightMatrix) : null);
+            _ownPaint.Color = value ? Color.Rgb(255, 60, 60) : Color.Rgb(21, 101, 192);
+            _allyPaint.Color = value ? Color.Rgb(120, 0, 0) : Color.Rgb(46, 125, 50);
+            _ringPaint.Color = value ? Color.Rgb(200, 30, 30) : Color.White;
+            _textPaint.Color = value ? Color.Rgb(200, 30, 30) : Color.White;
+            _labelBackground.Color = value ? Color.Argb(220, 0, 0, 0) : Color.Argb(190, 20, 20, 20);
+            Invalidate();
+        }
+    }
 
     private Bitmap? _bitmap;
     private MapInfo? _map;
@@ -42,12 +70,12 @@ public class MapCanvasView(Context context) : View(context)
         base.OnDraw(canvas);
         if (_bitmap is null || _map is null)
         {
-            canvas.DrawColor(Color.Rgb(43, 47, 51));
+            canvas.DrawColor(_nightMode ? Color.Black : Color.Rgb(43, 47, 51));
             canvas.DrawText("Carte en cours de téléchargement…", 24, 60, _textPaint);
             return;
         }
 
-        canvas.DrawBitmap(_bitmap, null, new Rect(0, 0, Width, Height), null);
+        canvas.DrawBitmap(_bitmap, null, new Rect(0, 0, Width, Height), _nightMode ? _nightBitmapPaint : null);
         var bounds = new GeoBounds(_map.North, _map.South, _map.West, _map.East);
         PointF ToScreen(GeoPoint p)
         {

@@ -49,6 +49,13 @@ internal static class Prefs
         set => Store.Edit()!.PutInt(nameof(IntervalSeconds), value)!.Apply();
     }
 
+    /// <summary>Mode nuit : texte rouge sur fond noir, carte assombrie, luminosité minimale.</summary>
+    public static bool NightMode
+    {
+        get => Store.GetBoolean(nameof(NightMode), false);
+        set => Store.Edit()!.PutBoolean(nameof(NightMode), value)!.Apply();
+    }
+
     public static bool IsTracking
     {
         get => Store.GetBoolean(nameof(IsTracking), false);
