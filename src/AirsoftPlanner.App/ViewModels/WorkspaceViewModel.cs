@@ -20,13 +20,35 @@ public class WorkspaceViewModel : ViewModelBase
         Missions = new MissionsViewModel(file, General, Factions, Teams, Terrain, GameItems);
         Tracking = new TrackingViewModel(file, General, Teams, Terrain, Missions, GameItems);
         Tracking.Vehicles = Vehicles;
+        Tracking.Organizers = Organizers;
         Tracking.Dispatch = new DispatchViewModel(file, General, Teams, Factions, Missions, Terrain, GameItems, dialogs);
         RadioCheck = new RadioCheckViewModel(file.Operation, General, Factions, Teams, Organizers);
         Tracking.RadioCheck = RadioCheck;
         Tracking.Gps = new GpsViewModel(file, Tracking, Teams, dialogs, Vehicles);
+        AttachGps(Tracking.Gps);
         Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
         Retex = new RetexViewModel(file, General, Teams, Factions, Tracking, GameItems, dialogs);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
+    }
+
+    /// <summary>Relie la réception GPS aux onglets Équipes et Orgas (enrôlement), y compris après un rechargement de l'OP.</summary>
+    public void AttachGps(GpsViewModel gps)
+    {
+        gps.Organizers = Organizers;
+        Teams.Gps = gps;
+        Organizers.Gps = gps;
+        gps.EnrollmentTeam = Teams.Selected;
+        gps.EnrollmentOrganizer = Organizers.Selected;
+        Teams.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(TeamsViewModel.Selected))
+                gps.EnrollmentTeam = Teams.Selected;
+        };
+        Organizers.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(OrganizersViewModel.Selected))
+                gps.EnrollmentOrganizer = Organizers.Selected;
+        };
     }
 
     public OperationViewModel General { get; }

@@ -31,6 +31,8 @@
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
                     <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                    <Button Content="{Binding Gps.ServerStatus, FallbackValue='📡'}" Click="OnSettingsClick"
+                            ToolTip.Tip="Paramètres du suivi : serveur local, second poste, Meshtastic, Traccar, import de traces, journal de réception" />
                     <Button Content="⧉ Mode éclaté" Click="OnExplodeClick"
                             ToolTip.Tip="Carte, frise et état des équipes dans des fenêtres séparées, réparties sur les autres écrans (F11 : plein écran)" />
                     <Button Content="Tout rattacher" Click="OnReattachClick" />

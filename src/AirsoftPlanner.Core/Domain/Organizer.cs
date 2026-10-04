@@ -1,4 +1,4 @@
-namespace AirsoftPlanner.Core.Domain;
+﻿namespace AirsoftPlanner.Core.Domain;
 
 /// <summary>Membre de l'organisation de l'OP (PC, arbitres, logistique, secours...).</summary>
 public class Organizer : Entity
@@ -17,4 +17,7 @@ public class Organizer : Entity
     public string Notes { get; set; } = "";
 
     public int SortOrder { get; set; }
+
+    /// <summary>Code d'enrôlement de l'application Android pour le téléphone de cet orga.</summary>
+    public string EnrollmentCode { get; set; } = "";
 }

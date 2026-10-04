@@ -22,6 +22,9 @@ var adbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.L
 var results = new List<(string Name, bool Ok, string Detail)>();
 
 // ----- PC de l'OP (code réel du logiciel) -----
+// Le test change le port du serveur : le réglage du poste est rétabli à la fin.
+var originalPort = AppSettings.Current.GpsServerPort;
+AppSettings.SuppressOpening = true;
 var opPath = Path.Combine(AppContext.BaseDirectory, "op-integration.aop");
 File.Copy(args[0], opPath, overwrite: true);
 AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
@@ -214,6 +217,24 @@ Check("Adresse périmée : PC retrouvé sur le Wi-Fi et enrôlement accepté",
     () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && Screen().Contains("Suivi actif"), 40);
 gps.ServerPort = Port;
 
+// 15. Téléphone d'un orga : enrôlé avec le code de l'orga, sa position apparaît sur la carte du suivi
+ws.Organizers.AddCommand.Execute(null);
+var arbitre = ws.Organizers.Selected!;
+arbitre.Name = "Sophie";
+arbitre.Role = "arbitre";
+gps.EnrollmentOrganizer = arbitre;
+gps.GenerateOrganizerCodeCommand.Execute(null);
+gps.SelectedDevice = gps.Devices.First(d => !d.IsRevoked);
+gps.RevokeDeviceCommand.Execute(null);
+Check("Révocation avant l'enrôlement orga", () => Screen().Contains("S'enrôler"), 30);
+Adb($"shell am start -a android.intent.action.VIEW -d '{EnrollmentLink.Create($"http://10.0.2.2:{Port - 1}", arbitre.EnrollmentCode)}' {Package}");
+Check("Téléphone d'orga enrôlé (onglet Orgas)", () => gps.OrganizerDevices.Any(d => !d.IsRevoked), 30);
+Check("Téléphone d'orga : écran de suivi de l'orga", () => Screen().Contains("Sophie") && Screen().Contains("Suivi actif"), 30);
+Geo(43.6450, 5.9950);
+tracking.IsSimulation = false; // position reçue maintenant : visible en heure réelle
+Check("Position de l'orga sur la carte du suivi", () => tracking.Markers.Any(m => m.Label.StartsWith("★ Sophie")), 30);
+Check("Téléphone d'orga : voit les équipes sur la carte", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 30);
+
 // 14. Mode nuit de l'application
 Tap("Mode nuit");
 Check("Mode nuit activé (bouton « Mode jour » affiché)", () => Screen().Contains("Mode jour") && Screen().Contains("Suivi actif"), 15);
@@ -228,6 +249,8 @@ foreach (var (name, ok, detail) in results)
 Console.WriteLine($"{results.Count(r => r.Ok)}/{results.Count} vérifications réussies");
 Pump(gps.ToggleServerCommand.ExecuteAsync(null));
 main.Dispose();
+AppSettings.Current.GpsServerPort = originalPort;
+AppSettings.Current.Save();
 return results.All(r => r.Ok) ? 0 : 1;
 
 // ----- Outils -----

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
@@ -60,6 +60,10 @@ public partial class TeamsViewModel : ViewModelBase
     public ObservableCollection<FactionViewModel> Factions { get; }
 
     public ObservableCollection<TeamViewModel> Items { get; }
+
+    /// <summary>Réception GPS (enrôlement de l'application Android de l'équipe sélectionnée).</summary>
+    [ObservableProperty]
+    private GpsViewModel? _gps;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasSelection))]

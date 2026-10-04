@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
 using AirsoftPlanner.Core.Domain;
 using AirsoftPlanner.Data;
@@ -41,6 +41,18 @@ public class OrganizerViewModel(Organizer organizer) : ViewModelBase
         set => SetProperty(organizer.Email, value, organizer, (o, v) => o.Email = v);
     }
 
+    public string EnrollmentCode
+    {
+        get => organizer.EnrollmentCode;
+        set
+        {
+            if (SetProperty(organizer.EnrollmentCode, value, organizer, (o, v) => o.EnrollmentCode = v))
+                OnPropertyChanged(nameof(EnrollmentCodeText));
+        }
+    }
+
+    public string EnrollmentCodeText => organizer.EnrollmentCode.Length == 0 ? "—" : Core.Gps.EnrollmentCodes.Format(organizer.EnrollmentCode);
+
     public string Notes
     {
         get => organizer.Notes;
@@ -64,6 +76,10 @@ public partial class OrganizersViewModel : ViewModelBase
     public OperationViewModel General { get; }
 
     public ObservableCollection<OrganizerViewModel> Items { get; }
+
+    /// <summary>Réception GPS (enrôlement du téléphone de l'orga sélectionné).</summary>
+    [ObservableProperty]
+    private GpsViewModel? _gps;
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveCommand))]

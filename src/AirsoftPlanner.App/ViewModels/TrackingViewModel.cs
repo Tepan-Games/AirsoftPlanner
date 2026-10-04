@@ -768,6 +768,25 @@ public partial class TrackingViewModel : ViewModelBase
     }
 
     /// <summary>Enregistre une position reçue (saisie manuelle aujourd'hui, GPS plus tard).</summary>
+    /// <summary>Orgas de l'OP (positions de leurs téléphones sur la carte).</summary>
+    public OrganizersViewModel? Organizers { get; set; }
+
+    /// <summary>Position du téléphone d'un orga (enregistrée comme celle d'une équipe, avec l'identifiant de l'orga).</summary>
+    public void RecordOrganizerPosition(OrganizerViewModel organizer, GeoPoint point, DateTimeOffset? at)
+    {
+        var position = new TeamPosition
+        {
+            TeamId = organizer.Model.Id,
+            Point = point,
+            ReceivedAt = at ?? DateTimeOffset.Now,
+            Source = "Téléphone orga",
+        };
+        _file.Add(position);
+        var index = _positions.FindLastIndex(p => p.ReceivedAt <= position.ReceivedAt);
+        _positions.Insert(index + 1, position);
+        RefreshMarkers();
+    }
+
     public void RecordPosition(TeamViewModel team, GeoPoint point, string source = "Manuel", DateTimeOffset? at = null)
     {
         // Saisie manuelle : heure suivie (réelle ou simulée). GPS : heure de la mesure.
@@ -899,6 +918,14 @@ public partial class TrackingViewModel : ViewModelBase
                 s.Team.ResolvedSymbol,
                 s.Team.Echelon))
             .ToList();
+
+        // Téléphones des orgas : dernière position avant l'instant suivi, point blanc « ★ nom (rôle) ».
+        var orgaNow = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
+        Markers = [.. Markers, .. (Organizers?.Items ?? [])
+            .Select(o => (Organizer: o, Position: _positions.LastOrDefault(p => p.TeamId == o.Model.Id && p.ReceivedAt <= orgaNow.AddSeconds(1))))
+            .Where(x => x.Position is not null)
+            .Select(x => new TeamMarker(x.Position!.Point, "#ECEFF1", $"★ {x.Organizer.Name}{(x.Organizer.Role.Length > 0 ? $" ({x.Organizer.Role})" : "")}",
+                "#FFFFFF", null, false, AirsoftPlanner.Core.Symbols.MilSymbol.Dot))];
 
         var nowDate = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
         var vehicleMarkers = Vehicles is null ? [] : _teams.Items

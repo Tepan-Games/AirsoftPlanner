@@ -1,12 +1,16 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using AirsoftPlanner.Core.Domain;
 
 namespace AirsoftPlanner.Core.Gps;
 
-/// <summary>Téléphone enrôlé auprès du PC de l'OP avec le code d'une équipe.</summary>
+/// <summary>Téléphone enrôlé auprès du PC de l'OP avec le code d'une équipe (ou d'un orga).</summary>
 public class EnrolledDevice : Entity
 {
+    /// <summary>Équipe du téléphone, ou orga quand <see cref="IsOrganizer"/> est vrai.</summary>
     public Guid TeamId { get; set; }
+
+    /// <summary>Téléphone d'un orga (arbitre, PC) : sa position est suivie, il voit toutes les équipes.</summary>
+    public bool IsOrganizer { get; set; }
 
     /// <summary>Jeton secret remis au téléphone à l'enrôlement, présenté à chaque envoi de position.</summary>
     public string Token { get; set; } = "";

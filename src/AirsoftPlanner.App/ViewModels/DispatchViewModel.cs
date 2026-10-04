@@ -162,6 +162,13 @@ public partial class DispatchViewModel : ViewModelBase
     [RelayCommand]
     private void RemovePhoto() => ComposePhoto = null;
 
+    /// <summary>Téléphone d'orga : les derniers messages envoyés aux équipes (pour suivre ce qui a été transmis).</summary>
+    public IReadOnlyList<PhoneMessage> PhoneMessagesForOrga() => _messages
+        .OrderBy(m => m.SentAt)
+        .TakeLast(50)
+        .Select(m => new PhoneMessage(m.Id, m.SentAt, m.Text, AudienceOf(m), m.Kind, MessageSender.Orga, "", m.Photo is { Length: > 0 }))
+        .ToList();
+
     /// <summary>Photo d'un message, si ce message est destiné à l'équipe.</summary>
     public byte[]? PhotoFor(TeamViewModel team, Guid messageId) =>
         _messages.FirstOrDefault(m => m.Id == messageId && m.IsFor(team.Model))?.Photo;

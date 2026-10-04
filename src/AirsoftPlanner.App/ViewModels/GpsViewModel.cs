@@ -166,6 +166,53 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     [NotifyCanExecuteChangedFor(nameof(GenerateCodeCommand), nameof(ShowQrCodeCommand))]
     private TeamViewModel? _enrollmentTeam;
 
+    partial void OnEnrollmentTeamChanged(TeamViewModel? value) => RefreshDevices();
+
+    /// <summary>Orga sélectionné dans l'onglet Orgas (enrôlement de son téléphone).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(GenerateOrganizerCodeCommand), nameof(ShowOrganizerQrCodeCommand))]
+    private OrganizerViewModel? _enrollmentOrganizer;
+
+    partial void OnEnrollmentOrganizerChanged(OrganizerViewModel? value) => RefreshDevices();
+
+    /// <summary>Orgas de l'OP (codes d'enrôlement de leurs téléphones).</summary>
+    public OrganizersViewModel? Organizers { get; set; }
+
+    /// <summary>Téléphones de l'équipe choisie (onglet Équipes).</summary>
+    public ObservableCollection<EnrolledDeviceRow> TeamDevices { get; } = [];
+
+    /// <summary>Téléphones de l'orga choisi (onglet Orgas).</summary>
+    public ObservableCollection<EnrolledDeviceRow> OrganizerDevices { get; } = [];
+
+    /// <summary>État du serveur, affiché dans le suivi (« 📡 Serveur actif · 3 téléphones »).</summary>
+    public string ServerStatus => (IsServerRunning ? "📡 Serveur actif" : "📡 Serveur arrêté")
+                                  + $" · {_devices.Count(d => !d.IsRevoked)} téléphone(s)";
+
+    partial void OnIsServerRunningChanged(bool value) => OnPropertyChanged(nameof(ServerStatus));
+
+    [RelayCommand(CanExecute = nameof(HasEnrollmentOrganizer))]
+    private void GenerateOrganizerCode()
+    {
+        EnrollmentOrganizer!.EnrollmentCode = EnrollmentCodes.Generate(AllCodes());
+        Log($"Code d'enrôlement de l'orga {EnrollmentOrganizer.Name} : {EnrollmentOrganizer.EnrollmentCodeText}");
+    }
+
+    [RelayCommand(CanExecute = nameof(HasEnrollmentOrganizer))]
+    private async Task ShowOrganizerQrCodeAsync()
+    {
+        var organizer = EnrollmentOrganizer!;
+        if (organizer.EnrollmentCode.Length == 0)
+            GenerateOrganizerCode();
+        await ShowQrAsync($"Enrôlement orga — {organizer.Name}", organizer.EnrollmentCode, organizer.EnrollmentCodeText);
+    }
+
+    private bool HasEnrollmentOrganizer => EnrollmentOrganizer is not null;
+
+    /// <summary>Codes déjà attribués (équipes et orgas) : chaque code est unique dans l'OP.</summary>
+    private List<string> AllCodes() => _teams.Items.Select(t => t.EnrollmentCode)
+        .Concat(Organizers?.Items.Select(o => o.EnrollmentCode) ?? [])
+        .Where(c => c.Length > 0).ToList();
+
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RevokeDeviceCommand))]
     private EnrolledDeviceRow? _selectedDevice;
@@ -189,8 +236,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     [RelayCommand(CanExecute = nameof(HasEnrollmentTeam))]
     private void GenerateCode()
     {
-        var existing = _teams.Items.Select(t => t.EnrollmentCode).Where(c => c.Length > 0).ToList();
-        EnrollmentTeam!.EnrollmentCode = EnrollmentCodes.Generate(existing);
+        EnrollmentTeam!.EnrollmentCode = EnrollmentCodes.Generate(AllCodes());
         Log($"Code d'enrôlement de {EnrollmentTeam.Name} : {EnrollmentTeam.EnrollmentCodeText}");
     }
 
@@ -202,6 +248,11 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         if (team.EnrollmentCode.Length == 0)
             GenerateCode();
 
+        await ShowQrAsync($"Enrôlement — {team.Name}", team.EnrollmentCode, team.EnrollmentCodeText);
+    }
+
+    private async Task ShowQrAsync(string title, string code, string codeText)
+    {
         var address = PublishedAddress((int)(ServerPort ?? 5055));
         if (address is null)
         {
@@ -209,14 +260,24 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             return;
         }
 
-        var link = EnrollmentLink.Create(address, team.EnrollmentCode);
+        var link = EnrollmentLink.Create(address, code);
         using var generator = new QRCoder.QRCodeGenerator();
         using var data = generator.CreateQrCode(link, QRCoder.QRCodeGenerator.ECCLevel.M);
         var png = new QRCoder.PngByteQRCode(data).GetGraphic(10);
-        await _dialogs.ShowImageAsync($"Enrôlement — {team.Name}",
-            $"Dans l'application Airsoft Planner du chef d'équipe : « Scanner le QR code », ou saisir :\n" +
-            $"Serveur : {address}\nCode : {team.EnrollmentCodeText}" +
+        await _dialogs.ShowImageAsync(title,
+            $"Dans l'application Airsoft Planner : scanner ce QR code avec l'appareil photo, ou saisir :\n" +
+            $"Serveur : {address}\nCode : {codeText}" +
             (IsServerRunning ? "" : "\n\n⚠ Pensez à activer le serveur local avant l'enrôlement."), png);
+    }
+
+    [RelayCommand]
+    private void RevokeRow(EnrolledDeviceRow? row)
+    {
+        if (row is null || row.IsRevoked)
+            return;
+        row.Model.IsRevoked = true;
+        Log($"Téléphone « {row.Device} » révoqué.");
+        RefreshDevices();
     }
 
     [RelayCommand(CanExecute = nameof(HasSelectedDevice))]
@@ -245,6 +306,9 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     {
         var code = EnrollmentCodes.Normalize(request.Code);
         var team = _teams.Items.FirstOrDefault(t => t.EnrollmentCode.Length > 0 && t.EnrollmentCode == code);
+        var organizer = team is null ? Organizers?.Items.FirstOrDefault(o => o.EnrollmentCode.Length > 0 && o.EnrollmentCode == code) : null;
+        if (organizer is not null)
+            return EnrollOrganizer(organizer, request);
         if (team is null)
         {
             Log($"Enrôlement refusé : code « {request.Code} » inconnu ({request.DeviceName}).");
@@ -266,9 +330,62 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             team.RadioFrequency, _file.Operation.TrackingIntervalSeconds, _file.Operation.AllyShareMode, CommsFor(team), _file.Operation.Id);
     }
 
+    private EnrollResponse EnrollOrganizer(OrganizerViewModel organizer, EnrollRequest request)
+    {
+        var device = new EnrolledDevice
+        {
+            TeamId = organizer.Model.Id,
+            IsOrganizer = true,
+            Token = EnrollmentCodes.NewToken(),
+            DeviceName = request.DeviceName.Trim().Length > 0 ? request.DeviceName.Trim() : "Téléphone",
+            EnrolledAt = DateTimeOffset.Now,
+        };
+        _file.Add(device);
+        _devices.Add(device);
+        RefreshDevices();
+        Log($"Téléphone « {device.DeviceName} » enrôlé pour l'orga {organizer.Name}.");
+        return new EnrollResponse(device.Token, organizer.Name, _file.Operation.Name, "Orga", organizer.RadioFrequency,
+            _file.Operation.TrackingIntervalSeconds, AllyShareMode.Map, OrgaComms(), _file.Operation.Id);
+    }
+
+    private Comms OrgaComms() => new("Orga", _file.Operation.OrgaRadioFrequency,
+        _teams.Items.Select(t => new TeamFrequency(t.Name, t.RadioFrequency, t.Faction?.CommandTeam == t)).ToList(),
+        _file.Operation.OrgaRadioFrequency, _file.Operation.EmergencyPhone);
+
+    /// <summary>Téléphone d'orga : il voit toutes les équipes et tous les points, sur la carte.</summary>
+    private TrackResponse? AuthorizeOrganizer(EnrolledDevice device)
+    {
+        var organizer = Organizers?.Items.FirstOrDefault(o => o.Model.Id == device.TeamId);
+        if (organizer is null)
+            return null;
+        device.LastSeenAt = DateTimeOffset.Now;
+        RefreshDevices();
+        var format = _file.Operation.CoordinateFormat;
+        var teams = _tracking.LatestPositions()
+            .Select(p => new AllyPosition(p.Team.Name, p.Point.Latitude, p.Point.Longitude, Core.Geo.Coordinates.Format(p.Point, format), p.Time,
+                p.Team.RadioFrequency, p.Team.ResolvedSymbol, p.Team.Echelon, p.Team.Faction?.Color ?? "#607D8B"))
+            .ToList();
+        var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
+        var map = layer is null ? null : new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East);
+        var points = _tracking.Terrain.Zones.Where(z => z.IsComplete).Select(PoiFor).ToList();
+        return new TrackResponse(organizer.Name, _file.Operation.TrackingIntervalSeconds, map is null ? AllyShareMode.Coordinates : AllyShareMode.Map,
+            teams, null, map, OrgaComms(), format, _tracking.Dispatch?.PhoneMessagesForOrga() ?? [], points);
+    }
+
+    private PoiInfo PoiFor(ZoneViewModel z)
+    {
+        var center = z.IsArea ? Core.Geo.GeoMath.Centroid(z.Points) : z.Points[0];
+        return new PoiInfo(z.Name, PoiCategories.Label(z.Model.Category), PoiCategories.Symbol(z.Model.Category),
+            Core.Geo.Coordinates.Format(center, _file.Operation.CoordinateFormat), center.Latitude, center.Longitude, z.Description, z.Color,
+            z.IsArea ? z.Points.Select(p => new LatLon(p.Latitude, p.Longitude)).ToList() : [],
+            z.ResolvedSymbol, z.Model.Echelon, z.SymbolColor);
+    }
+
     private TrackResponse? AuthorizeDevice(string token)
     {
         var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
+        if (device is { IsOrganizer: true })
+            return AuthorizeOrganizer(device);
         var team = device is null ? null : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId);
         if (device is null || team is null)
             return null;
@@ -289,14 +406,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
             : null;
         var points = _tracking.Terrain.Zones
             .Where(z => z.IsComplete && z.Model.IsVisibleTo(team.Model))
-            .Select(z =>
-            {
-                var center = z.IsArea ? Core.Geo.GeoMath.Centroid(z.Points) : z.Points[0];
-                return new PoiInfo(z.Name, PoiCategories.Label(z.Model.Category), PoiCategories.Symbol(z.Model.Category),
-                    Core.Geo.Coordinates.Format(center, format), center.Latitude, center.Longitude, z.Description, z.Color,
-                    z.IsArea ? z.Points.Select(p => new LatLon(p.Latitude, p.Longitude)).ToList() : [],
-                    z.ResolvedSymbol, z.Model.Echelon, z.SymbolColor);
-            })
+            .Select(PoiFor)
             .ToList();
         var dispatch = _tracking.Dispatch;
         return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, dispatch?.MissionBriefFor(team, format), map,
@@ -317,6 +427,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     private byte[]? MessagePhotoFor(string token, Guid id)
     {
         var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
+        if (device is { IsOrganizer: true })
+            return _tracking.Dispatch?.AllMessages.FirstOrDefault(m => m.Id == id)?.Photo;
         var team = device is null ? null : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId);
         return team is null ? null : _tracking.Dispatch?.PhotoFor(team, id);
     }
@@ -324,7 +436,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     /// <summary>Fond de carte (redimensionné pour un téléphone), uniquement si l'OP autorise le mode carte.</summary>
     private byte[]? MapImageFor(string token)
     {
-        if (_file.Operation.AllyShareMode != AllyShareMode.Map || !_devices.Any(d => d.Token == token && !d.IsRevoked))
+        var device = _devices.FirstOrDefault(d => d.Token == token && !d.IsRevoked);
+        if (device is null || (_file.Operation.AllyShareMode != AllyShareMode.Map && !device.IsOrganizer))
             return null;
         var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
         return layer is null ? null : MapSnapshot.Render(layer.Model, [], maxSide: 2048);
@@ -336,13 +449,22 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         Devices.Clear();
         foreach (var device in _devices.OrderBy(d => d.IsRevoked).ThenByDescending(d => d.LastSeenAt ?? d.EnrolledAt))
         {
-            var team = _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name ?? "équipe supprimée";
+            var team = device.IsOrganizer
+                ? $"Orga {Organizers?.Items.FirstOrDefault(o => o.Model.Id == device.TeamId)?.Name ?? "supprimé"}"
+                : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name ?? "équipe supprimée";
             var seen = device.IsRevoked ? "révoqué"
                 : device.LastSeenAt is { } at ? $"dernier envoi {at.LocalDateTime:HH:mm:ss}" : "enrôlé, aucun envoi";
             Devices.Add(new EnrolledDeviceRow(device, team, device.DeviceName, seen, device.IsRevoked));
         }
 
         SelectedDevice = Devices.FirstOrDefault(d => d.Model == selected);
+        TeamDevices.Clear();
+        foreach (var row in Devices.Where(d => !d.Model.IsOrganizer && d.Model.TeamId == EnrollmentTeam?.Model.Id))
+            TeamDevices.Add(row);
+        OrganizerDevices.Clear();
+        foreach (var row in Devices.Where(d => d.Model.IsOrganizer && d.Model.TeamId == EnrollmentOrganizer?.Model.Id))
+            OrganizerDevices.Add(row);
+        OnPropertyChanged(nameof(ServerStatus));
     }
 
     // ----- Adresse publiée et DynDNS -----
@@ -647,6 +769,12 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var team = GpsParsers.FindTeam(_teams.Items.Select(t => t.Model), fix.DeviceId) is { } model
             ? _teams.Items.First(t => t.Model == model)
             : null;
+        if (team is null && fix.Source == "Appli Android" && Organizers?.Items.FirstOrDefault(o => o.Name == fix.DeviceId) is { } organizer)
+        {
+            _tracking.RecordOrganizerPosition(organizer, fix.Point, fix.Time);
+            Log($"{(fix.Time ?? DateTimeOffset.Now).LocalDateTime:HH:mm:ss} orga {organizer.Name} (téléphone)");
+            return;
+        }
         var time = (fix.Time ?? DateTimeOffset.Now).LocalDateTime.ToString("HH:mm:ss");
         if (team is null)
         {

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -322,6 +322,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
             if (old.Tracking.Gps is { } gps)
             {
                 gps.Rebind(_file, workspace.Tracking, workspace.Teams, workspace.Vehicles);
+                workspace.AttachGps(gps);
                 workspace.Tracking.Gps = gps;
             }
         }
