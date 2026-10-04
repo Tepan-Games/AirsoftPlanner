@@ -59,6 +59,13 @@ public class OrganizerViewModel(Organizer organizer) : ViewModelBase
         get => organizer.Notes;
         set => SetProperty(organizer.Notes, value, organizer, (o, v) => o.Notes = v);
     }
+
+    /// <summary>Traceurs GPS de l'orga (Traccar Client, nœud Meshtastic...), séparés par des virgules.</summary>
+    public string GpsDeviceIds
+    {
+        get => organizer.GpsDeviceIds;
+        set => SetProperty(organizer.GpsDeviceIds, value, organizer, (o, v) => o.GpsDeviceIds = v);
+    }
 }
 
 /// <summary>Onglet Orgas : les organisateurs de l'OP, leur rôle et leurs contacts.</summary>

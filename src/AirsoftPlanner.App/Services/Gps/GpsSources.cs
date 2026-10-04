@@ -47,6 +47,9 @@ public sealed class LocalGpsServer : IAsyncDisposable
     /// <summary>Équipe et intervalle associés à un jeton d'appareil : null si le jeton est inconnu ou révoqué.</summary>
     public Func<string, TrackResponse?> Authorize { get; set; } = _ => null;
 
+    /// <summary>Message d'un téléphone vers l'orga : faux si le jeton est inconnu ou révoqué.</summary>
+    public Func<ReportRequest, bool> Report { get; set; } = _ => false;
+
     /// <summary>Photo d'un message destiné à l'équipe du jeton, sinon null.</summary>
     public Func<string, Guid, byte[]?> MessagePhoto { get; set; } = (_, _) => null;
 
@@ -130,6 +133,15 @@ public sealed class LocalGpsServer : IAsyncDisposable
             }
 
             return Results.Json(authorization);
+        });
+
+        // Message (texte, photo) du téléphone vers l'orga.
+        app.MapPost("/api/report", async (HttpContext context) =>
+        {
+            var request = await context.Request.ReadFromJsonAsync<ReportRequest>();
+            if (request is null || (request.Text.Trim().Length == 0 && request.Photo is not { Length: > 0 }))
+                return Results.BadRequest();
+            return Report(request) ? Results.Ok() : Results.Unauthorized();
         });
 
         app.MapGet("/api/message/photo", (string token, Guid id) =>

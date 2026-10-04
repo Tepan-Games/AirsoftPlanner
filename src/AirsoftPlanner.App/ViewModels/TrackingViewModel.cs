@@ -773,14 +773,14 @@ public partial class TrackingViewModel : ViewModelBase
     public OrganizersViewModel? Organizers { get; set; }
 
     /// <summary>Position du téléphone d'un orga (enregistrée comme celle d'une équipe, avec l'identifiant de l'orga).</summary>
-    public void RecordOrganizerPosition(OrganizerViewModel organizer, GeoPoint point, DateTimeOffset? at)
+    public void RecordOrganizerPosition(OrganizerViewModel organizer, GeoPoint point, DateTimeOffset? at, string? source = null)
     {
         var position = new TeamPosition
         {
             TeamId = organizer.Model.Id,
             Point = point,
             ReceivedAt = at ?? DateTimeOffset.Now,
-            Source = L.T("telephone_orga"),
+            Source = source ?? L.T("telephone_orga"),
         };
         _file.Add(position);
         var index = _positions.FindLastIndex(p => p.ReceivedAt <= position.ReceivedAt);

@@ -39,15 +39,15 @@ public class LocalizationTests
     }
 
     [Fact]
-    public void Unknown_language_falls_back_to_french()
+    public void Unknown_language_falls_back_to_english()
     {
         try
         {
             L.SetLanguage("xx");
-            Assert.Equal("fr", L.Code);
-            Assert.Equal("Équipes", L.T("equipes"));
-            L.SetLanguage("en");
+            Assert.Equal("en", L.Code);
             Assert.Equal("Teams", L.T("equipes"));
+            L.SetLanguage("fr");
+            Assert.Equal("Équipes", L.T("equipes"));
             Assert.Equal("cle_inconnue", L.T("cle_inconnue"));
         }
         finally
@@ -55,6 +55,15 @@ public class LocalizationTests
             L.SetLanguage("fr");
         }
     }
+
+    [Theory]
+    [InlineData("de-AT", "de")]
+    [InlineData("it-CH", "it")]
+    [InlineData("pt-BR", "en")]
+    [InlineData("ja-JP", "en")]
+    [InlineData("fr-CA", "fr")]
+    public void System_language_is_used_when_available_otherwise_english(string culture, string expected) =>
+        Assert.Equal(expected, L.SystemLanguage(System.Globalization.CultureInfo.GetCultureInfo(culture)));
 }
 
 /// <summary>Tests qui changent la langue du programme : jamais en parallèle des autres.</summary>

@@ -121,6 +121,35 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
+                <DockPanel Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Content="✓" Classes="icon" Command="{Binding MarkReportsReadCommand}"
+                            IsVisible="{Binding HasUnreadReports}" ToolTip.Tip="{l:T marquer_comme_lus}" AutomationProperties.Name="{l:T marquer_comme_lus}" />
+                    <TextBlock Text="{l:T messages_recus_des_telephones}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                </DockPanel>
+                <TextBlock Text="{l:T aucun_message_recu}" IsVisible="{Binding !Reports.Count}" FontSize="12" Opacity="0.6" />
+                <ItemsControl ItemsSource="{Binding Reports}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ReportRowViewModel">
+                            <Grid ColumnDefinitions="Auto,*" Margin="0,3">
+                                <Button Grid.Column="0" IsVisible="{Binding HasPhoto}" Padding="0" Margin="0,0,8,0" Background="Transparent"
+                                        Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).ShowReportPhotoCommand}" CommandParameter="{Binding}"
+                                        ToolTip.Tip="{l:T agrandir_la_photo}">
+                                    <Image Source="{Binding Thumbnail}" Width="80" />
+                                </Button>
+                                <StackPanel Grid.Column="1">
+                                    <TextBlock TextWrapping="Wrap">
+                                        <Run Text="{Binding Time}" FontWeight="SemiBold" />
+                                        <Run Text="{Binding Author}" FontWeight="SemiBold" Foreground="#1565C0" />
+                                        <Run Text="{Binding Recipient}" Foreground="Gray" />
+                                        <Run Text="{Binding Text}" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Position}" IsVisible="{Binding HasPosition}" FontSize="11" Opacity="0.7" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <TextBlock Text="{l:T missions_diffusees_aux_telephones}" FontWeight="SemiBold" Margin="0,8,0,0" />
                 <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
                            Text="{l:T le_telephone_affiche_seulement_la_mission_diffus}" />

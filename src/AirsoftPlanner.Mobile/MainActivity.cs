@@ -43,6 +43,17 @@ public class MainActivity : Activity
     private TextView? _status;
     private Button? _toggle;
     private TextView? _level;
+    private TextView? _phase;
+    private EditText? _reportText;
+    private ImageView? _reportPreview;
+    private Button? _reportRemovePhoto;
+    private byte[]? _reportPhoto;
+    // Fenêtre « Nouveau message » (QG ou orga), ouverte par le bouton ✉ en haut de l'écran.
+    private bool _composing;
+    private MessageSender _composeRecipient = MessageSender.Hq;
+    private RadioButton? _toHq;
+    private const int CameraRequest = 41;
+    private const int GalleryRequest = 42;
     private readonly List<View> _gameParts = [];
     private View? _radioPart;
     private TextView? _mission;
@@ -110,18 +121,100 @@ public class MainActivity : Activity
 
     // ----- Écrans -----
 
+    /// <summary>Titre de l'application, en tête de tous les écrans.</summary>
+    public const string AppTitle = "AIRSOFT PLANNER · FIELD LINK";
+
     private void Show()
     {
         _root.RemoveAllViews();
         _target = _root;
         _messagesSignature = "";
         _toggle = null;
+        _status = null;
+        var title = new TextView(this) { Text = AppTitle, TextSize = 11, LetterSpacing = 0.15f, Gravity = GravityFlags.Center };
+        title.SetTypeface(null, TypefaceStyle.Bold);
+        title.Alpha = 0.6f;
+        _root.AddView(title, Spaced(0));
         AddHeader();
-        if (Prefs.IsEnrolled)
+        if (Prefs.IsEnrolled && _composing)
+            BuildCompose();
+        else if (Prefs.IsEnrolled)
             BuildDashboard();
         else
             BuildEnrollment(Prefs.ServerUrl, "");
         ApplyNightMode();
+    }
+
+    /// <summary>Retour du téléphone : la fenêtre de message se ferme (le brouillon est abandonné).</summary>
+    public override void OnBackPressed()
+    {
+        if (_composing)
+        {
+            _composing = false;
+            Show();
+            return;
+        }
+        base.OnBackPressed();
+    }
+
+    // ----- Fenêtre « Nouveau message » -----
+
+    private void OpenCompose()
+    {
+        // Destinataire proposé : celui de l'onglet affiché.
+        _composeRecipient = _orgaSelected ? MessageSender.Orga : MessageSender.Hq;
+        _composing = true;
+        _reportPhoto = null;
+        Show();
+    }
+
+    private void BuildCompose()
+    {
+        AddTitle(L.T("nouveau_message"));
+        Text($"{Prefs.Team} · {Prefs.Operation}", 13, secondary: true);
+
+        Label(L.T("destinataire"));
+        var recipients = new RadioGroup(this) { Orientation = Orientation.Horizontal };
+        _toHq = new RadioButton(this) { Text = L.T("destinataire_qg"), Id = View.GenerateViewId() };
+        var toOrga = new RadioButton(this) { Text = L.T("destinataire_orga"), Id = View.GenerateViewId() };
+        recipients.AddView(_toHq);
+        recipients.AddView(toOrga);
+        recipients.Check(_composeRecipient == MessageSender.Hq ? _toHq.Id : toOrga.Id);
+        recipients.CheckedChange += (_, e) => _composeRecipient = e.CheckedId == _toHq.Id ? MessageSender.Hq : MessageSender.Orga;
+        _target.AddView(recipients, Spaced(4));
+
+        _reportText = Input("", L.T("votre_message"), Android.Text.InputTypes.ClassText | Android.Text.InputTypes.TextFlagMultiLine
+            | Android.Text.InputTypes.TextFlagCapSentences);
+        _reportText.SetMinLines(3);
+        var photoRow = new LinearLayout(this) { Orientation = Orientation.Horizontal };
+        if (OperatingSystem.IsAndroidVersionAtLeast(29))
+        {
+            var camera = new Button(this) { Text = L.T("bouton_prendre_une_photo"), TextSize = 13 };
+            camera.Click += (_, _) => TakePhoto();
+            photoRow.AddView(camera, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        }
+        var gallery = new Button(this) { Text = L.T("bouton_choisir_une_photo"), TextSize = 13 };
+        gallery.Click += (_, _) => StartActivityForResult(new Intent(Intent.ActionGetContent).SetType("image/*"), GalleryRequest);
+        photoRow.AddView(gallery, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        _target.AddView(photoRow, Spaced(4));
+        _reportPreview = new ImageView(this) { Visibility = ViewStates.Gone, ContentDescription = L.T("photo_jointe") };
+        _reportPreview.SetAdjustViewBounds(true);
+        _reportPreview.SetMaxHeight(Dp(220));
+        _target.AddView(_reportPreview, Spaced(4));
+        _reportRemovePhoto = new Button(this) { Text = L.T("retirer_la_photo"), TextSize = 12, Visibility = ViewStates.Gone };
+        _reportRemovePhoto.Click += (_, _) => SetReportPhoto(null);
+        _target.AddView(_reportRemovePhoto, Spaced(2));
+        SetReportPhoto(_reportPhoto);
+
+        var send = PrimaryButton(L.T("envoyer"));
+        send.Click += async (_, _) => await SendReportAsync();
+        var cancel = new Button(this) { Text = L.T("annuler") };
+        cancel.Click += (_, _) =>
+        {
+            _composing = false;
+            Show();
+        };
+        _target.AddView(cancel, Spaced(8));
     }
 
     // ----- Mode nuit -----
@@ -136,7 +229,8 @@ public class MainActivity : Activity
         if (Prefs.IsEnrolled)
         {
             // Envoi de la position : icône ▶ / ⏸ (le libellé complet sert à l'accessibilité).
-            _toggle = new Button(this) { TextSize = 20 };
+            _toggle = new Button(this) { TextSize = 20, Text = Prefs.IsTracking ? "⏸" : "▶" };
+            _toggle.ContentDescription = Prefs.IsTracking ? L.T("arreter_l_envoi_de_la_position") : L.T("demarrer_l_envoi_de_la_position");
             _toggle.Click += (_, _) =>
             {
                 if (Prefs.IsTracking)
@@ -146,6 +240,9 @@ public class MainActivity : Activity
                 _refresh.PostDelayed(RefreshDashboard, 500);
             };
             header.AddView(_toggle, new LinearLayout.LayoutParams(Dp(64), ViewGroup.LayoutParams.WrapContent));
+            var write = new Button(this) { Text = "✉", TextSize = 20, ContentDescription = L.T("ecrire_un_message") };
+            write.Click += (_, _) => OpenCompose();
+            header.AddView(write, new LinearLayout.LayoutParams(Dp(64), ViewGroup.LayoutParams.WrapContent));
         }
 
         header.AddView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
@@ -249,6 +346,12 @@ public class MainActivity : Activity
 
         _status = Text("", 13, secondary: true);
 
+        // Phase de la partie annoncée par l'orga (début, pause, fin) : visible quel que soit l'onglet.
+        _phase = new TextView(this) { TextSize = 15, Gravity = GravityFlags.Center };
+        _phase.SetPadding(Dp(8), Dp(8), Dp(8), Dp(8));
+        _phase.SetTypeface(null, TypefaceStyle.Bold);
+        _root.AddView(_phase, Spaced(8));
+
         var tabs = new LinearLayout(this) { Orientation = Orientation.Horizontal };
         _qgTab = new Button(this);
         _orgaTab = new Button(this);
@@ -314,6 +417,8 @@ public class MainActivity : Activity
             if (!string.IsNullOrWhiteSpace(phone))
                 StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
         };
+
+
         Section(L.T("messages_de_l_orga"));
         _orgaMessages = List();
 
@@ -331,6 +436,121 @@ public class MainActivity : Activity
         SelectTab(_orgaSelected);
         if (!Prefs.IsTracking)
             StartTracking();
+    }
+
+    /// <summary>Bandeau de la phase de la partie : discret pendant le jeu, très visible en pause et à la fin.</summary>
+    private void RefreshPhase(TrackResponse? response)
+    {
+        if (response is null)
+        {
+            _phase!.Visibility = ViewStates.Gone;
+            return;
+        }
+        var phase = response.Phase;
+        var since = response.PhaseSince is { } at ? L.F("depuis_x", at.LocalDateTime.ToString("HH:mm")) : "";
+        _phase!.Visibility = ViewStates.Visible;
+        _phase.Text = phase switch
+        {
+            AirsoftPlanner.Core.Domain.GamePhase.Paused => $"⏸ {AirsoftPlanner.Core.Domain.GamePhases.Label(phase).ToUpper(L.Culture)}{since}\n{L.T("annonce_jeu_en_pause")}",
+            AirsoftPlanner.Core.Domain.GamePhase.Ended => $"⏹ {AirsoftPlanner.Core.Domain.GamePhases.Label(phase).ToUpper(L.Culture)}{since}\n{L.T("annonce_fin_de_partie")}",
+            _ => $"{AirsoftPlanner.Core.Domain.GamePhases.Symbol(phase)} {AirsoftPlanner.Core.Domain.GamePhases.Label(phase)}{since}",
+        };
+        _phase.TextSize = phase is AirsoftPlanner.Core.Domain.GamePhase.Paused or AirsoftPlanner.Core.Domain.GamePhase.Ended ? 18 : 13;
+        var (background, text) = phase switch
+        {
+            AirsoftPlanner.Core.Domain.GamePhase.Paused => (Color.Rgb(239, 108, 0), Color.White),
+            AirsoftPlanner.Core.Domain.GamePhase.Ended => (Color.Rgb(198, 40, 40), Color.White),
+            AirsoftPlanner.Core.Domain.GamePhase.Running => (Color.Rgb(46, 125, 50), Color.White),
+            _ => (Color.Rgb(120, 120, 120), Color.White),
+        };
+        if (Prefs.NightMode)
+            (background, text) = (Color.Rgb(40, 0, 0), phase is AirsoftPlanner.Core.Domain.GamePhase.Paused or AirsoftPlanner.Core.Domain.GamePhase.Ended
+                ? Color.Rgb(255, 82, 82) : NightText);
+        _phase.SetBackgroundColor(background);
+        _phase.SetTextColor(text);
+    }
+
+    // ----- Message vers l'orga -----
+
+    private void TakePhoto()
+    {
+        if (!OperatingSystem.IsAndroidVersionAtLeast(29))
+            return;
+        // La photo est enregistrée dans la galerie (Images/AirsoftPlanner), puis réduite pour l'envoi.
+        var values = new ContentValues();
+        values.Put(Android.Provider.MediaStore.IMediaColumns.DisplayName, $"AirsoftPlanner_{DateTime.Now:yyyyMMdd_HHmmss}.jpg");
+        values.Put(Android.Provider.MediaStore.IMediaColumns.MimeType, "image/jpeg");
+        values.Put(Android.Provider.MediaStore.IMediaColumns.RelativePath, "Pictures/AirsoftPlanner");
+        var uri = ContentResolver!.Insert(Android.Provider.MediaStore.Images.Media.ExternalContentUri!, values);
+        if (uri is null)
+            return;
+        Prefs.CameraUri = uri.ToString()!;
+        var intent = new Intent(Android.Provider.MediaStore.ActionImageCapture);
+        intent.PutExtra(Android.Provider.MediaStore.ExtraOutput, uri);
+        intent.AddFlags(ActivityFlags.GrantWriteUriPermission);
+        try
+        {
+            StartActivityForResult(intent, CameraRequest);
+        }
+        catch (ActivityNotFoundException)
+        {
+            Toast.MakeText(this, L.T("aucun_appareil_photo"), ToastLength.Short)!.Show();
+        }
+    }
+
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    {
+        base.OnActivityResult(requestCode, resultCode, data);
+        var uri = requestCode switch
+        {
+            CameraRequest when Prefs.CameraUri.Length > 0 => Android.Net.Uri.Parse(Prefs.CameraUri),
+            GalleryRequest => data?.Data,
+            _ => null,
+        };
+        if (requestCode == CameraRequest)
+            Prefs.CameraUri = "";
+        if (resultCode != Result.Ok || uri is null)
+            return;
+        try
+        {
+            SetReportPhoto(Outbox.Shrink(this, uri));
+        }
+        catch (Exception ex) when (ex is IOException or Java.Lang.SecurityException)
+        {
+            Toast.MakeText(this, L.T("photo_illisible"), ToastLength.Short)!.Show();
+        }
+    }
+
+    private void SetReportPhoto(byte[]? photo)
+    {
+        _reportPhoto = photo;
+        if (_reportPreview is null)
+            return;
+        _reportPreview.Visibility = photo is null ? ViewStates.Gone : ViewStates.Visible;
+        _reportRemovePhoto!.Visibility = _reportPreview.Visibility;
+        _reportPreview.SetImageBitmap(photo is null ? null : BitmapFactory.DecodeByteArray(photo, 0, photo.Length));
+    }
+
+    private async Task SendReportAsync()
+    {
+        var text = _reportText?.Text?.Trim() ?? "";
+        if (text.Length == 0 && _reportPhoto is null)
+        {
+            Toast.MakeText(this, L.T("ecrivez_un_message_ou_joignez_une_photo"), ToastLength.Short)!.Show();
+            return;
+        }
+        var recipient = _composeRecipient;
+        Outbox.Add(text, _reportPhoto, recipient);
+        _reportPhoto = null;
+        _composing = false;
+        // Retour sur l'onglet du destinataire, où le message apparaît.
+        _orgaSelected = recipient == MessageSender.Orga;
+        Show();
+        var sent = await Outbox.SendPendingAsync();
+        Toast.MakeText(this, sent ? L.T(recipient == MessageSender.Hq ? "message_envoye_au_qg" : "message_envoye_a_l_orga") : L.T("message_en_attente_du_reseau"),
+            ToastLength.Short)!.Show();
+        _messagesSignature = "";
+        RefreshDashboard();
     }
 
     /// <summary>Partie de l'onglet QG, masquable selon le niveau de difficulté.</summary>
@@ -400,6 +620,7 @@ public class MainActivity : Activity
         var response = Prefs.LastResponse;
         var format = response?.CoordinateFormat ?? CoordinateFormat.Utm;
         RefreshLevel(response);
+        RefreshPhase(response);
         _status.Text = (Prefs.IsTracking ? L.T("suivi_actif") : L.T("suivi_arrete")) +
                        L.F("envoi_toutes_les_x_s_x", Prefs.IntervalSeconds, Prefs.Status);
         _toggle!.Text = Prefs.IsTracking ? "⏸" : "▶";
@@ -460,7 +681,8 @@ public class MainActivity : Activity
     private void RenderMessages(IReadOnlyList<PhoneMessage> archive, IReadOnlyList<MessageGroup> groups)
     {
         var photosReady = archive.Count(m => m.HasPhoto && File.Exists(TrackingService.PhotoFile(this, m.Id)));
-        var signature = $"{_showHistory}|{archive.Count}|{archive.LastOrDefault()?.Id}|{photosReady}";
+        var outbox = Outbox.All;
+        var signature = $"{_showHistory}|{archive.Count}|{archive.LastOrDefault()?.Id}|{photosReady}|{outbox.Count}|{outbox.Count(r => r.Delivered)}";
         if (signature == _messagesSignature)
             return;
         _messagesSignature = signature;
@@ -468,6 +690,13 @@ public class MainActivity : Activity
         _messages!.RemoveAllViews();
         if (groups.Count == 0)
             AddLine(_messages, L.T("aucun_message_du_qg"), 15);
+        var toHq = outbox.Where(r => r.Recipient == MessageSender.Hq).OrderByDescending(r => r.SentAt).ToList();
+        if (toHq.Count > 0)
+        {
+            AddLine(_messages, L.T("vos_messages_au_qg"), 14, bold: true);
+            foreach (var report in _showHistory ? toHq : toHq.Take(3))
+                AddSentReport(_messages, report);
+        }
         foreach (var group in _showHistory ? groups : groups.Take(1))
         {
             AddLine(_messages, group.Mission.Length > 0 ? L.F("mission_x_2", group.Mission) : L.T("hors_mission"), 14, bold: true);
@@ -475,17 +704,43 @@ public class MainActivity : Activity
                 AddMessage(_messages, message, $"{message.SentAt.LocalDateTime:HH:mm} · {message.Audience}");
         }
 
-        var orga = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
+        var orga = archive.Where(x => x.Sender == MessageSender.Orga).ToList();
+        var toOrga = outbox.Where(r => r.Recipient == MessageSender.Orga).ToList();
         _orgaMessages!.RemoveAllViews();
-        if (orga.Count == 0)
+        if (orga.Count == 0 && toOrga.Count == 0)
             AddLine(_orgaMessages, L.T("aucun_message_de_l_orga"), 15);
-        foreach (var message in orga)
-            AddMessage(_orgaMessages, message, $"{message.SentAt.LocalDateTime.ToString("ddd HH:mm", French)} · {message.Audience}");
+        // Reçus et envoyés mélangés par date, le plus récent en premier.
+        var items = orga.Select(m => (At: m.SentAt, Received: m, Sent: (OutgoingReport?)null))
+            .Concat(toOrga.Select(r => (At: r.SentAt, Received: (PhoneMessage?)null, Sent: (OutgoingReport?)r)))
+            .OrderByDescending(i => i.At);
+        foreach (var item in items)
+        {
+            if (item.Received is { } message)
+                AddMessage(_orgaMessages, message, $"{message.SentAt.LocalDateTime.ToString("ddd HH:mm", French)} · {message.Audience}");
+            else if (item.Sent is { } report)
+                AddSentReport(_orgaMessages, report);
+        }
 
         if (Prefs.NightMode)
         {
             Paint(_messages);
             Paint(_orgaMessages);
+        }
+    }
+
+    private void AddSentReport(LinearLayout list, OutgoingReport report)
+    {
+        var state = report.Delivered ? L.T("message_recu") : L.T("en_attente_du_reseau");
+        var header = $"{report.SentAt.LocalDateTime.ToString("ddd HH:mm", French)} · "
+                     + $"{L.T(report.Recipient == MessageSender.Hq ? "vous_vers_qg" : "vous_vers_orga")} · {state}";
+        AddLine(list, report.Text.Length > 0 ? $"{header}\n{report.Text}" : header, 15);
+        if (report.HasPhoto && File.Exists(Outbox.PhotoFile(report.Id)) && BitmapFactory.DecodeFile(Outbox.PhotoFile(report.Id)) is { } bitmap)
+        {
+            var image = new ImageView(this) { ContentDescription = L.T("photo_jointe") };
+            image.SetAdjustViewBounds(true);
+            image.SetMaxHeight(Dp(160));
+            image.SetImageBitmap(bitmap);
+            list.AddView(image, Spaced(4));
         }
     }
 

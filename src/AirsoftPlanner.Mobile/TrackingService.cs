@@ -20,6 +20,8 @@ public class TrackingService : Service, ILocationListener
     public const string ActionStop = "com.tepangames.airsoftplanner.STOP";
     private const string ChannelId = "suivi";
     private const string NewsChannelId = "orga";
+    // Canal distinct (son d'alarme, vibration longue) : début, pause, reprise et fin de partie.
+    private const string GameChannelId = "partie";
     private const int NotificationId = 1;
     private const int MaxPending = 500;
 
@@ -143,6 +145,8 @@ public class TrackingService : Service, ILocationListener
 
             var previous = Prefs.LastResponse;
             Prefs.LastResponse = response;
+            // Messages à l'orga restés en attente (Wi-Fi perdu) : le PC est de nouveau joignable.
+            await Outbox.SendPendingAsync();
             Prefs.MessageArchive = MessageHistory.Merge(Prefs.MessageArchive, response.Messages ?? []);
             await DownloadPhotosAsync();
             NotifyNews(previous, response);
@@ -249,6 +253,8 @@ public class TrackingService : Service, ILocationListener
 
         if (previous is null)
             return;
+        if (previous.Phase != response.Phase)
+            GameAlert(response.Phase, previous.Phase);
         if (Describe(previous.Comms) != Describe(response.Comms))
             Notify(L.T("plan_radio_mis_a_jour"), response.Comms?.EmergencyPhone is { Length: > 0 } phone && phone != previous.Comms?.EmergencyPhone
                 ? L.F("nouveau_numero_d_urgence_de_l_orga_x", phone)
@@ -264,6 +270,25 @@ public class TrackingService : Service, ILocationListener
     private static string Describe(Comms? comms) => comms is null
         ? ""
         : $"{comms.FactionFrequency}|{comms.OrgaFrequency}|{comms.EmergencyPhone}|{string.Join(";", comms.Teams.Select(t => $"{t.Team}={t.Frequency}"))}";
+
+    /// <summary>Alerte de partie (début, pause, reprise, fin) : son d'alarme et vibration longue, distincts des messages.</summary>
+    private void GameAlert(AirsoftPlanner.Core.Domain.GamePhase phase, AirsoftPlanner.Core.Domain.GamePhase previous)
+    {
+        var open = PendingIntent.GetActivity(this, 0, new Intent(this, typeof(MainActivity)), PendingIntentFlags.Immutable);
+        var title = AirsoftPlanner.Core.Domain.GamePhases.AlertTitle(phase, previous);
+        var text = AirsoftPlanner.Core.Domain.GamePhases.Announcement(phase, previous);
+        var builder = OperatingSystem.IsAndroidVersionAtLeast(26) ? new Notification.Builder(this, GameChannelId) : new Notification.Builder(this);
+        var notification = builder
+            .SetContentTitle($"{AirsoftPlanner.Core.Domain.GamePhases.Symbol(phase)} {title}")!
+            .SetContentText(text)!
+            .SetStyle(new Notification.BigTextStyle().BigText(text))!
+            .SetSmallIcon(Resource.Drawable.ic_notification)!
+            .SetCategory(Notification.CategoryAlarm)!
+            .SetAutoCancel(true)!
+            .SetContentIntent(open)!
+            .Build()!;
+        ((NotificationManager?)GetSystemService(NotificationService))?.Notify(5, notification);
+    }
 
     private void Notify(string title, string text, int id)
     {
@@ -300,9 +325,20 @@ public class TrackingService : Service, ILocationListener
             Description = L.T("messages_de_l_orga_missions_diffusees_plan_radio"),
         };
         news.EnableVibration(true);
+        var game = new NotificationChannel(GameChannelId, L.T("annonces_de_partie"), NotificationImportance.High)
+        {
+            Description = L.T("debut_pause_reprise_et_fin_de_partie_alerte_dist"),
+        };
+        game.EnableVibration(true);
+        game.SetVibrationPattern([0, 900, 250, 900, 250, 900]);
+        game.SetSound(Android.Media.RingtoneManager.GetDefaultUri(Android.Media.RingtoneType.Alarm),
+            new Android.Media.AudioAttributes.Builder()!.SetUsage(Android.Media.AudioUsageKind.Alarm)!
+                .SetContentType(Android.Media.AudioContentType.Sonification)!.Build());
+        game.LockscreenVisibility = NotificationVisibility.Public;
         var manager = (NotificationManager?)GetSystemService(NotificationService);
         manager?.CreateNotificationChannel(channel);
         manager?.CreateNotificationChannel(news);
+        manager?.CreateNotificationChannel(game);
     }
 
     private Notification BuildNotification(string text)

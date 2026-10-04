@@ -83,13 +83,22 @@ public record TrackRequest(string Token, IReadOnlyList<TrackPoint> Positions);
 
 /// <summary>
 /// Réponse à un envoi : intervalle à respecter (réglable depuis le PC pendant l'OP), mission en cours ou à venir,
-/// et positions des alliés, selon le niveau de difficulté de la faction.
+/// positions des alliés selon le niveau de difficulté de la faction et phase de la partie (début, pause, fin).
 /// </summary>
 public record TrackResponse(string Team, int IntervalSeconds, AllyShareMode ShareMode = AllyShareMode.Coordinates,
     IReadOnlyList<AllyPosition>? Allies = null, MissionBrief? Mission = null, MapInfo? Map = null, Comms? Comms = null,
     AirsoftPlanner.Core.Geo.CoordinateFormat CoordinateFormat = AirsoftPlanner.Core.Geo.CoordinateFormat.Utm,
     IReadOnlyList<PhoneMessage>? Messages = null, IReadOnlyList<PoiInfo>? Points = null,
-    AirsoftPlanner.Core.Domain.HqDifficulty Difficulty = AirsoftPlanner.Core.Domain.HqDifficulty.Easy);
+    AirsoftPlanner.Core.Domain.HqDifficulty Difficulty = AirsoftPlanner.Core.Domain.HqDifficulty.Easy,
+    AirsoftPlanner.Core.Domain.GamePhase Phase = AirsoftPlanner.Core.Domain.GamePhase.NotStarted, DateTimeOffset? PhaseSince = null);
+
+/// <summary>
+/// Message du téléphone vers le QG (en jeu) ou l'orga : <c>POST /api/report</c>. <paramref name="Id"/> est choisi par le
+/// téléphone (un message renvoyé après une coupure n'est enregistré qu'une fois).
+/// </summary>
+/// <param name="Photo">Photo JPEG (réduite par le téléphone), ou null.</param>
+public record ReportRequest(string Token, Guid Id, string Text, byte[]? Photo, DateTimeOffset SentAt, double? Latitude, double? Longitude,
+    AirsoftPlanner.Core.Domain.MessageSender Recipient = AirsoftPlanner.Core.Domain.MessageSender.Orga);
 
 /// <summary>Contenu du QR code d'enrôlement : <c>airsoftplanner://enroll?server=...&amp;code=...</c>.</summary>
 public static class EnrollmentLink

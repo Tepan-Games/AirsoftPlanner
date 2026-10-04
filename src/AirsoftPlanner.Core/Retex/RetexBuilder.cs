@@ -34,6 +34,9 @@ public record TeamRetex(
     IReadOnlyList<OrgaMessage> Messages,
     IReadOnlyList<RetexEvent> Events)
 {
+    /// <summary>Messages envoyés à l'orga depuis le téléphone de l'équipe.</summary>
+    public IReadOnlyList<PhoneReport> Reports { get; init; } = [];
+
     public int MissionsPlanned => Missions.Count;
 
     public int MissionsPublished => Missions.Count(m => m.PublishedAt is not null);
@@ -65,8 +68,12 @@ public static class RetexBuilder
         Func<int, DateTimeOffset> missionTime,
         Func<Guid, string> itemName,
         Func<ItemEventKind, string> itemEventLabel,
-        Func<OutReason, string> outReasonLabel)
+        Func<OutReason, string> outReasonLabel,
+        IReadOnlyList<PhoneReport>? reports = null,
+        IReadOnlyList<GamePhaseEvent>? phases = null)
     {
+        reports ??= [];
+        phases ??= [];
         string TeamName(Guid? id) => teams.FirstOrDefault(t => t.Id == id)?.Name ?? "";
         var sheets = new List<TeamRetex>();
         foreach (var team in teams)
@@ -94,6 +101,8 @@ public static class RetexBuilder
             events.AddRange(own.Select(m => new RetexEvent(m.SentAt, team.Name, Category(m), m.Text)));
             events.AddRange(itemEvents.Where(e => e.TeamId == team.Id).Select(e =>
                 new RetexEvent(e.At, team.Name, L.T("objet"), $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}{(e.Notes.Length > 0 ? $" ({e.Notes})" : "")}")));
+            var sent = reports.Where(r => !r.FromOrganizer && r.AuthorId == team.Id).OrderBy(r => r.SentAt).ToList();
+            events.AddRange(sent.Select(r => new RetexEvent(r.SentAt, team.Name, ReportCategory(r), r.Text.Length > 0 ? r.Text : "📷")));
             events.AddRange(playerEvents.Where(e => e.TeamId == team.Id).Select(e =>
                 new RetexEvent(e.At, team.Name, L.T("effectif"), e.IsOut
                     ? L.F("x_joueur_s_hors_jeu_x_x", e.Players, outReasonLabel(e.Reason), (e.Notes.Length > 0 ? $" ({e.Notes})" : ""))
@@ -103,6 +112,7 @@ public static class RetexBuilder
                 playerEvents.Where(e => e.TeamId == team.Id && e.IsOut).Sum(e => e.Players), own, events.OrderBy(e => e.At).ToList())
             {
                 Trail = trail.Select(p => p.Point).ToList(),
+                Reports = sent,
             });
         }
 
@@ -115,11 +125,22 @@ public static class RetexBuilder
             _ => L.T("toutes_les_equipes"),
         }, Category(m), m.Text)));
         timeline.AddRange(itemEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), L.T("objet"), $"{itemEventLabel(e.Kind)} : {itemName(e.ItemId)}")));
+        timeline.AddRange(reports.Select(r => new RetexEvent(r.SentAt, r.FromOrganizer ? L.F("orga_x", r.Author) : r.Author,
+            ReportCategory(r), r.Text.Length > 0 ? r.Text : "📷")));
+        var previous = GamePhase.NotStarted;
+        foreach (var phase in phases.OrderBy(p => p.At))
+        {
+            timeline.Add(new RetexEvent(phase.At, L.T("toutes_les_equipes"), L.T("partie"), GamePhases.AlertTitle(phase.Phase, previous)));
+            previous = phase.Phase;
+        }
         timeline.AddRange(playerEvents.Select(e => new RetexEvent(e.At, TeamName(e.TeamId), L.T("effectif"), e.IsOut
             ? L.F("x_joueur_s_hors_jeu_x", e.Players, outReasonLabel(e.Reason))
             : L.F("x_joueur_s_de_retour_en_jeu", e.Players))));
         return new OperationRetex(sheets, timeline.OrderBy(e => e.At).ToList());
     }
+
+    private static string ReportCategory(PhoneReport report) =>
+        report.Recipient == MessageSender.Hq ? L.T("message_au_qg") : L.T("message_a_l_orga");
 
     private static DateTimeOffset? EndOf(IReadOnlyList<OrgaMessage> messages, Guid missionId)
     {

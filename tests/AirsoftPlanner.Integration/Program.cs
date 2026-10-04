@@ -1,6 +1,7 @@
 ﻿// Tests d'interaction entre l'application Android (émulateur, pilotée par adb) et le logiciel
 // (code réel, piloté par programme comme le ferait l'orga).
 using System.Diagnostics;
+using System.Net.Http.Json;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
@@ -207,6 +208,66 @@ Tap("ORGA");
 Check("Nouveau numéro d'urgence reçu (onglet ORGA)", () => Screen().Contains("Urgence orga : 06 11 22 33 44"), 25);
 Tap("QG");
 Check("Changement du numéro d'urgence notifié", () => Notifications().Contains("Nouveau numéro d'urgence de l'orga : 06 11 22 33 44"), 10);
+
+// 7b. Messages écrits sur le téléphone (fenêtre ouverte par le bouton ✉) : à l'orga, puis au QG
+Check("Titre de l'application affiché", () => { Swipe(up: true); return Screen().Contains("FIELD LINK"); }, 5);
+Tap("✉");
+Check("Fenêtre « Nouveau message » ouverte", () => Screen().Contains("Nouveau message"), 10);
+TapInPlace("Orga");
+TypeInto(0, "Blesse leger au village");
+Capture("android-9-nouveau-message.png");
+Tap("Envoyer");
+Check("Message à l'orga reçu par le PC", () => dispatch.Reports.Any(r => r.Text == "Blesse leger au village" && r.Author == "Alpha" && r.Recipient == "→ Orga"), 20);
+Check("Message reçu signalé sur le PC (bandeau)", () => dispatch.HasUnreadReports && dispatch.UnreadSummary.Contains("Alpha"), 5);
+Check("Téléphone : message à l'orga affiché comme reçu (onglet ORGA)", () => Screen().Contains("Vous → Orga") && Screen().Contains("✓ reçu"), 20);
+Tap("QG");
+Tap("✉");
+Check("Destinataire proposé : le QG (onglet affiché)", () => Screen().Contains("Nouveau message"), 10);
+TypeInto(0, "Objectif atteint");
+Tap("Envoyer");
+Check("Message au QG reçu par le PC", () => dispatch.Reports.Any(r => r.Text == "Objectif atteint" && r.Recipient == "→ QG"), 20);
+Check("Téléphone : message au QG dans l'onglet QG", () => ScrollUntil(n => n.Text.Contains("Vous → QG")), 20);
+
+// 7c. Photo envoyée par le téléphone (même requête que l'application) : enregistrée avec sa position
+var devicesField = typeof(GpsViewModel).GetField("_devices", BindingFlags.NonPublic | BindingFlags.Instance)!;
+var alphaToken = ((List<EnrolledDevice>)devicesField.GetValue(gps)!).Last(d => !d.IsRevoked && d.TeamId == alpha.Model.Id).Token;
+using var http = new HttpClient();
+byte[] jpeg;
+using (var bitmap = new SkiaSharp.SKBitmap(64, 48))
+{
+    bitmap.Erase(SkiaSharp.SKColors.OliveDrab);
+    using var image = SkiaSharp.SKImage.FromBitmap(bitmap);
+    jpeg = image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 80).ToArray();
+}
+var photoReport = new ReportRequest(alphaToken, Guid.NewGuid(), "Dépôt adverse", jpeg, DateTimeOffset.Now, 43.6492, 5.9871);
+Pump(http.PostAsJsonAsync($"http://127.0.0.1:{Port}/api/report", photoReport));
+Pump(http.PostAsJsonAsync($"http://127.0.0.1:{Port}/api/report", photoReport)); // renvoi après coupure : une seule fois
+Check("Photo du téléphone reçue avec sa position (une seule fois)",
+    () => dispatch.Reports.Count(r => r.Text == "Dépôt adverse") == 1 && dispatch.Reports.First(r => r.Text == "Dépôt adverse") is { HasPhoto: true, HasPosition: true }, 10);
+dispatch.MarkReportsReadCommand.Execute(null);
+Check("Messages marqués lus", () => !dispatch.HasUnreadReports, 2);
+
+// 7d. Traceur GPS d'un orga (Traccar Client, OsmAnd...) rattaché par ses identifiants GPS
+ws.Organizers.AddCommand.Execute(null);
+var paul = ws.Organizers.Selected!;
+paul.Name = "Paul";
+paul.GpsDeviceIds = "traceur-paul";
+Pump(http.GetAsync(FormattableString.Invariant($"http://127.0.0.1:{Port}/?id=traceur-paul&lat=43.6500&lon=5.9900&timestamp={DateTimeOffset.UtcNow.ToUnixTimeSeconds()}")));
+Check("Traceur GPS de l'orga : position enregistrée pour l'orga", () => tracking.RecordedPositions.Any(p => p.TeamId == paul.Model.Id), 10);
+
+// 7e. Début, pause, reprise et fin de partie : bandeau et alerte particulière sur le téléphone
+dispatch.SetPhase(GamePhase.Running);
+Check("Début de partie : bandeau du téléphone", () => { Swipe(up: true); return Screen().Contains("Partie en cours"); }, 25);
+Check("Début de partie : alerte sur le téléphone", () => Notifications().Contains("DÉBUT DE PARTIE"), 10);
+dispatch.SetPhase(GamePhase.Paused);
+Check("Pause : bandeau « JEU EN PAUSE » sur le téléphone", () => { Swipe(up: true); return Screen().Contains("JEU EN PAUSE"); }, 25);
+Check("Pause : alerte sur le téléphone", () => Notifications().Contains("JEU EN PAUSE"), 10);
+Capture("android-10-pause.png");
+dispatch.SetPhase(GamePhase.Running);
+Check("Reprise : alerte sur le téléphone", () => Notifications().Contains("REPRISE DU JEU"), 25);
+dispatch.SetPhase(GamePhase.Ended);
+Check("Fin de partie : bandeau et alerte", () => { Swipe(up: true); return Screen().Contains("FIN DE PARTIE") && Notifications().Contains("FIN DE PARTIE"); }, 25);
+dispatch.SetPhase(GamePhase.Running);
 
 // 8. Coupure du serveur (Wi-Fi perdu) puis retour
 Pump(gps.ToggleServerCommand.ExecuteAsync(null));

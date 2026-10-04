@@ -92,6 +92,31 @@
                 <TextBlock Text="{l:T airsoft_planner}" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
                 <TextBlock Text="{l:T creez_une_nouvelle_op_ou_ouvrez_un_fichier_d_op}"
                            Opacity="0.7" HorizontalAlignment="Center" />
+                <!-- Fichiers ouverts récemment -->
+                <StackPanel IsVisible="{Binding HasRecentFiles}" Spacing="4" Margin="0,24,0,0" MinWidth="460" MaxWidth="640">
+                    <TextBlock Text="{l:T fichiers_recents}" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding RecentFiles}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RecentFile">
+                                <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                    <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="10,6"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenRecentCommand}" CommandParameter="{Binding}"
+                                            ToolTip.Tip="{Binding Path}" IsEnabled="{Binding Exists}">
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock FontSize="11" Opacity="0.7" TextTrimming="CharacterEllipsis">
+                                                <Run Text="{Binding Modified}" /><Run Text="  ·  " /><Run Text="{Binding Folder}" />
+                                            </TextBlock>
+                                        </StackPanel>
+                                    </Button>
+                                    <Button Grid.Column="1" Content="✕" Classes="icon" Margin="4,0,0,0" VerticalAlignment="Center"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).ForgetRecentCommand}" CommandParameter="{Binding}"
+                                            ToolTip.Tip="{l:T retirer_de_la_liste}" AutomationProperties.Name="{l:T retirer_de_la_liste}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
             </StackPanel>
 
             <Panel IsVisible="{Binding HasOperation}">

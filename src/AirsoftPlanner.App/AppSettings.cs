@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -45,6 +46,9 @@ public class AppSettings
 
     /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
     public static bool StartGpsServerOnce { get; set; }
+
+    /// <summary>Fichiers d'OP ouverts récemment (le plus récent en premier), proposés sur l'écran d'accueil.</summary>
+    public List<string> RecentFiles { get; set; } = [];
 
     /// <summary>Langue du logiciel (« fr », « en »...) ; vide : langue de Windows.</summary>
     public string Language { get; set; } = "";

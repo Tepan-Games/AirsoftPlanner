@@ -74,7 +74,8 @@ public static class DocumentationBuilder
             "Une OP = un fichier .aop (base SQLite) qu'on peut copier, envoyer à un autre orga, fusionner, ou partager dans un dossier OneDrive pour travailler à plusieurs en même temps.",
             "L'application Android du chef d'équipe envoie sa position au PC de l'OP et reçoit la mission diffusée, les messages du QG et de l'orga, le plan radio, les points d'intérêt et la carte.",
             "Coordonnées en UTM (avec gestion des terrains à cheval sur deux fuseaux), degrés décimaux ou degrés-minutes-secondes, au choix.",
-            "Disponible en français, anglais, allemand, espagnol et italien : menu « ⋯ » › Langue dans le logiciel (il redémarre dans la langue choisie) ; l'application suit la langue du téléphone ou se règle avec le bouton 🌐.");
+            "Disponible en français, anglais, allemand, espagnol et italien : le logiciel et l'application prennent la langue de Windows ou du téléphone, et l'anglais si elle n'est pas proposée ; menu « ⋯ » › Langue dans le logiciel (il redémarre dans la langue choisie), bouton 🌐 dans l'application.",
+            "Au lancement, l'écran d'accueil propose les fichiers d'OP ouverts récemment (✕ pour en retirer un de la liste).");
         Shot(col, img, "accueil", "Écran d'accueil : créer une OP ou ouvrir un fichier .aop.");
     }
 
@@ -109,7 +110,7 @@ public static class DocumentationBuilder
         P(col, "Nom de l'OP, organisateur (équipe ou association), terrain, dates et heures de début et de fin (OP sur plusieurs jours possible), fréquence radio et numéro d'urgence de l'orga, vitesses estimées à pied et en véhicule (calcul des retards), format des coordonnées des documents imprimés.");
         Shot(col, img, "general", "Onglet Général.");
         H2(col, "Orgas");
-        P(col, "Liste des organisateurs avec leur rôle (directeur de jeu, arbitre, secouriste…), téléphone, radio et e-mail. Chaque orga peut enrôler son téléphone : sa position apparaît alors sur la carte du suivi (point blanc « ★ nom (rôle) »).");
+        P(col, "Liste des organisateurs avec leur rôle (directeur de jeu, arbitre, secouriste…), téléphone, radio et e-mail. Chaque orga peut enrôler son téléphone : sa position apparaît alors sur la carte du suivi (point blanc « ★ nom (rôle) »). Un orga qui porte un traceur (Traccar Client, OsmAnd, nœud Meshtastic) le déclare dans la colonne « ID GPS » ; un appareil inconnu peut aussi lui être associé depuis les paramètres du suivi.");
         Shot(col, img, "orgas", "Onglet Orgas : contacts de l'organisation et téléphone de chaque orga.");
         H2(col, "Factions");
         P(col, "Effectif minimum et maximum, brassard (couleur), tenue, fréquence radio de la faction et équipe de commandement. La couleur de la faction sert aux symboles militaires sur toutes les cartes.");
@@ -144,12 +145,18 @@ public static class DocumentationBuilder
         H1(col, "4. Pendant l'OP : le suivi");
         P(col, "Scénario › Suivi de l'OP rassemble la frise (ligne de l'heure), la carte avec la dernière position de chaque équipe (symbole aux couleurs de la faction, contour selon l'état : à l'heure, juste, en retard compte tenu de la distance à parcourir) et l'état des équipes. Le plan radio reste affiché en permanence ; il se replie sur quelques lignes avec une vingtaine d'équipes. Les fréquences saisies en double sont signalées (bandeau orange) et peuvent être déclarées normales.");
         Shot(col, img, "suivi", "Suivi de l'OP : plan radio, bandeau « À diffuser », frise et carte.");
+        H2(col, "Début, pause, reprise et fin de partie");
+        P(col, "La barre du suivi affiche la phase de la partie et les boutons « Début de partie », « Pause », « Reprise » et « Fin de partie » (le début et la fin demandent confirmation). Chaque changement est envoyé aux téléphones à leur échange suivant : une alerte particulière (son d'alarme, longue vibration, distincte des messages) et un bandeau en haut de l'application (orange « JEU EN PAUSE », rouge « FIN DE PARTIE »). Les changements figurent dans la chronologie du RETEX.");
+        H2(col, "Fiche de la mission pendant l'OP");
+        P(col, "Un clic sur une mission de la frise du suivi ouvre une fiche compacte : horaire, zone, matériel, condition, alertes, briefing replié, puis pour chaque équipe l'état de la mission et le seul bouton utile (📤 diffuser, ⏹ terminer). Une fois la mission commencée, son résultat se choisit en un clic (✔ Réussie, ◐ Partielle, ✘ Échouée ; un second clic l'annule), avec un commentaire facultatif.");
         H2(col, "Diffusion des missions : toujours sur décision de l'orga");
         P(col, "Rien n'est envoyé automatiquement aux téléphones. Le bandeau « À diffuser » pose la question au bon moment : mission qui approche, mission dont l'heure de fin est dépassée (« terminer et diffuser la suivante ? »), mission urgente créée pendant la partie. Réponses : Diffuser, Terminer seulement, Plus tard (la question revient 10 minutes après). Le tableau « Missions diffusées » permet aussi de diffuser n'importe quelle mission ou de terminer celle en cours.");
         P(col, "En terminant une mission, l'orga saisit son résultat directement dans la question (ou dans le tableau). La suite proposée en tient compte : après un échec, c'est le plan de repli qui est proposé, pas l'exploitation. « Annoncer » (coché par défaut) ajoute le résultat au message QG de fin de mission (« Mission « Pont » terminée : réussie ») ; décoché, seul l'orga le connaît. L'onglet « Score » affiche en direct les points de chaque faction et de chaque équipe.");
         H2(col, "Messages QG et Orga, photos");
         P(col, "Onglet « Messages et missions » : message à toutes les équipes, à une faction ou à une équipe, envoyé par le QG (ordre en jeu, pour le roleplay : affiché dans l'onglet QG de l'application) ou par l'orga (organisation, sécurité : onglet ORGA). Une photo peut être jointe ; elle est réduite automatiquement. L'historique indique quelles équipes ont reçu chaque message.");
         Shot(col, img, "suivi-messages", "Messages et missions : envoi, historique avec réception, diffusion des missions.");
+        H2(col, "Messages reçus des téléphones");
+        P(col, "Les chefs d'équipe (et les orgas) écrivent depuis l'application au QG (en jeu) ou à l'orga, avec une photo s'il le faut ; leur dernière position est jointe. Un bandeau violet signale les messages non lus en haut du suivi ; ils sont listés dans « Messages et missions » (clic sur la vignette pour agrandir la photo) et repris dans le RETEX de l'équipe. Un message envoyé hors réseau part au retour du Wi-Fi, une seule fois.");
         H2(col, "Effectif, objets d'objectif, mission urgente");
         Bullets(col,
             "Joueurs : sorties de jeu et retours, avec la raison (blessure réelle, pause, matériel, sanction…) ; l'effectif de chaque équipe est suivi tout au long de l'OP.",
@@ -213,7 +220,8 @@ public static class DocumentationBuilder
     private static void Android(PdfFlow col, IReadOnlyDictionary<string, byte[]> phone)
     {
         H1(col, "6. L'application Android");
-        P(col, "L'application est pensée pour le chef d'équipe : une icône ▶ / ⏸ en haut à gauche démarre ou arrête l'envoi de la position, le bouton de droite passe en mode nuit. Deux onglets séparent le jeu (QG) de l'organisation (ORGA), pour préserver le roleplay.");
+        P(col, "L'application (« Airsoft Planner · Field Link ») est pensée pour le chef d'équipe : une icône ▶ / ⏸ en haut à gauche démarre ou arrête l'envoi de la position, ✉ ouvre la fenêtre « Nouveau message » (destinataire QG ou orga, texte, photo prise ou choisie dans la galerie), le bouton de droite passe en mode nuit. Deux onglets séparent le jeu (QG) de l'organisation (ORGA), pour préserver le roleplay ; un bandeau rappelle la phase de la partie (en cours, pause, fin).");
+        PhoneRow(col, phone, [("android-9-nouveau-message", "Nouveau message au QG ou à l'orga, avec photo."), ("android-10-pause", "Alerte de partie : « JEU EN PAUSE ».")]);
         PhoneRow(col, phone, [("android-1-enrolement", "Enrôlement : QR code ou adresse + code d'équipe."), ("android-2-mission", "Onglet QG : mission diffusée par l'orga, messages du QG groupés par mission.")]);
         PhoneRow(col, phone, [("android-3-photo", "Message du QG avec photo."), ("android-5-carte", "Carte : points d'intérêt et alliés en symboles militaires, position de l'équipe.")]);
         PhoneRow(col, phone, [("android-4-orga", "Onglet ORGA : fréquence et numéro d'urgence de l'orga, messages de l'orga."), ("android-6-notifications", "Notifications : nouvelle mission, messages, plan radio, points d'intérêt.")]);

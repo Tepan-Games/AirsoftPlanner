@@ -73,6 +73,15 @@ internal static class ServerApi
         }
     }
 
+    /// <summary>Message (texte, photo) vers l'orga.</summary>
+    public static async Task ReportAsync(string server, ReportRequest request)
+    {
+        using var response = await Http.PostAsJsonAsync($"{Normalize(server)}/api/report", request, ProtocolJson.Default.ReportRequest);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+            throw new RevokedException();
+        response.EnsureSuccessStatusCode();
+    }
+
     public static async Task<byte[]?> MessagePhotoAsync(string server, string token, Guid id)
     {
         using var response = await Http.GetAsync($"{Normalize(server)}/api/message/photo?token={Uri.EscapeDataString(token)}&id={id}");

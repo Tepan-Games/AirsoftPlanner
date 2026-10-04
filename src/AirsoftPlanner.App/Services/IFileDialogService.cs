@@ -38,4 +38,7 @@ public interface IFileDialogService
     Task<SaveChoice> AskSaveChangesAsync(string fileName);
 
     Task ShowErrorAsync(string message);
+
+    /// <summary>Question oui / non (vrai : confirmé). Sans interface (tests) : confirmé.</summary>
+    Task<bool> ConfirmAsync(string title, string message, string confirm) => Task.FromResult(true);
 }

@@ -1,6 +1,7 @@
 ﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:AirsoftPlanner.App.Localization"
+             xmlns:domain="using:AirsoftPlanner.Core.Domain"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
              xmlns:controls="using:AirsoftPlanner.App.Controls"
@@ -13,38 +14,58 @@
     <Border DockPanel.Dock="Right" Width="300" BorderThickness="1,0,0,0" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
             IsVisible="{Binding Missions.HasSelection}">
         <ScrollViewer DataContext="{Binding Missions.Selected}" x:DataType="vm:MissionViewModel">
-            <StackPanel Margin="10,30,10,10" Spacing="6">
+            <StackPanel Margin="10,30,10,10" Spacing="4">
+                <!-- En-tête : résultat, nom, horaire et zone -->
                 <DockPanel>
                     <Button DockPanel.Dock="Right" Content="✕" Classes="icon" ToolTip.Tip="{l:T fermer}" AutomationProperties.Name="{l:T fermer}"
                             Command="{Binding $parent[UserControl].((vm:TrackingViewModel)DataContext).Missions.ClearSelectionCommand}" />
-                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontSize="16" FontWeight="SemiBold">
+                    <TextBlock VerticalAlignment="Center" TextWrapping="Wrap" FontSize="15" FontWeight="SemiBold">
                         <Run Text="{Binding ResultSymbol}" /><Run Text=" " /><Run Text="{Binding Name}" />
                     </TextBlock>
                 </DockPanel>
-                <TextBlock Text="{Binding TimeRangeText}" FontSize="12" Opacity="0.75" />
-                <TextBlock Text="{Binding IssuesText}" IsVisible="{Binding HasIssues}" Foreground="#C62828" TextWrapping="Wrap" FontSize="12" />
-                <TextBlock TextWrapping="Wrap" FontSize="12" IsVisible="{Binding ZoneName.Length}">
-                    <Run Text="📍 " /><Run Text="{Binding ZoneName}" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8">
+                    <Run Text="{Binding TimeRangeText}" /><Run Text="{Binding ZoneName, StringFormat='  ·  📍 {0}'}" />
                 </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="12">
-                    <Run Text="👥 " /><Run Text="{Binding TeamsText}" />
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="12" IsVisible="{Binding ItemsSummary.Length}">
-                    <Run Text="📦 " /><Run Text="{Binding ItemsSummary}" />
-                </TextBlock>
-                <TextBlock TextWrapping="Wrap" FontSize="12" IsVisible="{Binding HasCondition}">
-                    <Run Text="↳ " /><Run Text="{Binding ConditionText}" />
-                </TextBlock>
-                <TextBlock Text="{l:T briefing}" Classes="label" IsVisible="{Binding Description.Length}" />
-                <TextBlock Text="{Binding Description}" TextWrapping="Wrap" IsVisible="{Binding Description.Length}" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8" IsVisible="{Binding ItemsSummary.Length}" Text="{Binding ItemsSummary, StringFormat='📦 {0}'}" />
+                <TextBlock TextWrapping="Wrap" FontSize="12" Opacity="0.8" IsVisible="{Binding HasCondition}" Text="{Binding ConditionText, StringFormat='↳ {0}'}" />
+                <TextBlock Text="{Binding IssuesText}" IsVisible="{Binding HasIssues}" Foreground="#C62828" TextWrapping="Wrap" FontSize="11" />
+                <Expander Header="{l:T briefing}" IsVisible="{Binding Description.Length}" Padding="6" Margin="0,2,0,0">
+                    <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" />
+                </Expander>
 
-                <TextBlock Text="{l:T resultat_et_points}" Classes="h2" Margin="0,8,0,0" />
-                <ComboBox ItemsSource="{x:Static vm:MissionResultOption.All}" SelectedItem="{Binding Result}" HorizontalAlignment="Stretch" />
-                <TextBox Text="{Binding ResultNotes}" PlaceholderText="{l:T commentaire_sur_le_resultat}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="50" />
-                <TextBlock FontSize="12" Opacity="0.75" TextWrapping="Wrap">
-                    <Run Text="✔" /><Run Text="{Binding SuccessPoints}" /><Run Text="   ◐" /><Run Text="{Binding PartialPoints}" />
-                    <Run Text="   ✘" /><Run Text="{Binding FailurePoints}" /><Run Text=" pts" />
-                </TextBlock>
+                <!-- Équipes : diffuser ou terminer selon l'état de la mission pour chacune -->
+                <ItemsControl ItemsSource="{Binding $parent[UserControl].((vm:TrackingViewModel)DataContext).Dispatch.SelectedMissionTeams, FallbackValue={x:Null}}" Margin="0,4,0,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MissionTeamRow">
+                            <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                                <TextBlock VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                                    <Run Text="{Binding Team.Name}" FontWeight="SemiBold" /><Run Text="  " /><Run Text="{Binding State}" Foreground="Gray" FontSize="11" />
+                                </TextBlock>
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                    <Button Content="📤" Classes="icon" IsVisible="{Binding CanPublish}" ToolTip.Tip="{l:T diffuser}" AutomationProperties.Name="{l:T diffuser}"
+                                            Command="{Binding $parent[UserControl].((vm:TrackingViewModel)DataContext).Dispatch.PublishMissionToCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}" />
+                                    <Button Content="⏹" Classes="icon" IsVisible="{Binding CanEnd}" ToolTip.Tip="{l:T terminer}" AutomationProperties.Name="{l:T terminer}"
+                                            Command="{Binding $parent[UserControl].((vm:TrackingViewModel)DataContext).Dispatch.EndMissionForCommand, FallbackValue={x:Null}}" CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- Résultat : proposé une fois la mission commencée ; commentaire après le choix -->
+                <StackPanel Spacing="4" Margin="0,6,0,0" IsVisible="{Binding $parent[UserControl].((vm:TrackingViewModel)DataContext).Dispatch.ShowSelectedResult, FallbackValue=False}">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding EarnedPointsText}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <TextBlock Text="{l:T resultat}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <WrapPanel ItemSpacing="4" LineSpacing="4">
+                        <Button Content="{l:T bouton_reussie}" Classes.accent="{Binding IsSuccess}" Command="{Binding SetResultCommand}" CommandParameter="{x:Static domain:MissionResult.Success}" />
+                        <Button Content="{l:T bouton_partielle}" Classes.accent="{Binding IsPartial}" Command="{Binding SetResultCommand}" CommandParameter="{x:Static domain:MissionResult.Partial}" />
+                        <Button Content="{l:T bouton_echouee}" Classes.accent="{Binding IsFailure}" Command="{Binding SetResultCommand}" CommandParameter="{x:Static domain:MissionResult.Failure}" />
+                    </WrapPanel>
+                    <TextBox Text="{Binding ResultNotes}" IsVisible="{Binding IsEvaluated}" PlaceholderText="{l:T commentaire_sur_le_resultat}"
+                             TextWrapping="Wrap" FontSize="12" />
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
     </Border>

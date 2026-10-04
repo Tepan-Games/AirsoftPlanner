@@ -47,6 +47,41 @@ public partial class MessageRowViewModel(OrgaMessage message, string audience) :
     private string _delivery = "";
 }
 
+/// <summary>Équipe de la mission sélectionnée sur la frise du suivi : état de la mission pour elle, actions possibles.</summary>
+public record MissionTeamRow(TeamViewModel Team, string State, bool CanPublish, bool CanEnd);
+
+/// <summary>Message reçu d'un téléphone (équipe ou orga).</summary>
+public partial class ReportRowViewModel(PhoneReport report, string position) : ViewModelBase
+{
+    public PhoneReport Model => report;
+
+    public string Time => report.SentAt.LocalDateTime.ToString("HH:mm");
+
+    public string Author => report.FromOrganizer ? L.F("orga_x", report.Author) : report.Author;
+
+    /// <summary>« → QG » ou « → Orga ».</summary>
+    public string Recipient => report.Recipient == MessageSender.Hq ? "→ QG" : "→ Orga";
+
+    public string Text => report.Text;
+
+    public string Position => position;
+
+    public bool HasPosition => position.Length > 0;
+
+    public bool HasPhoto => report.Photo is { Length: > 0 };
+
+    private Avalonia.Media.Imaging.Bitmap? _thumbnail;
+
+    public Avalonia.Media.Imaging.Bitmap? Thumbnail =>
+        _thumbnail ??= HasPhoto ? Avalonia.Media.Imaging.Bitmap.DecodeToWidth(new System.IO.MemoryStream(report.Photo!), 160) : null;
+
+    public bool IsRead
+    {
+        get => report.IsRead;
+        set => SetProperty(report.IsRead, value, report, (r, v) => r.IsRead = v);
+    }
+}
+
 /// <summary>Question posée à l'orga : terminer une mission, en diffuser une nouvelle.</summary>
 /// <param name="current">Mission en cours (son résultat se saisit dans la question), ou null.</param>
 /// <param name="row">Ligne de l'équipe : choix d'annoncer ou non le résultat.</param>
@@ -111,6 +146,7 @@ public partial class DispatchViewModel : ViewModelBase
     private readonly TerrainViewModel _terrain;
     private readonly GameItemsViewModel _items;
     private readonly List<OrgaMessage> _messages;
+    private readonly List<GamePhaseEvent> _phaseEvents;
 
     // Équipes ayant reçu chaque message (téléphone passé depuis l'envoi) : suivi de la session en cours.
     private readonly Dictionary<Guid, HashSet<Guid>> _delivered = [];
@@ -136,12 +172,143 @@ public partial class DispatchViewModel : ViewModelBase
         _terrain = terrain;
         _items = items;
         _messages = file.LoadMessages().ToList();
+        _phaseEvents = file.LoadGamePhaseEvents().ToList();
+        foreach (var report in file.LoadPhoneReports().OrderByDescending(r => r.ReceivedAt))
+            Reports.Add(new ReportRowViewModel(report, PositionOf(report)));
+        RefreshUnread();
         missions.ResultsChanged += () => Refresh(_now);
+        missions.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MissionsViewModel.Selected))
+                RefreshSelectedMission();
+        };
         teams.Items.CollectionChanged += (_, _) => RefreshTargets();
         factions.Items.CollectionChanged += (_, _) => RefreshTargets();
         RefreshTargets();
         RefreshMessages();
     }
+
+    // ----- Phase de la partie : début, pause, reprise, fin (alerte particulière sur les téléphones) -----
+
+    public GamePhase Phase => _file.Operation.GamePhase;
+
+    /// <summary>« ⏸ Jeu en pause depuis 14:32 ».</summary>
+    public string PhaseText => GamePhases.Symbol(Phase) + " " + GamePhases.Label(Phase)
+        + (_file.Operation.GamePhaseSince is { } since ? L.F("depuis_x", since.LocalDateTime.ToString("HH:mm")) : "");
+
+    public bool CanStartGame => Phase is GamePhase.NotStarted or GamePhase.Ended;
+
+    public bool CanPauseGame => Phase == GamePhase.Running;
+
+    public bool CanResumeGame => Phase == GamePhase.Paused;
+
+    public bool CanEndGame => Phase is GamePhase.Running or GamePhase.Paused;
+
+    /// <summary>Historique des phases (RETEX).</summary>
+    public IReadOnlyList<GamePhaseEvent> PhaseEvents => _phaseEvents;
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task StartGameAsync()
+    {
+        if (CanStartGame && await Confirm(L.T("debut_de_partie"), L.T("annoncer_le_debut_de_partie_a_tous_les_telephone"), L.T("debut_de_partie")))
+            SetPhase(GamePhase.Running);
+    }
+
+    [RelayCommand]
+    private void PauseGame()
+    {
+        if (CanPauseGame)
+            SetPhase(GamePhase.Paused);
+    }
+
+    [RelayCommand]
+    private void ResumeGame()
+    {
+        if (CanResumeGame)
+            SetPhase(GamePhase.Running);
+    }
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task EndGameAsync()
+    {
+        if (CanEndGame && await Confirm(L.T("fin_de_partie"), L.T("annoncer_la_fin_de_partie_a_tous_les_telephones"), L.T("fin_de_partie")))
+            SetPhase(GamePhase.Ended);
+    }
+
+    private System.Threading.Tasks.Task<bool> Confirm(string title, string message, string confirm) =>
+        _dialogs?.ConfirmAsync(title, message, confirm) ?? System.Threading.Tasks.Task.FromResult(true);
+
+    /// <summary>Change la phase : enregistrée, envoyée aux téléphones à leur prochain échange (alerte particulière).</summary>
+    public void SetPhase(GamePhase phase)
+    {
+        var now = DateTimeOffset.Now;
+        _file.Operation.GamePhase = phase;
+        _file.Operation.GamePhaseSince = now;
+        var change = new GamePhaseEvent { Phase = phase, At = now };
+        _file.Add(change);
+        _phaseEvents.Add(change);
+        OnPropertyChanged(nameof(Phase));
+        OnPropertyChanged(nameof(PhaseText));
+        OnPropertyChanged(nameof(CanStartGame));
+        OnPropertyChanged(nameof(CanPauseGame));
+        OnPropertyChanged(nameof(CanResumeGame));
+        OnPropertyChanged(nameof(CanEndGame));
+    }
+
+    // ----- Messages reçus des téléphones -----
+
+    /// <summary>Messages des téléphones vers l'orga, le plus récent en premier.</summary>
+    public ObservableCollection<ReportRowViewModel> Reports { get; } = [];
+
+    /// <summary>Messages reçus pas encore lus : bandeau du suivi.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUnreadReports))]
+    private int _unreadReports;
+
+    public bool HasUnreadReports => UnreadReports > 0;
+
+    [ObservableProperty]
+    private string _unreadSummary = "";
+
+    public bool HasReport(Guid clientId) => Reports.Any(r => r.Model.ClientId == clientId);
+
+    public void AddReport(PhoneReport report)
+    {
+        _file.Add(report);
+        Reports.Insert(0, new ReportRowViewModel(report, PositionOf(report)));
+        RefreshUnread();
+    }
+
+    /// <summary>Tous les messages reçus (RETEX).</summary>
+    public IReadOnlyList<PhoneReport> AllReports => Reports.Select(r => r.Model).ToList();
+
+    [RelayCommand]
+    private void MarkReportsRead()
+    {
+        foreach (var row in Reports.Where(r => !r.IsRead))
+            row.IsRead = true;
+        RefreshUnread();
+    }
+
+    [RelayCommand]
+    private async System.Threading.Tasks.Task ShowReportPhotoAsync(ReportRowViewModel? row)
+    {
+        if (row?.Model.Photo is { Length: > 0 } photo && _dialogs is not null)
+            await _dialogs.ShowImageAsync(row.Author, $"{row.Time} — {row.Text}", photo);
+    }
+
+    private void RefreshUnread()
+    {
+        var unread = Reports.Where(r => !r.IsRead).ToList();
+        UnreadReports = unread.Count;
+        UnreadSummary = unread.Count == 0 ? ""
+            : L.F("x_message_s_recu_s_des_telephones_x", unread.Count,
+                $"{unread[0].Author} {unread[0].Recipient} ({unread[0].Time}) : {(unread[0].Text.Length > 0 ? unread[0].Text : "📷")}");
+    }
+
+    private string PositionOf(PhoneReport report) => report.Latitude is { } lat && report.Longitude is { } lon
+        ? Coordinates.Format(new GeoPoint(lat, lon), _operation.CoordinateFormat)
+        : "";
 
     // ----- Messages -----
 
@@ -335,6 +502,52 @@ public partial class DispatchViewModel : ViewModelBase
             ? MissionResults.Label(mission.Result).ToLower(L.Culture)
             : null;
 
+    // ----- Mission sélectionnée sur la frise du suivi -----
+
+    /// <summary>Équipes de la mission sélectionnée, avec ce qu'on peut faire pour chacune (diffuser, terminer).</summary>
+    public ObservableCollection<MissionTeamRow> SelectedMissionTeams { get; } = [];
+
+    /// <summary>Le résultat se saisit une fois la mission commencée (ou diffusée).</summary>
+    [ObservableProperty]
+    private bool _showSelectedResult;
+
+    [RelayCommand]
+    private void PublishMissionTo(MissionTeamRow? row)
+    {
+        if (row is { CanPublish: true } && _missions.Selected is { } mission)
+            Publish(row.Team, mission.Model, CurrentOf(row.Team));
+    }
+
+    [RelayCommand]
+    private void EndMissionFor(MissionTeamRow? row)
+    {
+        if (row is { CanEnd: true })
+            End(row.Team);
+    }
+
+    private void RefreshSelectedMission()
+    {
+        var mission = _missions.Selected?.Model;
+        var rows = mission is null ? [] : _missions.Columns.Where(t => mission.TeamIds.Contains(t.Model.Id)).Select(team =>
+        {
+            var published = team.Model.PublishedMissionId == mission.Id;
+            var done = team.Model.CompletedMissionIds.Contains(mission.Id);
+            var state = published ? L.T("etat_diffusee")
+                : done ? L.T("etat_terminee")
+                : _now >= mission.StartMinutes ? L.F("etat_prevue_depuis_x", MissionTime.Format(mission.StartMinutes))
+                : L.F("etat_a_venir_x", MissionTime.Format(mission.StartMinutes));
+            return new MissionTeamRow(team, state, !published && mission.IsEnabled, published);
+        }).ToList();
+        if (!rows.SequenceEqual(SelectedMissionTeams))
+        {
+            SelectedMissionTeams.Clear();
+            foreach (var row in rows)
+                SelectedMissionTeams.Add(row);
+        }
+        ShowSelectedResult = mission is not null && (_now >= mission.StartMinutes || mission.Result != MissionResult.NotEvaluated
+            || rows.Any(r => r.CanEnd || r.State == L.T("etat_terminee")));
+    }
+
     // ----- Score -----
 
     /// <summary>Points des factions d'après le résultat des missions (une fois par mission et par faction).</summary>
@@ -422,6 +635,7 @@ public partial class DispatchViewModel : ViewModelBase
         HasPrompts = Prompts.Count > 0;
         RefreshTeams();
         RefreshScores();
+        RefreshSelectedMission();
     }
 
     // ----- Interne -----

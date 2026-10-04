@@ -222,6 +222,21 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
 
     public bool IsEvaluated => mission.Result != MissionResult.NotEvaluated;
 
+    public bool IsSuccess => mission.Result == MissionResult.Success;
+
+    public bool IsPartial => mission.Result == MissionResult.Partial;
+
+    public bool IsFailure => mission.Result == MissionResult.Failure;
+
+    /// <summary>« +10 pts » une fois la mission évaluée.</summary>
+    public string EarnedPointsText => IsEvaluated ? $"{MissionResults.Points(mission):+0;-0;0} pts" : "";
+
+    private CommunityToolkit.Mvvm.Input.RelayCommand<MissionResult>? _setResult;
+
+    /// <summary>Choisit le résultat (bouton du suivi) ; un second clic sur le même résultat l'annule.</summary>
+    public CommunityToolkit.Mvvm.Input.RelayCommand<MissionResult> SetResultCommand => _setResult ??= new(result =>
+        Result = MissionResultOption.Of(result == mission.Result ? MissionResult.NotEvaluated : result));
+
     public string ResultNotes
     {
         get => mission.ResultNotes;
@@ -261,6 +276,10 @@ public class MissionViewModel(Mission mission, MissionsViewModel owner) : ViewMo
         OnPropertyChanged(nameof(Result));
         OnPropertyChanged(nameof(ResultSymbol));
         OnPropertyChanged(nameof(IsEvaluated));
+        OnPropertyChanged(nameof(IsSuccess));
+        OnPropertyChanged(nameof(IsPartial));
+        OnPropertyChanged(nameof(IsFailure));
+        OnPropertyChanged(nameof(EarnedPointsText));
         owner.OnResultChanged();
     }
 

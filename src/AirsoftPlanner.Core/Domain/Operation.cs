@@ -59,4 +59,9 @@ public class Operation : Entity
 
     /// <summary>Règlement de jeu : règles propres à l'OP ou règlement ACP (PDF officiel joint automatiquement aux documents).</summary>
     public AirsoftPlanner.Core.Documents.GameRuleSet RuleSet { get; set; }
+
+    /// <summary>Phase de la partie déclarée par l'orga (début, pause, reprise, fin), annoncée aux téléphones.</summary>
+    public GamePhase GamePhase { get; set; }
+
+    public DateTimeOffset? GamePhaseSince { get; set; }
 }

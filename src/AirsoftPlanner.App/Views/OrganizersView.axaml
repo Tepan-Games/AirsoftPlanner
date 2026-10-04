@@ -60,6 +60,7 @@
                 <DataGridTextColumn Header="{l:T radio}" Binding="{Binding RadioFrequency}" Width="*" />
                 <DataGridTextColumn Header="E-mail" Binding="{Binding Email}" Width="1.4*" />
                 <DataGridTextColumn Header="{l:T code_telephone}" Binding="{Binding EnrollmentCodeText}" Width="*" IsReadOnly="True" />
+                <DataGridTextColumn Header="{l:T id_gps}" Binding="{Binding GpsDeviceIds}" Width="1.2*" />
                 <DataGridTextColumn Header="{l:T remarques}" Binding="{Binding Notes}" Width="1.4*" />
             </DataGrid.Columns>
         </DataGrid>

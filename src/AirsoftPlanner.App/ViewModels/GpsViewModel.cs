@@ -84,6 +84,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _server.Authorize = token => Dispatcher.UIThread.InvokeAsync(() => AuthorizeDevice(token)).GetAwaiter().GetResult();
         _server.MessagePhoto = (token, id) => Dispatcher.UIThread.InvokeAsync(() => MessagePhotoFor(token, id)).GetAwaiter().GetResult();
         _server.MapImage = token => Dispatcher.UIThread.InvokeAsync(() => MapImageFor(token)).GetAwaiter().GetResult();
+        _server.Report = request => Dispatcher.UIThread.InvokeAsync(() => ReceiveReport(request)).GetAwaiter().GetResult();
         _difficulty = DifficultyOption.Of(file.Operation.HqDifficulty);
         RefreshDevices();
         _upstream.FixReceived += OnFix;
@@ -109,7 +110,7 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
     public ObservableCollection<UnknownDevice> UnknownDevices { get; } = [];
 
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(AssignDeviceCommand))]
+    [NotifyCanExecuteChangedFor(nameof(AssignDeviceCommand), nameof(AssignDeviceToOrganizerCommand))]
     private UnknownDevice? _selectedUnknownDevice;
 
     // ----- Serveur local -----
@@ -378,7 +379,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var map = layer is null ? null : new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East);
         var points = _tracking.Terrain.Zones.Where(z => z.IsComplete).Select(PoiFor).ToList();
         return new TrackResponse(organizer.Name, _file.Operation.TrackingIntervalSeconds, map is null ? AllyShareMode.Coordinates : AllyShareMode.Map,
-            teams, null, map, OrgaComms(), format, _tracking.Dispatch?.PhoneMessagesForOrga() ?? [], points);
+            teams, null, map, OrgaComms(), format, _tracking.Dispatch?.PhoneMessagesForOrga() ?? [], points,
+            Phase: _file.Operation.GamePhase, PhaseSince: _file.Operation.GamePhaseSince);
     }
 
     private PoiInfo PoiFor(ZoneViewModel z)
@@ -424,7 +426,41 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         // Messages de l'orga toujours transmis (onglet ORGA) ; ordres du QG et mission seulement en Facile et Moyen.
         var messages = (dispatch?.PhoneMessagesFor(team) ?? []).Where(m => game || m.Sender == MessageSender.Orga).ToList();
         return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, game ? dispatch?.MissionBriefFor(team, format) : null,
-            map, CommsFor(team, level), format, messages, points, level);
+            map, CommsFor(team, level), format, messages, points, level, _file.Operation.GamePhase, _file.Operation.GamePhaseSince);
+    }
+
+    /// <summary>Message d'un téléphone enrôlé (équipe ou orga) : enregistré une seule fois, signalé à l'orga.</summary>
+    private bool ReceiveReport(ReportRequest request)
+    {
+        var device = _devices.FirstOrDefault(d => d.Token == request.Token && !d.IsRevoked);
+        if (device is null)
+            return false;
+        var author = device.IsOrganizer
+            ? Organizers?.Items.FirstOrDefault(o => o.Model.Id == device.TeamId)?.Name
+            : _teams.Items.FirstOrDefault(t => t.Model.Id == device.TeamId)?.Name;
+        if (author is null)
+            return false;
+        device.LastSeenAt = DateTimeOffset.Now;
+        if (_tracking.Dispatch is { } dispatch && !dispatch.HasReport(request.Id))
+        {
+            dispatch.AddReport(new PhoneReport
+            {
+                ClientId = request.Id,
+                AuthorId = device.TeamId,
+                FromOrganizer = device.IsOrganizer,
+                Recipient = request.Recipient,
+                Author = author,
+                DeviceName = device.DeviceName,
+                Text = request.Text.Trim(),
+                Photo = request.Photo is { Length: > 0 } photo ? photo : null,
+                SentAt = request.SentAt,
+                ReceivedAt = DateTimeOffset.Now,
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+            });
+            Log(L.F("message_recu_de_x", author));
+        }
+        return true;
     }
 
     private HqDifficulty DifficultyFor(TeamViewModel team) => HqDifficultyRules.For(_file.Operation, team.Faction?.Model);
@@ -749,6 +785,24 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
 
     private bool CanAssignDevice => SelectedUnknownDevice is not null && _tracking.Selected is not null;
 
+    /// <summary>Orga à qui rattacher un appareil inconnu (traceur porté par un orga).</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(AssignDeviceToOrganizerCommand))]
+    private OrganizerViewModel? _assignOrganizer;
+
+    /// <summary>Ajoute l'appareil inconnu sélectionné aux identifiants GPS de l'orga choisi.</summary>
+    [RelayCommand(CanExecute = nameof(CanAssignDeviceToOrganizer))]
+    private void AssignDeviceToOrganizer()
+    {
+        var device = SelectedUnknownDevice!;
+        var organizer = AssignOrganizer!;
+        organizer.GpsDeviceIds = string.Join(", ", GpsParsers.DeviceIds(organizer.GpsDeviceIds).Append(device.DeviceId));
+        UnknownDevices.Remove(device);
+        Log(L.F("appareil_x_associe_a_x", device.DeviceId, organizer.Name));
+    }
+
+    private bool CanAssignDeviceToOrganizer => SelectedUnknownDevice is not null && AssignOrganizer is not null;
+
     /// <summary>Après un rechargement de l'OP : les sources restent connectées, seules les cibles changent.</summary>
     public void Rebind(Data.OperationFile file, TrackingViewModel tracking, TeamsViewModel teams, VehicleTracker vehicles)
     {
@@ -793,9 +847,15 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var team = GpsParsers.FindTeam(_teams.Items.Select(t => t.Model), fix.DeviceId) is { } model
             ? _teams.Items.First(t => t.Model == model)
             : null;
-        if (team is null && fix.Source == L.T("appli_android") && Organizers?.Items.FirstOrDefault(o => o.Name == fix.DeviceId) is { } organizer)
+        // Orga : téléphone enrôlé (application) ou traceur déclaré dans ses identifiants GPS (Traccar, Meshtastic...).
+        var organizer = team is not null ? null
+            : fix.Source == L.T("appli_android") && Organizers?.Items.FirstOrDefault(o => o.Name == fix.DeviceId) is { } enrolled ? enrolled
+            : GpsParsers.FindOrganizer(Organizers?.Items.Select(o => o.Model) ?? [], fix.DeviceId) is { } organizerModel
+                ? Organizers!.Items.First(o => o.Model == organizerModel) : null;
+        if (organizer is not null)
         {
-            _tracking.RecordOrganizerPosition(organizer, fix.Point, fix.Time);
+            _tracking.RecordOrganizerPosition(organizer, fix.Point, fix.Time,
+                fix.Source == L.T("appli_android") ? L.T("telephone_orga") : $"{fix.Source} ({fix.DeviceId})");
             Log(L.F("x_orga_x_telephone_2", (fix.Time ?? DateTimeOffset.Now).LocalDateTime, organizer.Name));
             return;
         }

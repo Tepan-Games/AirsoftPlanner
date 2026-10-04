@@ -133,6 +133,22 @@ public class FileDialogService(Window owner) : IFileDialogService
         return choice;
     }
 
+    public async Task<bool> ConfirmAsync(string title, string message, string confirm)
+    {
+        var confirmed = false;
+        var yes = new Button { Content = confirm, Classes = { "accent" } };
+        var no = new Button { Content = L.T("annuler") };
+        var dialog = CreateDialog(title, message, yes, no);
+        yes.Click += (_, _) =>
+        {
+            confirmed = true;
+            dialog.Close();
+        };
+        no.Click += (_, _) => dialog.Close();
+        await dialog.ShowDialog(owner);
+        return confirmed;
+    }
+
     public async Task ShowErrorAsync(string message)
     {
         var close = new Button { Content = "OK" };

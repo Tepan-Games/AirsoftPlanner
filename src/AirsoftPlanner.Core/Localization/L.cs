@@ -37,10 +37,13 @@ public static class L
     /// <summary>Culture correspondante (dates, nombres).</summary>
     public static CultureInfo Culture { get; private set; } = CultureInfo.GetCultureInfo("fr-FR");
 
-    /// <summary>Change la langue (code inconnu : français).</summary>
+    /// <summary>Langue utilisée quand celle du système (ou celle choisie) n'est pas proposée.</summary>
+    public const string FallbackLanguage = "en";
+
+    /// <summary>Change la langue (code inconnu : anglais).</summary>
     public static void SetLanguage(string? code)
     {
-        Code = Languages.Any(l => l.Code == code) ? code! : "fr";
+        Code = Languages.Any(l => l.Code == code) ? code! : FallbackLanguage;
         _current = Table(Code);
         Culture = CultureInfo.GetCultureInfo(Code switch
         {
@@ -52,9 +55,11 @@ public static class L
         });
     }
 
-    /// <summary>Langue du système si elle est proposée, sinon français.</summary>
-    public static string SystemLanguage() =>
-        Languages.FirstOrDefault(l => l.Code == CultureInfo.CurrentUICulture.TwoLetterISOLanguageName)?.Code ?? "fr";
+    /// <summary>Langue du système (Windows, Android) si elle est proposée, sinon anglais.</summary>
+    public static string SystemLanguage() => SystemLanguage(CultureInfo.CurrentUICulture);
+
+    public static string SystemLanguage(CultureInfo culture) =>
+        Languages.FirstOrDefault(l => l.Code == culture.TwoLetterISOLanguageName)?.Code ?? FallbackLanguage;
 
     /// <summary>Texte traduit.</summary>
     public static string T(string key) =>

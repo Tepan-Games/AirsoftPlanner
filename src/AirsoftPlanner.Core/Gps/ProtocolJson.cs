@@ -12,5 +12,6 @@ namespace AirsoftPlanner.Core.Gps;
 [JsonSerializable(typeof(EnrollResponse))]
 [JsonSerializable(typeof(TrackRequest))]
 [JsonSerializable(typeof(TrackResponse))]
+[JsonSerializable(typeof(ReportRequest))]
 [JsonSerializable(typeof(List<PhoneMessage>))]
 public partial class ProtocolJson : JsonSerializerContext;

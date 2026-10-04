@@ -49,6 +49,10 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<OrgaMessage> OrgaMessages => Set<OrgaMessage>();
 
+    public DbSet<PhoneReport> PhoneReports => Set<PhoneReport>();
+
+    public DbSet<GamePhaseEvent> GamePhaseEvents => Set<GamePhaseEvent>();
+
     public DbSet<AirsoftPlanner.Core.Gps.EnrolledDevice> EnrolledDevices => Set<AirsoftPlanner.Core.Gps.EnrolledDevice>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -137,6 +141,12 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         message.Property(m => m.Target).HasConversion<string>();
         message.Property(m => m.Kind).HasConversion<string>();
         message.Property(m => m.Sender).HasConversion<string>();
+        modelBuilder.Entity<PhoneReport>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<PhoneReport>().HasIndex(r => r.ClientId);
+        modelBuilder.Entity<PhoneReport>().Property(r => r.Recipient).HasConversion<string>();
+        modelBuilder.Entity<GamePhaseEvent>().HasQueryFilter(e => !e.IsDeleted);
+        modelBuilder.Entity<GamePhaseEvent>().Property(e => e.Phase).HasConversion<string>();
+        modelBuilder.Entity<Operation>().Property(o => o.GamePhase).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

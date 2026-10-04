@@ -116,6 +116,9 @@ internal static class Prefs
 
     public static string Status { get => Get(nameof(Status)); set => Set(nameof(Status), value); }
 
+    /// <summary>Photo en cours de prise par l'appareil photo (l'écran peut être recréé entre-temps).</summary>
+    public static string CameraUri { get => Get(nameof(CameraUri)); set => Set(nameof(CameraUri), value); }
+
     public static double? LastLatitude { get => GetDouble(nameof(LastLatitude)); set => SetDouble(nameof(LastLatitude), value); }
 
     public static double? LastLongitude { get => GetDouble(nameof(LastLongitude)); set => SetDouble(nameof(LastLongitude), value); }
@@ -130,6 +133,7 @@ internal static class Prefs
         var night = NightMode;
         var updates = CheckUpdates;
         Store.Edit()!.Clear()!.Apply();
+        Outbox.Clear();
         Language = language;
         NightMode = night;
         CheckUpdates = updates;

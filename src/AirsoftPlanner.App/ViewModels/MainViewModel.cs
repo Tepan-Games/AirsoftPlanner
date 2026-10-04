@@ -350,6 +350,63 @@ public partial class MainViewModel : ViewModelBase, IDisposable
         _file = file;
         Workspace = new WorkspaceViewModel(file, dialogs);
         RefreshSharing();
+        RememberRecent(file.Path);
+    }
+
+    // ----- Fichiers récents (écran d'accueil) -----
+
+    private const int MaxRecentFiles = 10;
+
+    /// <summary>Fichiers d'OP ouverts récemment, proposés sur l'écran d'accueil.</summary>
+    public System.Collections.ObjectModel.ObservableCollection<RecentFile> RecentFiles { get; } = new(RecentFile.From(AppSettings.Current.RecentFiles));
+
+    public bool HasRecentFiles => RecentFiles.Count > 0;
+
+    [RelayCommand]
+    private async Task OpenRecentAsync(RecentFile? recent)
+    {
+        if (recent is null || !await ConfirmDiscardOrSaveAsync())
+            return;
+        if (!File.Exists(recent.Path))
+        {
+            ForgetRecent(recent);
+            await dialogs.ShowErrorAsync(L.F("fichier_introuvable_x", recent.Path));
+            return;
+        }
+        await OpenFileAsync(recent.Path);
+    }
+
+    [RelayCommand]
+    private void ForgetRecent(RecentFile? recent)
+    {
+        if (recent is null)
+            return;
+        AppSettings.Current.RecentFiles.RemoveAll(p => string.Equals(p, recent.Path, StringComparison.OrdinalIgnoreCase));
+        AppSettings.Current.Save();
+        RefreshRecent();
+    }
+
+    private void RememberRecent(string path)
+    {
+        // Tests et outils automatiques : les réglages du poste ne sont pas modifiés.
+        if (AppSettings.SuppressOpening)
+            return;
+        var full = Path.GetFullPath(path);
+        var list = AppSettings.Current.RecentFiles;
+        list.RemoveAll(p => string.Equals(p, full, StringComparison.OrdinalIgnoreCase));
+        list.Insert(0, full);
+        if (list.Count > MaxRecentFiles)
+            list.RemoveRange(MaxRecentFiles, list.Count - MaxRecentFiles);
+        AppSettings.Current.Save();
+        RefreshRecent();
+    }
+
+    private void RefreshRecent()
+    {
+        RecentFiles.Clear();
+        foreach (var recent in RecentFile.From(AppSettings.Current.RecentFiles))
+            RecentFiles.Add(recent);
+        OnPropertyChanged(nameof(HasRecentFiles));
     }
 
     /// <summary>

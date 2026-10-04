@@ -21,7 +21,7 @@ public sealed class OperationFile : IDisposable
     /// 12 = enrôlement de l'application Android.
     /// Les fichiers d'une version précédente sont mis à niveau à l'ouverture.
     /// </summary>
-    public const int CurrentFormatVersion = 23;
+    public const int CurrentFormatVersion = 24;
 
     /// <summary>Les fichiers plus anciens viennent de préversions de développement et ne sont pas repris.</summary>
     public const int MinimumFormatVersion = 2;
@@ -127,6 +127,10 @@ public sealed class OperationFile : IDisposable
     public IReadOnlyList<RuleDocument> LoadRuleDocuments() => Context.RuleDocuments.OrderBy(r => r.SortOrder).ToList();
 
     public IReadOnlyList<OrgaMessage> LoadMessages() => Context.OrgaMessages.OrderBy(m => m.SentAt).ToList();
+
+    public IReadOnlyList<PhoneReport> LoadPhoneReports() => Context.PhoneReports.AsEnumerable().OrderBy(r => r.ReceivedAt).ToList();
+
+    public IReadOnlyList<GamePhaseEvent> LoadGamePhaseEvents() => Context.GamePhaseEvents.AsEnumerable().OrderBy(e => e.At).ToList();
 
     public IReadOnlyList<Organizer> LoadOrganizers() => Context.Organizers.OrderBy(o => o.SortOrder).ToList();
 

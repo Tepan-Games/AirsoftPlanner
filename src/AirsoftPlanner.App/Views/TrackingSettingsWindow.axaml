@@ -113,6 +113,15 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
                     <Button Content="{l:T associer_a_l_equipe_selectionnee}" Command="{Binding AssignDeviceCommand}" Margin="0,0,6,4" />
+                    <ComboBox ItemsSource="{Binding Organizers.Items, FallbackValue={x:Null}}" SelectedItem="{Binding AssignOrganizer}"
+                              PlaceholderText="{l:T orga}" MinWidth="150" Margin="0,0,6,4">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:OrganizerViewModel">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Content="{l:T associer_a_l_orga}" Command="{Binding AssignDeviceToOrganizerCommand}" Margin="0,0,6,4" />
                 </WrapPanel>
 
                 <TextBlock Text="{l:T journal}" FontWeight="SemiBold" Margin="0,6,0,0" />

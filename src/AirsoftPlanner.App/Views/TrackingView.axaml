@@ -30,6 +30,14 @@
                     </StackPanel>
                     <TextBlock Text="{Binding NowText}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
+                <!-- Partie : début, pause, reprise, fin (alerte particulière sur les téléphones) -->
+                <StackPanel Orientation="Horizontal" Spacing="6" DataContext="{Binding Dispatch}" x:DataType="vm:DispatchViewModel">
+                    <TextBlock Text="{Binding PhaseText}" VerticalAlignment="Center" FontWeight="SemiBold" Margin="0,0,4,0" />
+                    <Button Content="{l:T bouton_debut_de_partie}" Command="{Binding StartGameCommand}" IsVisible="{Binding CanStartGame}" Classes="accent" />
+                    <Button Content="{l:T bouton_pause}" Command="{Binding PauseGameCommand}" IsVisible="{Binding CanPauseGame}" />
+                    <Button Content="{l:T bouton_reprise}" Command="{Binding ResumeGameCommand}" IsVisible="{Binding CanResumeGame}" Classes="accent" />
+                    <Button Content="{l:T bouton_fin_de_partie}" Command="{Binding EndGameCommand}" IsVisible="{Binding CanEndGame}" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12">
                     <TextBlock Text="{Binding Summary}" VerticalAlignment="Center" FontWeight="SemiBold" />
                     <Button Content="{Binding Gps.ServerStatus, FallbackValue='📡'}" Click="OnSettingsClick"
@@ -107,6 +115,17 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
                 </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <!-- Messages reçus des téléphones, pas encore lus -->
+        <Border DockPanel.Dock="Top" Padding="10,4" BorderThickness="0,0,0,1" BorderBrush="#6A1B9A" Background="#266A1B9A"
+                IsVisible="{Binding Dispatch.HasUnreadReports, FallbackValue=False}">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="{l:T marquer_comme_lus}" Padding="8,1"
+                        Command="{Binding Dispatch.MarkReportsReadCommand, FallbackValue={x:Null}}" />
+                <TextBlock Text="{Binding Dispatch.UnreadSummary, FallbackValue=''}" FontWeight="SemiBold" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" Margin="0,0,12,0" />
             </DockPanel>
         </Border>
 

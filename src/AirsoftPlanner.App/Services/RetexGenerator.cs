@@ -163,6 +163,21 @@ public static class RetexGenerator
                     m.Image(photo, widthCm: 8);
             }, background: message.Sender == MessageSender.Hq ? "#E3F2FD" : "#FFF3E0", padding: 6);
 
+        if (team.Reports.Count > 0)
+        {
+            col.Text(L.F("messages_envoyes_par_l_equipe_x", team.Reports.Count), new TextStyle(14, Bold: true), spaceBefore: 6);
+            foreach (var report in team.Reports)
+                col.Box(null, m =>
+                {
+                    m.Line((report.SentAt.LocalDateTime.ToString("ddd HH:mm", French), Head),
+                        ($"  {report.Author} → {(report.Recipient == MessageSender.Hq ? "QG" : "Orga")}", Muted));
+                    if (report.Text.Length > 0)
+                        m.Text(report.Text);
+                    if (report.Photo is { Length: > 0 } photo)
+                        m.Image(photo, widthCm: 8);
+                }, background: "#F3E5F5", padding: 6);
+        }
+
         var other = team.Events.Where(e => e.Category == L.T("objet") || e.Category == L.T("effectif")).ToList();
         if (other.Count > 0)
         {

@@ -69,7 +69,9 @@ public partial class RetexViewModel : ViewModelBase
             minutes => new DateTimeOffset(_operation.ToDateTime(minutes)),
             id => _items.Items.FirstOrDefault(i => i.Model.Id == id)?.Name ?? L.T("objet_supprime"),
             kind => ItemEventOption.Of(kind).Label,
-            reason => OutReasonOption.Of(reason).Label);
+            reason => OutReasonOption.Of(reason).Label,
+            dispatch?.AllReports ?? [],
+            dispatch?.PhaseEvents ?? []);
 
         var selected = SelectedTeam?.Sheet.Team;
         Teams.Clear();

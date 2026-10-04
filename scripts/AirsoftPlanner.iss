@@ -39,8 +39,9 @@ OutputBaseFilename=AirsoftPlanner-{#AppVersion}-Setup
 
 [Languages]
 ; Déclaration de confidentialité affichée avant l'installation.
-Name: "fr"; MessagesFile: "compiler:Languages\French.isl"; InfoBeforeFile: "confidentialite\fr.txt"
+; Langue de Windows si elle est proposée, sinon la première de la liste : l'anglais.
 Name: "en"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "confidentialite\en.txt"
+Name: "fr"; MessagesFile: "compiler:Languages\French.isl"; InfoBeforeFile: "confidentialite\fr.txt"
 Name: "de"; MessagesFile: "compiler:Languages\German.isl"; InfoBeforeFile: "confidentialite\de.txt"
 Name: "es"; MessagesFile: "compiler:Languages\Spanish.isl"; InfoBeforeFile: "confidentialite\es.txt"
 Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "confidentialite\it.txt"

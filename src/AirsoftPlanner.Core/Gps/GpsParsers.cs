@@ -150,8 +150,17 @@ public static class GpsParsers
                ?? candidates.FirstOrDefault(t => t.Name.Trim().Equals(id, StringComparison.CurrentCultureIgnoreCase));
     }
 
-    public static IReadOnlyList<string> DeviceIds(Team team) =>
-        team.GpsDeviceIds.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    public static IReadOnlyList<string> DeviceIds(Team team) => DeviceIds(team.GpsDeviceIds);
+
+    public static IReadOnlyList<string> DeviceIds(string ids) =>
+        ids.Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+    /// <summary>Orga dont la liste « Identifiants GPS » contient cet identifiant d'appareil.</summary>
+    public static Organizer? FindOrganizer(IEnumerable<Organizer> organizers, string deviceId)
+    {
+        var id = deviceId.Trim();
+        return organizers.FirstOrDefault(o => DeviceIds(o.GpsDeviceIds).Contains(id, StringComparer.OrdinalIgnoreCase));
+    }
 
     private static double? Number(string? text) =>
         double.TryParse(text?.Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) ? value : null;

@@ -20,4 +20,7 @@ public class Organizer : Entity
 
     /// <summary>Code d'enrôlement de l'application Android pour le téléphone de cet orga.</summary>
     public string EnrollmentCode { get; set; } = "";
+
+    /// <summary>Identifiants des traceurs GPS de l'orga (Traccar Client, nœud Meshtastic...), séparés par des virgules.</summary>
+    public string GpsDeviceIds { get; set; } = "";
 }
