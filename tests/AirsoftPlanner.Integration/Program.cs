@@ -101,7 +101,11 @@ dispatch.ComposeAsHq = false;
 dispatch.SelectedTarget = dispatch.Targets.First(t => t.Target == MessageTarget.AllTeams);
 dispatch.ComposeText = "Fin de partie à 17 h, retour au parking";
 dispatch.SendCommand.Execute(null);
-Check("Message de l'orga dans la section Orga", () => Screen().Contains("Messages de l'orga :") && Screen().Contains("Fin de partie à 17 h"), 25);
+Check("Message de l'orga signalé sur l'onglet ORGA", () => Screen().Contains("ORGA (1)"), 25);
+Check("Message de l'orga absent de l'onglet QG", () => !Screen().Contains("Fin de partie à 17 h"), 1);
+Tap("ORGA");
+Check("Onglet ORGA : message et contacts de l'orga", () => Screen().Contains("Fin de partie à 17 h") && Screen().Contains("Fréquence orga : PMR 446 canal 8"), 10);
+Tap("QG");
 Check("Message de l'orga notifié comme tel", () => Notifications().Contains("Message de l'orga"), 10);
 dispatch.ComposeAsHq = true;
 
@@ -140,7 +144,9 @@ gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
 
 // 7. Numéro d'urgence modifié
 ws.General.EmergencyPhone = "06 11 22 33 44";
-Check("Nouveau numéro d'urgence reçu", () => Screen().Contains("Urgence orga : 06 11 22 33 44"), 25);
+Tap("ORGA");
+Check("Nouveau numéro d'urgence reçu (onglet ORGA)", () => Screen().Contains("Urgence orga : 06 11 22 33 44"), 25);
+Tap("QG");
 Check("Changement du numéro d'urgence notifié", () => Notifications().Contains("Nouveau numéro d'urgence de l'orga : 06 11 22 33 44"), 10);
 
 // 8. Coupure du serveur (Wi-Fi perdu) puis retour
@@ -293,11 +299,11 @@ void Swipe(bool up) => Adb(up ? "shell input swipe 540 700 540 2000 120" : "shel
 void Tap(string text)
 {
     Swipe(up: true);
-    var node = ScreenNodes().FirstOrDefault(n => n.Text.Contains(text));
+    var node = ScreenNodes().FirstOrDefault(n => n.Text.Contains(text) || n.Desc.Contains(text));
     if (node.Text is null)
     {
         Swipe(up: false);
-        node = ScreenNodes().First(n => n.Text.Contains(text));
+        node = ScreenNodes().First(n => n.Text.Contains(text) || n.Desc.Contains(text));
     }
     Adb($"shell input tap {node.X} {node.Y}");
     Wait(1);

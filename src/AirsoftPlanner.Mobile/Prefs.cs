@@ -78,6 +78,18 @@ internal static class Prefs
         set => Set(nameof(MessageArchive), JsonSerializer.Serialize(value.ToList(), ProtocolJson.Default.ListPhoneMessage));
     }
 
+    /// <summary>Derniers passages sur les onglets QG et ORGA (messages non lus).</summary>
+    public static DateTimeOffset HqSeenAt { get => GetDate(nameof(HqSeenAt)); set => SetDate(nameof(HqSeenAt), value); }
+
+    public static DateTimeOffset OrgaSeenAt { get => GetDate(nameof(OrgaSeenAt)); set => SetDate(nameof(OrgaSeenAt), value); }
+
+    private static DateTimeOffset GetDate(string key) =>
+        DateTimeOffset.TryParse(Get(key), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out var at)
+            ? at : DateTimeOffset.MinValue;
+
+    private static void SetDate(string key, DateTimeOffset value) =>
+        Set(key, value.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+
     /// <summary>Plan radio reçu à l'enrôlement (avant le premier envoi).</summary>
     public static Comms? EnrollComms
     {

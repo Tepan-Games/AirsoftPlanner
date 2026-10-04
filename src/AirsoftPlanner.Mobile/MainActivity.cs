@@ -28,6 +28,16 @@ public class MainActivity : Activity
     private readonly Handler _refresh = new(Looper.MainLooper!);
     private LinearLayout _root = null!;
 
+    // Conteneur où les éléments sont ajoutés pendant la construction d'un écran.
+    private ViewGroup _target = null!;
+
+    // Onglets du suivi : QG (en jeu) et ORGA (organisation).
+    private LinearLayout? _qgPane;
+    private LinearLayout? _orgaPane;
+    private Button? _qgTab;
+    private Button? _orgaTab;
+    private bool _orgaSelected;
+
     // Écran de suivi
     private TextView? _status;
     private Button? _toggle;
@@ -96,7 +106,9 @@ public class MainActivity : Activity
     private void Show()
     {
         _root.RemoveAllViews();
-        AddNightToggle();
+        _target = _root;
+        _toggle = null;
+        AddHeader();
         if (Prefs.IsEnrolled)
             BuildDashboard();
         else
@@ -110,8 +122,25 @@ public class MainActivity : Activity
     private static readonly Color NightText = Color.Rgb(200, 30, 30);
     private static readonly Color NightBackground = Color.Black;
 
-    private void AddNightToggle()
+    private void AddHeader()
     {
+        var header = new LinearLayout(this) { Orientation = Orientation.Horizontal };
+        if (Prefs.IsEnrolled)
+        {
+            // Envoi de la position : icône ▶ / ⏸ (le libellé complet sert à l'accessibilité).
+            _toggle = new Button(this) { TextSize = 20 };
+            _toggle.Click += (_, _) =>
+            {
+                if (Prefs.IsTracking)
+                    TrackingService.Stop(this);
+                else
+                    StartTracking();
+                _refresh.PostDelayed(RefreshDashboard, 500);
+            };
+            header.AddView(_toggle, new LinearLayout.LayoutParams(Dp(64), ViewGroup.LayoutParams.WrapContent));
+        }
+
+        header.AddView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
         var toggle = new Button(this) { Text = Prefs.NightMode ? "☀ Mode jour" : "🌙 Mode nuit", TextSize = 12 };
         toggle.Click += (_, _) =>
         {
@@ -119,10 +148,8 @@ public class MainActivity : Activity
             // Les couleurs par défaut du thème sont rétablies en recréant l'écran.
             Recreate();
         };
-        _root.AddView(toggle, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent)
-        {
-            Gravity = GravityFlags.End,
-        });
+        header.AddView(toggle, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WrapContent, ViewGroup.LayoutParams.WrapContent));
+        _root.AddView(header, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
     }
 
     /// <summary>Texte rouge sur fond noir, carte assombrie en rouge, luminosité de l'écran au minimum.</summary>
@@ -197,15 +224,20 @@ public class MainActivity : Activity
         Text($"{Prefs.Faction}{(Prefs.Faction.Length > 0 ? " · " : "")}{Prefs.Operation}", 14, secondary: true);
 
         _status = Text("", 13, secondary: true);
-        _toggle = PrimaryButton("");
-        _toggle.Click += (_, _) =>
-        {
-            if (Prefs.IsTracking)
-                TrackingService.Stop(this);
-            else
-                StartTracking();
-            _refresh.PostDelayed(RefreshDashboard, 500);
-        };
+
+        var tabs = new LinearLayout(this) { Orientation = Orientation.Horizontal };
+        _qgTab = new Button(this);
+        _orgaTab = new Button(this);
+        _qgTab.Click += (_, _) => SelectTab(orga: false);
+        _orgaTab.Click += (_, _) => SelectTab(orga: true);
+        tabs.AddView(_qgTab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        tabs.AddView(_orgaTab, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        _root.AddView(tabs, Spaced(16));
+
+        // ----- Onglet QG : le jeu -----
+        _qgPane = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        _root.AddView(_qgPane);
+        _target = _qgPane;
 
         Section("Mission");
         _mission = Text("", 15);
@@ -219,7 +251,7 @@ public class MainActivity : Activity
             _showHistory = !_showHistory;
             RefreshDashboard();
         };
-        _root.AddView(_history, Spaced(4));
+        _target.AddView(_history, Spaced(4));
 
         Section("Radio");
         _comms = Text("", 15);
@@ -232,11 +264,15 @@ public class MainActivity : Activity
 
         Section("Alliés");
         _map = new MapCanvasView(this) { ContentDescription = "Carte du terrain" };
-        _root.AddView(_map, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
+        _target.AddView(_map, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
         _allies = Text("", 15);
 
-        // Organisation (hors jeu) : contacts de l'orga, urgence et messages de l'orga.
-        Section("Orga");
+        // ----- Onglet ORGA : l'organisation (hors jeu) -----
+        _orgaPane = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        _root.AddView(_orgaPane);
+        _target = _orgaPane;
+
+        Section("Contacts de l'orga");
         _orgaComms = Text("", 15);
         _emergency = PrimaryButton("", Color.Rgb(198, 40, 40));
         _emergency.Click += (_, _) =>
@@ -245,6 +281,7 @@ public class MainActivity : Activity
             if (!string.IsNullOrWhiteSpace(phone))
                 StartActivity(new Intent(Intent.ActionDial, Android.Net.Uri.Parse("tel:" + phone.Replace(" ", ""))));
         };
+        Section("Messages de l'orga");
         _orgaMessages = Text("", 15);
 
         var leave = new Button(this) { Text = "Se désenrôler" };
@@ -254,11 +291,38 @@ public class MainActivity : Activity
             Prefs.Unenroll();
             Show();
         };
-        _root.AddView(leave, Spaced());
+        _target.AddView(leave, Spaced(24));
+        _target = _root;
 
-        RefreshDashboard();
+        SelectTab(_orgaSelected);
         if (!Prefs.IsTracking)
             StartTracking();
+    }
+
+    private void SelectTab(bool orga)
+    {
+        _orgaSelected = orga;
+        _qgPane!.Visibility = orga ? ViewStates.Gone : ViewStates.Visible;
+        _orgaPane!.Visibility = orga ? ViewStates.Visible : ViewStates.Gone;
+        RefreshDashboard();
+    }
+
+    /// <summary>Onglet affiché en gras ; l'autre indique ses messages non lus.</summary>
+    private void RefreshTabs(IReadOnlyList<PhoneMessage> archive)
+    {
+        var now = DateTimeOffset.Now;
+        if (_orgaSelected)
+            Prefs.OrgaSeenAt = now;
+        else
+            Prefs.HqSeenAt = now;
+        var unreadHq = archive.Count(m => m.Sender == MessageSender.Hq && m.SentAt > Prefs.HqSeenAt);
+        var unreadOrga = archive.Count(m => m.Sender == MessageSender.Orga && m.SentAt > Prefs.OrgaSeenAt);
+        _qgTab!.Text = unreadHq > 0 ? $"QG ({unreadHq})" : "QG";
+        _orgaTab!.Text = unreadOrga > 0 ? $"ORGA ({unreadOrga})" : "ORGA";
+        _qgTab.SetTypeface(null, _orgaSelected ? TypefaceStyle.Normal : TypefaceStyle.Bold);
+        _orgaTab.SetTypeface(null, _orgaSelected ? TypefaceStyle.Bold : TypefaceStyle.Normal);
+        _qgTab.Alpha = _orgaSelected ? 0.6f : 1;
+        _orgaTab.Alpha = _orgaSelected ? 1 : 0.6f;
     }
 
     private void RefreshDashboard()
@@ -278,7 +342,8 @@ public class MainActivity : Activity
         var format = response?.CoordinateFormat ?? CoordinateFormat.Utm;
         _status.Text = (Prefs.IsTracking ? "● Suivi actif" : "○ Suivi arrêté") +
                        $" · envoi toutes les {Prefs.IntervalSeconds} s\n{Prefs.Status}";
-        _toggle!.Text = Prefs.IsTracking ? "Arrêter l'envoi de la position" : "Démarrer l'envoi de la position";
+        _toggle!.Text = Prefs.IsTracking ? "⏸" : "▶";
+        _toggle.ContentDescription = Prefs.IsTracking ? "Arrêter l'envoi de la position" : "Démarrer l'envoi de la position";
 
         _mission!.Text = response?.Mission is { } m
             ? $"MISSION : {m.Name}\n" +
@@ -290,6 +355,7 @@ public class MainActivity : Activity
             : "Aucune mission diffusée par l'orga : attendez les ordres.";
 
         var archive = Prefs.MessageArchive;
+        RefreshTabs(archive);
         var groups = MessageHistory.Group(archive.Where(x => x.Sender == MessageSender.Hq));
         var shown = _showHistory ? groups : groups.Take(1);
         _messages!.Text = groups.Count == 0
@@ -303,7 +369,7 @@ public class MainActivity : Activity
         var orgaMessages = archive.Where(x => x.Sender == MessageSender.Orga).Reverse().ToList();
         _orgaMessages!.Text = orgaMessages.Count == 0
             ? "Aucun message de l'orga."
-            : "Messages de l'orga :\n\n" + string.Join("\n\n", (_showHistory ? orgaMessages : orgaMessages.Take(5))
+            : string.Join("\n\n", orgaMessages
                 .Select(x => $"{x.SentAt.LocalDateTime:ddd HH:mm} · {x.Audience}\n{x.Text}"));
 
         var comms = response?.Comms ?? Prefs.EnrollComms;
@@ -453,12 +519,12 @@ public class MainActivity : Activity
     private LinearLayout.LayoutParams Spaced(int top = 8) =>
         new(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent) { TopMargin = Dp(top) };
 
-    private void AddTitle(string text) => _root.AddView(new TextView(this) { Text = text, TextSize = 26, Typeface = Typeface.DefaultBold });
+    private void AddTitle(string text) => _target.AddView(new TextView(this) { Text = text, TextSize = 26, Typeface = Typeface.DefaultBold });
 
     private void Section(string text) =>
-        _root.AddView(new TextView(this) { Text = text.ToUpperInvariant(), TextSize = 13, Typeface = Typeface.DefaultBold, LetterSpacing = 0.08f }, Spaced(20));
+        _target.AddView(new TextView(this) { Text = text.ToUpperInvariant(), TextSize = 13, Typeface = Typeface.DefaultBold, LetterSpacing = 0.08f }, Spaced(20));
 
-    private void Label(string text) => _root.AddView(new TextView(this) { Text = text, TextSize = 13 }, Spaced(12));
+    private void Label(string text) => _target.AddView(new TextView(this) { Text = text, TextSize = 13 }, Spaced(12));
 
     private TextView Text(string text, float size, bool secondary = false)
     {
@@ -466,7 +532,7 @@ public class MainActivity : Activity
         if (secondary)
             view.Alpha = 0.7f;
         view.SetTextIsSelectable(true);
-        _root.AddView(view, Spaced(4));
+        _target.AddView(view, Spaced(4));
         return view;
     }
 
@@ -474,7 +540,7 @@ public class MainActivity : Activity
     {
         var input = new EditText(this) { Text = text, Hint = hint, InputType = type };
         input.SetSingleLine(true);
-        _root.AddView(input, Spaced(2));
+        _target.AddView(input, Spaced(2));
         return input;
     }
 
@@ -487,7 +553,7 @@ public class MainActivity : Activity
             button.SetTextColor(Color.White);
         }
 
-        _root.AddView(button, Spaced(12));
+        _target.AddView(button, Spaced(12));
         return button;
     }
 
