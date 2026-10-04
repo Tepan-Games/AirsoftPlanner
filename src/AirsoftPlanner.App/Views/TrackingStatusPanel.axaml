@@ -87,6 +87,8 @@
                     <NumericUpDown Value="{Binding ServerPort}" Minimum="1024" Maximum="65535" FormatString="0" Width="120" Margin="0,0,8,4" />
                     <ToggleButton Content="Serveur actif" IsChecked="{Binding IsServerRunning, Mode=OneWay}"
                                   Command="{Binding ToggleServerCommand}" Margin="0,0,8,4" />
+                    <CheckBox Content="Au lancement" IsChecked="{Binding AutoStartServer}" Margin="0,0,8,4"
+                              ToolTip.Tip="Démarrer le serveur dès l'ouverture d'une OP sur ce PC" />
                     <SelectableTextBlock Text="{Binding ServerAddresses}" VerticalAlignment="Center" FontFamily="Consolas,monospace" />
                 </WrapPanel>
                 <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"

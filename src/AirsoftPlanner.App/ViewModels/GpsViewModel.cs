@@ -87,6 +87,16 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         _meshtastic.FixReceived += OnFix;
         _traccar.FixReceived += OnFix;
         _traccar.Error += message => Dispatcher.UIThread.Post(() => Log($"Traccar : {message}"));
+
+        // Démarrage automatique du serveur (réglage du poste, ou option de lancement « --serveur-gps »).
+        // Lors d'un rechargement de l'OP, l'ancienne réception GPS est reprise : celle-ci ne démarre alors rien.
+        _autoStartServer = AppSettings.Current.AutoStartGpsServer;
+        if (_autoStartServer || AppSettings.StartGpsServerOnce)
+            Dispatcher.UIThread.Post(async () =>
+            {
+                if (_tracking.Gps == this && !_server.IsRunning)
+                    await ToggleServerAsync();
+            });
     }
 
     public ObservableCollection<string> Journal { get; } = [];
@@ -206,6 +216,16 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         SelectedDevice!.Model.IsRevoked = true;
         Log($"Téléphone « {SelectedDevice.Device} » révoqué.");
         RefreshDevices();
+    }
+
+    /// <summary>Démarrer le serveur local dès l'ouverture d'une OP (réglage du poste).</summary>
+    [ObservableProperty]
+    private bool _autoStartServer;
+
+    partial void OnAutoStartServerChanged(bool value)
+    {
+        AppSettings.Current.AutoStartGpsServer = value;
+        AppSettings.Current.Save();
     }
 
     private bool HasEnrollmentTeam => EnrollmentTeam is not null;

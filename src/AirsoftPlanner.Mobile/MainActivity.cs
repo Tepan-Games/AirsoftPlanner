@@ -43,10 +43,14 @@ public class MainActivity : Activity
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
+        // Pas de barre de titre : l'écran affiche son propre titre (équipe).
+        Window!.RequestFeature(WindowFeatures.NoTitle);
         _root = new LinearLayout(this) { Orientation = Orientation.Vertical };
         _root.SetPadding(Dp(16), Dp(16), Dp(16), Dp(24));
         var scroll = new ScrollView(this);
         scroll.AddView(_root);
+        // Android 15 dessine l'application sous les barres système : on décale le contenu d'autant.
+        scroll.SetOnApplyWindowInsetsListener(new InsetsListener(_root, Dp(16), Dp(24)));
         SetContentView(scroll);
         Show();
         HandleLink(Intent);
@@ -342,5 +346,26 @@ public class MainActivity : Activity
 
         _root.AddView(button, Spaced(12));
         return button;
+    }
+
+    /// <summary>Marges du contenu ajustées à la barre d'état et à la barre de navigation du téléphone.</summary>
+    private sealed class InsetsListener(View content, int padding, int bottomPadding) : Java.Lang.Object, View.IOnApplyWindowInsetsListener
+    {
+        public WindowInsets OnApplyWindowInsets(View view, WindowInsets insets)
+        {
+            int top, bottom;
+            if (OperatingSystem.IsAndroidVersionAtLeast(30))
+            {
+                var bars = insets.GetInsets(WindowInsets.Type.SystemBars() | WindowInsets.Type.DisplayCutout());
+                (top, bottom) = (bars.Top, bars.Bottom);
+            }
+            else
+            {
+                (top, bottom) = (insets.SystemWindowInsetTop, insets.SystemWindowInsetBottom);
+            }
+
+            content.SetPadding(padding, top + padding, padding, bottom + bottomPadding);
+            return insets;
+        }
     }
 }

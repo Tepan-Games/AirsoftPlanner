@@ -39,6 +39,12 @@ public class AppSettings
 
     public int GpsServerPort { get; set; } = 5055;
 
+    /// <summary>Active le serveur local dès l'ouverture d'une OP (PC du terrain).</summary>
+    public bool AutoStartGpsServer { get; set; }
+
+    /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
+    public static bool StartGpsServerOnce { get; set; }
+
     public string MqttHost { get; set; } = "localhost";
 
     public int MqttPort { get; set; } = 1883;
