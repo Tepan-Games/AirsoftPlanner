@@ -7,8 +7,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationId>com.tepangames.airsoftplanner</ApplicationId>
     <ApplicationTitle>Airsoft Planner</ApplicationTitle>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>0.9.0</ApplicationDisplayVersion>
+    <ApplicationVersion>2</ApplicationVersion>
+    <ApplicationDisplayVersion>0.9.1</ApplicationDisplayVersion>
     <!-- Sérialisation JSON par générateur de source : compatible avec l'élagage du code. -->
     <TrimMode>partial</TrimMode>
     <!-- APK unique, installable directement (sans Play Store). -->

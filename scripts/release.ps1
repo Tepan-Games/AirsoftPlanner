@@ -76,7 +76,10 @@ if ($Publier) {
     # Les logiciels installés trouvent cette version (« Rechercher une mise à jour ») dès que le dépôt est public.
     $apkRelease = Join-Path $root "artifacts\AirsoftPlanner-$version.apk"
     Copy-Item $apk $apkRelease -Force
-    gh release create "v$version" $zip $setup $apkRelease --repo Tepan-Games/AirsoftPlanner --title "Airsoft Planner $version" --notes "Airsoft Planner $version"
+    # Notes de version : docs/versions/<version>.md s'il existe.
+    $notes = Join-Path $root "docs\versions\$version.md"
+    $notesArgs = if (Test-Path $notes) { @("--notes-file", $notes) } else { @("--notes", "Airsoft Planner $version") }
+    gh release create "v$version" $zip $setup $apkRelease --repo Tepan-Games/AirsoftPlanner --title "Airsoft Planner $version" @notesArgs
     if ($LASTEXITCODE -ne 0) { throw "La publication sur GitHub a échoué." }
     Write-Host "Version v$version publiée sur GitHub."
 }

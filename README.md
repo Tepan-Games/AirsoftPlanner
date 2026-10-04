@@ -153,7 +153,9 @@ produit `artifacts/AirsoftPlanner-<version>.zip` : programme d'installation Wind
 installation pour l'utilisateur sans .NET à installer, raccourcis, fichiers `.aop` ouverts par double-clic,
 désinstallation depuis Paramètres › Applications), application Android (`AirsoftPlanner.apk`), guide
 d'utilisation PDF et OP d'exemple.
-`scripts/publish.ps1` seul produit uniquement le logiciel Windows.
+`scripts/publish.ps1` seul produit uniquement le logiciel Windows. Avec `-Publier`, la version est publiée sur
+GitHub avec les notes de `docs/versions/<version>.md` ; les logiciels et applications installés la proposent
+alors en mise à jour.
 
 ## Signature de l'application Android
 
@@ -171,9 +173,11 @@ sans eux, aucune mise à jour de l'application ne pourra plus être installée s
 
 ## Licence
 
-Airsoft Planner est un logiciel libre distribué sous licence **GNU GPL v3.0** (voir [LICENSE](LICENSE)) :
+Airsoft Planner est un logiciel libre distribué sous licence **GNU GPL v3.0 ou ultérieure** (voir [LICENSE](LICENSE)) :
 chacun peut l'utiliser, l'étudier, le modifier et le redistribuer, à condition que les versions redistribuées
-restent sous la même licence, avec leur code source.
+restent sous la même licence, avec leur code source. Une permission supplémentaire (section 7) autorise la
+combinaison avec QuestPDF, distribuée sous sa propre licence ; le fichier LICENSE liste aussi les composants
+tiers et l'attribution des fonds de carte IGN.
 
 ## Structure
 
