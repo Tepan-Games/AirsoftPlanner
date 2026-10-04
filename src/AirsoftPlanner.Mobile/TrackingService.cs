@@ -18,6 +18,7 @@ public class TrackingService : Service, ILocationListener
 {
     public const string ActionStop = "com.tepangames.airsoftplanner.STOP";
     private const string ChannelId = "suivi";
+    private const string NewsChannelId = "orga";
     private const int NotificationId = 1;
     private const int MaxPending = 500;
 
@@ -138,7 +139,9 @@ public class TrackingService : Service, ILocationListener
             lock (_pending)
                 _pending.RemoveAll(batch.Contains);
 
+            var previous = Prefs.LastResponse;
             Prefs.LastResponse = response;
+            NotifyNews(previous, response);
             await DownloadMapIfNeededAsync(response);
             if (response.IntervalSeconds != _interval)
             {
@@ -201,6 +204,63 @@ public class TrackingService : Service, ILocationListener
 
     // ----- Notification -----
 
+    /// <summary>
+    /// Signale toute nouvelle information de l'orga : messages (dont mission diffusée ou terminée),
+    /// plan radio ou numéro d'urgence modifiés, partage des positions changé.
+    /// </summary>
+    private void NotifyNews(TrackResponse? previous, TrackResponse response)
+    {
+        var notified = Prefs.NotifiedMessages.ToHashSet();
+        var fresh = (response.Messages ?? []).Where(m => !notified.Contains(m.Id.ToString())).OrderBy(m => m.SentAt).ToList();
+        foreach (var message in fresh.Where(m => m.SentAt >= Prefs.EnrolledAt))
+        {
+            var title = message.Kind switch
+            {
+                AirsoftPlanner.Core.Domain.MessageKind.MissionAssigned => "📣 Nouvelle mission",
+                AirsoftPlanner.Core.Domain.MessageKind.MissionEnded => "✔ Mission terminée",
+                _ => $"Message de l'orga · {message.Audience}",
+            };
+            Notify(title, message.Text, message.Id.GetHashCode());
+        }
+
+        if (fresh.Count > 0)
+            Prefs.NotifiedMessages = [.. Prefs.NotifiedMessages, .. fresh.Select(m => m.Id.ToString())];
+
+        if (previous is null)
+            return;
+        if (Describe(previous.Comms) != Describe(response.Comms))
+            Notify("📻 Plan radio mis à jour", response.Comms?.EmergencyPhone is { Length: > 0 } phone && phone != previous.Comms?.EmergencyPhone
+                ? $"Nouveau numéro d'urgence de l'orga : {phone}"
+                : "Les fréquences de la faction ou de l'orga ont changé.", 2);
+        if (previous.ShareMode != response.ShareMode)
+            Notify("Partage des positions modifié", response.ShareMode switch
+            {
+                AllyShareMode.Map => "Positions des alliés sur la carte.",
+                AllyShareMode.Coordinates => "Positions des alliés en coordonnées.",
+                _ => "Positions des alliés non partagées.",
+            }, 3);
+    }
+
+    private static string Describe(Comms? comms) => comms is null
+        ? ""
+        : $"{comms.FactionFrequency}|{comms.OrgaFrequency}|{comms.EmergencyPhone}|{string.Join(";", comms.Teams.Select(t => $"{t.Team}={t.Frequency}"))}";
+
+    private void Notify(string title, string text, int id)
+    {
+        var open = PendingIntent.GetActivity(this, 0, new Intent(this, typeof(MainActivity)), PendingIntentFlags.Immutable);
+        var builder = OperatingSystem.IsAndroidVersionAtLeast(26) ? new Notification.Builder(this, NewsChannelId) : new Notification.Builder(this);
+        var notification = builder
+            .SetContentTitle(title)!
+            .SetContentText(text)!
+            .SetStyle(new Notification.BigTextStyle().BigText(text))!
+            .SetSmallIcon(Resource.Mipmap.appicon)!
+            .SetAutoCancel(true)!
+            .SetContentIntent(open)!
+            .Build()!;
+        // Identifiant 1 réservé à la notification permanente du suivi.
+        ((NotificationManager?)GetSystemService(NotificationService))?.Notify(id == NotificationId ? id + 1 : id, notification);
+    }
+
     private void UpdateStatus(string text)
     {
         Prefs.Status = text;
@@ -215,7 +275,14 @@ public class TrackingService : Service, ILocationListener
         {
             Description = "Envoi de la position de l'équipe au PC de l'OP",
         };
-        ((NotificationManager?)GetSystemService(NotificationService))?.CreateNotificationChannel(channel);
+        var news = new NotificationChannel(NewsChannelId, "Informations de l'orga", NotificationImportance.High)
+        {
+            Description = "Messages de l'orga, missions diffusées, plan radio",
+        };
+        news.EnableVibration(true);
+        var manager = (NotificationManager?)GetSystemService(NotificationService);
+        manager?.CreateNotificationChannel(channel);
+        manager?.CreateNotificationChannel(news);
     }
 
     private Notification BuildNotification(string text)

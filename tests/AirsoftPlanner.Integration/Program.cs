@@ -77,8 +77,27 @@ Check("Nouvelle position transmise (≈ 48.4070, 2.6980)",
     () => AlphaPositions().LastOrDefault() is { } p && Math.Abs(p.Latitude - 48.4070) < 1e-4 && Math.Abs(p.Longitude - 2.6980) < 1e-4, 25);
 Check("PC : téléphone vu récemment", () => gps.Devices.First(d => !d.IsRevoked).LastSeen.StartsWith("dernier envoi"), 10);
 
-// 4. Mission en cours
-Check("Mission en cours affichée sur le téléphone", () => Screen().Contains("EN COURS : Reconnaissance du village"), 15);
+// 4. Mission diffusée sur décision de l'orga (jamais automatiquement), notifiée sur le téléphone
+var dispatch = tracking.Dispatch!;
+Check("Aucune mission tant que l'orga n'a rien diffusé", () => Screen().Contains("Aucune mission diffusée par l'orga"), 15);
+Check("Le logiciel propose de diffuser la mission d'Alpha",
+    () => dispatch.Prompts.FirstOrDefault(p => p.Team == alpha) is { } p && p.Question.Contains("Reconnaissance du village"), 5);
+dispatch.AcceptCommand.Execute(dispatch.Prompts.First(p => p.Team == alpha));
+Check("Mission diffusée affichée sur le téléphone", () => Screen().Contains("MISSION : Reconnaissance du village"), 25);
+Check("Notification « Nouvelle mission » sur le téléphone", () => Notifications().Contains("Nouvelle mission"), 10);
+Check("Le logiciel indique le message reçu par Alpha", () => dispatch.Messages.First().Delivery.Contains("reçu"), 10);
+
+// Message à toute la faction d'Alpha
+dispatch.SelectedTarget = dispatch.Targets.First(t => t.Target == MessageTarget.Faction && t.Id == alpha.Model.FactionId);
+dispatch.ComposeText = "Regroupement au point Bravo à 11 h";
+dispatch.SendCommand.Execute(null);
+Check("Message de faction affiché sur le téléphone", () => Screen().Contains("Regroupement au point Bravo à 11 h"), 25);
+Check("Message de faction notifié", () => Notifications().Contains("Regroupement au point Bravo"), 10);
+
+// Fin de mission décidée par l'orga
+dispatch.End(alpha);
+Check("Mission terminée : le téléphone attend les ordres", () => Screen().Contains("Aucune mission diffusée par l'orga"), 25);
+Check("Notification « Mission terminée »", () => Notifications().Contains("Mission terminée"), 10);
 
 // 5. Intervalle modifié par l'orga
 gps.IntervalSeconds = 8;
@@ -87,10 +106,10 @@ gps.IntervalSeconds = 5;
 Check("Intervalle 5 s rétabli", () => Screen().Contains("envoi toutes les 5 s"), 30);
 
 // 6. Partage des alliés
-Check("Mode carte : carte affichée", () => ScreenNodes().Any(n => n.Desc == "Carte du terrain"), 25);
+Check("Mode carte : carte affichée", () => { Swipe(up: false); return ScreenNodes().Any(n => n.Desc == "Carte du terrain"); }, 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Coordinates);
 Check("Mode coordonnées : plus de carte, alliés en coordonnées",
-    () => !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*31U \d{6} \d{7}"), 25);
+    () => { Swipe(up: false); return !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*31U \d{6} \d{7}"); }, 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.None);
 Check("Mode rien : alliés non partagés", () => Screen().Contains("non partagées par l'orga"), 25);
 gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
@@ -98,6 +117,7 @@ gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
 // 7. Numéro d'urgence modifié
 ws.General.EmergencyPhone = "06 11 22 33 44";
 Check("Nouveau numéro d'urgence reçu", () => Screen().Contains("Urgence orga : 06 11 22 33 44"), 25);
+Check("Changement du numéro d'urgence notifié", () => Notifications().Contains("Nouveau numéro d'urgence de l'orga : 06 11 22 33 44"), 10);
 
 // 8. Coupure du serveur (Wi-Fi perdu) puis retour
 Pump(gps.ToggleServerCommand.ExecuteAsync(null));
@@ -226,11 +246,29 @@ List<(string Text, string Class, string Desc, int X, int Y)> ScreenNodes()
         .ToList();
 }
 
-string Screen() => string.Join("\n", ScreenNodes().Select(n => n.Text).Where(t => t.Length > 0));
+string Notifications() => Adb("shell dumpsys notification --noredact");
+
+// Le tableau de bord dépasse la hauteur de l'écran : on lit le haut puis le bas (uiautomator ne voit que l'écran).
+string Screen()
+{
+    Swipe(up: true);
+    var top = ScreenNodes().Select(n => n.Text).Where(t => t.Length > 0).ToList();
+    Swipe(up: false);
+    var bottom = ScreenNodes().Select(n => n.Text).Where(t => t.Length > 0).ToList();
+    return string.Join("\n", top.Concat(bottom.Where(t => !top.Contains(t))));
+}
+
+void Swipe(bool up) => Adb(up ? "shell input swipe 540 700 540 2000 120" : "shell input swipe 540 2000 540 700 120");
 
 void Tap(string text)
 {
-    var node = ScreenNodes().First(n => n.Text.Contains(text));
+    Swipe(up: true);
+    var node = ScreenNodes().FirstOrDefault(n => n.Text.Contains(text));
+    if (node.Text is null)
+    {
+        Swipe(up: false);
+        node = ScreenNodes().First(n => n.Text.Contains(text));
+    }
     Adb($"shell input tap {node.X} {node.Y}");
     Wait(1);
 }

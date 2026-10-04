@@ -26,6 +26,21 @@ internal static class Prefs
         set => Set(nameof(OperationId), value?.ToString() ?? "");
     }
 
+    /// <summary>Date de l'enrôlement : les messages plus anciens sont affichés sans notification.</summary>
+    public static DateTimeOffset EnrolledAt
+    {
+        get => DateTimeOffset.TryParse(Get(nameof(EnrolledAt)), System.Globalization.CultureInfo.InvariantCulture,
+            System.Globalization.DateTimeStyles.None, out var at) ? at : DateTimeOffset.MinValue;
+        set => Set(nameof(EnrolledAt), value.ToString("O", System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    /// <summary>Messages de l'orga déjà notifiés (identifiants séparés par des virgules, les plus récents).</summary>
+    public static IReadOnlyCollection<string> NotifiedMessages
+    {
+        get => Get(nameof(NotifiedMessages)).Split(',', StringSplitOptions.RemoveEmptyEntries);
+        set => Set(nameof(NotifiedMessages), string.Join(",", value.TakeLast(100)));
+    }
+
     public static string DeviceName { get => Get(nameof(DeviceName)); set => Set(nameof(DeviceName), value); }
 
     public static int IntervalSeconds

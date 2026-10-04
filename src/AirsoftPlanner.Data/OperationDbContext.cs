@@ -47,6 +47,8 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
 
     public DbSet<Organizer> Organizers => Set<Organizer>();
 
+    public DbSet<OrgaMessage> OrgaMessages => Set<OrgaMessage>();
+
     public DbSet<AirsoftPlanner.Core.Gps.EnrolledDevice> EnrolledDevices => Set<AirsoftPlanner.Core.Gps.EnrolledDevice>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -119,6 +121,11 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<Operation>().Property(o => o.VehicleSpeedKmh).HasDefaultValue(25.0);
         modelBuilder.Entity<Organizer>().HasQueryFilter(e => !e.IsDeleted);
         modelBuilder.Entity<Operation>().Property(o => o.IgnoredRadioConflicts).HasJsonListConversion();
+        modelBuilder.Entity<Team>().Property(t => t.CompletedMissionIds).HasJsonListConversion();
+        var message = modelBuilder.Entity<OrgaMessage>();
+        message.HasQueryFilter(e => !e.IsDeleted);
+        message.Property(m => m.Target).HasConversion<string>();
+        message.Property(m => m.Kind).HasConversion<string>();
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

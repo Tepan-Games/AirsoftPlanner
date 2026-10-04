@@ -284,8 +284,9 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var map = mode == AllyShareMode.Map && layer is not null
             ? new MapInfo(layer.Name, layer.Attribution, layer.Bounds.North, layer.Bounds.South, layer.Bounds.West, layer.Bounds.East)
             : null;
-        return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, _tracking.MissionBriefFor(team, format), map,
-            CommsFor(team), format);
+        var dispatch = _tracking.Dispatch;
+        return new TrackResponse(team.Name, _file.Operation.TrackingIntervalSeconds, mode, allies, dispatch?.MissionBriefFor(team, format), map,
+            CommsFor(team), format, dispatch?.PhoneMessagesFor(team) ?? []);
     }
 
     /// <summary>Fréquences de la faction, des équipes alliées et de l'orga, numéro d'urgence.</summary>

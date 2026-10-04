@@ -250,6 +250,19 @@ public partial class TrackingViewModel : ViewModelBase
 
     public MissionsViewModel Missions { get; }
 
+    private DispatchViewModel? _dispatch;
+
+    /// <summary>Messages de l'orga et diffusion des missions aux téléphones.</summary>
+    public DispatchViewModel? Dispatch
+    {
+        get => _dispatch;
+        set
+        {
+            _dispatch = value;
+            value?.Refresh(NowMinutes);
+        }
+    }
+
     public TerrainViewModel Terrain => _terrain;
 
     public ObservableCollection<TeamStatusViewModel> Statuses { get; } = [];
@@ -403,6 +416,7 @@ public partial class TrackingViewModel : ViewModelBase
     {
         var start = (int)Math.Ceiling(NowMinutes / 5) * 5;
         _urgentMission = Missions.CreateUrgentMission(Selected!.Team, start);
+        Dispatch?.ProposeUrgent(Selected.Team, _urgentMission.Model);
         IsPlacing = false;
         IsPlacingItem = false;
         IsPlacingUrgent = true;
@@ -586,29 +600,6 @@ public partial class TrackingViewModel : ViewModelBase
         .Select(x => (x.Team, x.Position!.Point, x.Position.ReceivedAt))
         .ToList();
 
-    /// <summary>Mission en cours (ou prochaine) d'une équipe, pour l'application Android.</summary>
-    public Core.Gps.MissionBrief? MissionBriefFor(TeamViewModel team, Core.Geo.CoordinateFormat format)
-    {
-        var progress = Statuses.FirstOrDefault(s => s.Team == team)?.Progress;
-        if (progress?.TargetMission is not { } mission)
-            return null;
-
-        var zone = _terrain.Zones.FirstOrDefault(z => z.Model.Id == mission.ZoneId);
-        var center = zone is { Points.Count: > 0 } ? GeoMath.Centroid(zone.Points) : (GeoPoint?)null;
-        var items = string.Join(", ", mission.Items.Select(u => _items.Items.FirstOrDefault(i => i.Model.Id == u.ItemId) is { } item ? $"{u.Quantity} × {item.Name}" : null).OfType<string>());
-        return new Core.Gps.MissionBrief(
-            mission.Name,
-            progress.CurrentMission is not null,
-            new DateTimeOffset(_operation.ToDateTime(mission.StartMinutes)),
-            new DateTimeOffset(_operation.ToDateTime(mission.EndMinutes)),
-            zone?.Name ?? "",
-            center is { } c ? Coordinates.Format(c, format) : "",
-            center?.Latitude,
-            center?.Longitude,
-            mission.Description,
-            items);
-    }
-
     /// <summary>Équipes en jeu, pour la page de saisie du serveur local.</summary>
     public IReadOnlyList<string> PublishedTeamNames { get; private set; } = [];
 
@@ -738,6 +729,7 @@ public partial class TrackingViewModel : ViewModelBase
                 : null;
         }
 
+        Dispatch?.Refresh(now);
         var late = Statuses.Count(s => s.Status == ProgressStatus.Late);
         var tight = Statuses.Count(s => s.Status == ProgressStatus.Tight);
         var unknown = Statuses.Count(s => s.Status == ProgressStatus.Unknown);

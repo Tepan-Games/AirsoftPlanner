@@ -1,4 +1,4 @@
-using AirsoftPlanner.Core.Registration;
+﻿using AirsoftPlanner.Core.Registration;
 
 namespace AirsoftPlanner.Core.Domain;
 
@@ -36,4 +36,10 @@ public class Team : Entity
 
     /// <summary>Code d'enrôlement de l'application Android pour cette équipe (vide tant qu'il n'est pas généré).</summary>
     public string EnrollmentCode { get; set; } = "";
+
+    /// <summary>Mission diffusée par l'orga aux téléphones de l'équipe (null : aucune). Jamais modifiée automatiquement.</summary>
+    public Guid? PublishedMissionId { get; set; }
+
+    /// <summary>Missions terminées par l'orga pour cette équipe.</summary>
+    public List<Guid> CompletedMissionIds { get; set; } = [];
 }

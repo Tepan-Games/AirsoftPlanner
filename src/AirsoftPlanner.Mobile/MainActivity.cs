@@ -32,6 +32,7 @@ public class MainActivity : Activity
     private TextView? _status;
     private Button? _toggle;
     private TextView? _mission;
+    private TextView? _messages;
     private TextView? _comms;
     private Button? _emergency;
     private TextView? _allies;
@@ -136,6 +137,9 @@ public class MainActivity : Activity
         Section("Mission");
         _mission = Text("", 15);
 
+        Section("Messages de l'orga");
+        _messages = Text("", 15);
+
         Section("Radio et urgence");
         _comms = Text("", 15);
         _emergency = PrimaryButton("", Color.Rgb(198, 40, 40));
@@ -188,12 +192,19 @@ public class MainActivity : Activity
         _toggle!.Text = Prefs.IsTracking ? "Arrêter l'envoi de la position" : "Démarrer l'envoi de la position";
 
         _mission!.Text = response?.Mission is { } m
-            ? $"{(m.IsCurrent ? "EN COURS" : "PROCHAINE")} : {m.Name}\n" +
+            ? $"MISSION : {m.Name}\n" +
               $"{m.Start.LocalDateTime.ToString("ddd HH:mm", French)} – {m.End.LocalDateTime:HH:mm}\n" +
               (m.Zone.Length > 0 ? $"Zone : {m.Zone}\n{m.ZoneCoordinates}\n" : "") +
               (m.Equipment.Length > 0 ? $"Matériel : {m.Equipment}\n" : "") +
               (m.Briefing.Length > 0 ? $"\n{m.Briefing}" : "")
-            : "Aucune mission en cours ou à venir.";
+            : response is null ? "En attente du premier échange avec le PC de l'OP."
+            : "Aucune mission diffusée par l'orga : attendez les ordres.";
+
+        var messages = response?.Messages ?? [];
+        _messages!.Text = messages.Count == 0
+            ? "Aucun message."
+            : string.Join("\n\n", messages.Take(8).Select(x =>
+                $"{x.SentAt.LocalDateTime:HH:mm} · {x.Audience}\n{x.Text}"));
 
         var comms = response?.Comms ?? Prefs.EnrollComms;
         _comms!.Text = comms is null
@@ -305,6 +316,7 @@ public class MainActivity : Activity
             Prefs.IntervalSeconds = response.IntervalSeconds;
             Prefs.EnrollComms = response.Comms;
             Prefs.OperationId = response.OperationId;
+            Prefs.EnrolledAt = DateTimeOffset.Now;
             Prefs.Status = "Enrôlé : démarrage du suivi.";
             Show();
         }

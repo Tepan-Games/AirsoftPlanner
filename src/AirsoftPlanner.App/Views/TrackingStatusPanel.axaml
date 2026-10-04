@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
@@ -77,6 +77,60 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </DockPanel>
+    </TabItem>
+    <TabItem Header="Messages et missions">
+        <ScrollViewer DataContext="{Binding Dispatch}" x:DataType="vm:DispatchViewModel">
+            <StackPanel Margin="8,4" Spacing="6">
+                <TextBlock Text="Message aux téléphones des équipes" FontWeight="SemiBold" />
+                <DockPanel>
+                    <ComboBox DockPanel.Dock="Left" ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedTarget}" MinWidth="190" Margin="0,0,6,0" />
+                    <Button DockPanel.Dock="Right" Content="Envoyer" Command="{Binding SendCommand}" Margin="6,0,0,0" Classes="accent" />
+                    <TextBox Text="{Binding ComposeText}" PlaceholderText="ex. Fin de partie à 17 h, retour au PC" AcceptsReturn="False" />
+                </DockPanel>
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MessageRowViewModel">
+                            <StackPanel Margin="0,3">
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="{Binding Time}" FontWeight="SemiBold" />
+                                    <Run Text="{Binding Audience}" Foreground="Gray" />
+                                    <Run Text="  " />
+                                    <Run Text="{Binding Text}" />
+                                </TextBlock>
+                                <TextBlock Text="{Binding Delivery}" FontSize="11" Opacity="0.7" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Text="Missions diffusées aux téléphones" FontWeight="SemiBold" Margin="0,8,0,0" />
+                <TextBlock FontSize="11" Opacity="0.7" TextWrapping="Wrap"
+                           Text="Le téléphone affiche seulement la mission diffusée par l'orga. Le bandeau « À diffuser » propose de terminer une mission ou de diffuser la suivante au bon moment ; ici, on peut diffuser n'importe quelle mission." />
+                <ItemsControl ItemsSource="{Binding Teams}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TeamDispatchViewModel">
+                            <Grid ColumnDefinitions="110,*,Auto,Auto,Auto" Margin="0,2">
+                                <TextBlock Text="{Binding Team.Name}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Grid.Column="1" Text="{Binding Published}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,6,0" />
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding Missions}" SelectedItem="{Binding SelectedMission}" Width="190" Margin="0,0,4,0">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:MissionViewModel">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <Button Grid.Column="3" Content="Diffuser" Margin="0,0,4,0"
+                                        Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).PublishSelectedCommand}"
+                                        CommandParameter="{Binding}" />
+                                <Button Grid.Column="4" Content="Terminer"
+                                        Command="{Binding $parent[ItemsControl].((vm:DispatchViewModel)DataContext).EndPublishedCommand}"
+                                        CommandParameter="{Binding}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
     </TabItem>
     <TabItem Header="Réception GPS">
         <ScrollViewer DataContext="{Binding Gps}" x:DataType="vm:GpsViewModel">
