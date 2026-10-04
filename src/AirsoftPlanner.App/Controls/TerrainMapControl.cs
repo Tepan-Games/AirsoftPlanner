@@ -192,7 +192,7 @@ public class TerrainMapControl : Control
         foreach (var zone in ZoneItems.Where(z => !z.IsArea))
             DrawPoint(context, view, zone);
         foreach (var zone in ZoneItems.Where(z => z.Points.Count > 0))
-            DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : -18), zone.DisplayName);
+            DrawLabel(context, ToScreen(view, Centroid(zone.Points)) + new Vector(0, zone.IsArea ? 0 : zone.ResolvedSymbol == Core.Symbols.MilSymbol.Dot ? -18 : -30), zone.DisplayName);
 
         foreach (var trail in Trails ?? [])
             DrawTrail(context, view, trail);
@@ -368,6 +368,14 @@ public class TerrainMapControl : Control
             return;
 
         var center = ToScreen(view, zone.Points[0]);
+        var symbol = zone.ResolvedSymbol;
+        if (symbol != Core.Symbols.MilSymbol.Dot)
+        {
+            SymbolRenderer.Draw(context, center, zone == SelectedZone ? 26 : 22, Core.Symbols.MilitarySymbols.Draw(symbol, zone.Model.Echelon),
+                zone.SymbolColor, zone == SelectedZone ? Brushes.White : null);
+            return;
+        }
+
         var radius = zone == SelectedZone ? 9 : 7;
         context.DrawEllipse(new SolidColorBrush(ParseColor(zone.Color)), new Pen(Brushes.White, 2), center, radius, radius);
     }
@@ -399,6 +407,14 @@ public class TerrainMapControl : Control
     private void DrawItem(DrawingContext context, GeoBounds view, ItemMarker item)
     {
         var c = ToScreen(view, item.Point);
+        if (item.SymbolColor is { } color)
+        {
+            // Véhicule mis en jeu : symbole militaire aux couleurs de la faction.
+            SymbolRenderer.Draw(context, c, 20, Core.Symbols.MilitarySymbols.Draw(Core.Symbols.MilSymbol.WheeledVehicle), color);
+            DrawLabel(context, c + new Vector(0, -24), item.Label);
+            return;
+        }
+
         var size = item.IsSelected ? 10 : 8;
         var geometry = new StreamGeometry();
         using (var g = geometry.Open())
@@ -425,10 +441,10 @@ public class TerrainMapControl : Control
             context.DrawLine(pen, center, ToScreen(view, target));
         }
 
-        var radius = marker.IsSelected ? 11 : 9;
-        context.DrawEllipse(new SolidColorBrush(ParseColor(marker.Color)), new Pen(status, 4), center, radius, radius);
-        context.DrawEllipse(null, new Pen(Brushes.White, 1.5), center, radius + 2.5, radius + 2.5);
-        DrawLabel(context, center + new Vector(0, radius + 12), marker.Label);
+        // Symbole militaire de l'équipe aux couleurs de sa faction, entouré de la couleur de son état.
+        var height = marker.IsSelected ? 26 : 22;
+        SymbolRenderer.Draw(context, center, height, Core.Symbols.MilitarySymbols.Draw(marker.Symbol, marker.Echelon), marker.Color, status);
+        DrawLabel(context, center + new Vector(0, height / 2.0 + 14), marker.Label);
     }
 
     /// <summary>Quadrillage dans le format de coordonnées affiché : UTM (un quadrillage par fuseau) ou degrés.</summary>

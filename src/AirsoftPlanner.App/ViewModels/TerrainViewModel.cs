@@ -34,7 +34,7 @@ public partial class TerrainViewModel : ViewModelBase
         _operation = operation;
         _dialogs = dialogs;
         Layers = new ObservableCollection<MapLayerViewModel>(file.LoadMapLayers().Select(l => new MapLayerViewModel(l)));
-        Zones = new ObservableCollection<ZoneViewModel>(file.LoadZones().Select(z => new ZoneViewModel(z, () => operation.CoordinateFormat)));
+        Zones = new ObservableCollection<ZoneViewModel>(file.LoadZones().Select(z => new ZoneViewModel(z, () => operation.CoordinateFormat, FactionColor)));
         _selectedLayer = Layers.FirstOrDefault();
         _selectedSource = MapSource.All[0];
         _areaSizeKm = 1.5m;
@@ -127,6 +127,28 @@ public partial class TerrainViewModel : ViewModelBase
 
     public IReadOnlyList<PoiCategoryOption> Categories => PoiCategoryOption.All;
 
+    public IReadOnlyList<MilSymbolOption> Symbols => MilSymbolOption.All;
+
+    public IReadOnlyList<EchelonOption> Echelons => EchelonOption.All;
+
+    /// <summary>Choix « Faction (couleur du symbole) ».</summary>
+    public ObservableCollection<FactionChoice> OwnerOptions { get; } = [];
+
+    public FactionChoice? SelectedZoneOwner
+    {
+        get => SelectedZone?.Model is { } zone ? OwnerOptions.FirstOrDefault(o => o.Id == zone.OwnerFactionId) : null;
+        set
+        {
+            if (value is null || SelectedZone?.Model is not { } zone)
+                return;
+            zone.OwnerFactionId = value.Id;
+            SelectedZone.NotifySymbolColorChanged();
+            OnPropertyChanged();
+        }
+    }
+
+    private string? FactionColor(Guid id) => _factions?.Items.FirstOrDefault(f => f.Model.Id == id)?.Color;
+
     private FactionsViewModel? _factions;
 
     /// <summary>Choix « Visible par » : orga seulement, toutes les équipes, ou une faction.</summary>
@@ -138,7 +160,14 @@ public partial class TerrainViewModel : ViewModelBase
         _factions = factions;
         factions.Items.CollectionChanged += (_, _) => RefreshVisibilityOptions();
         foreach (var faction in factions.Items)
-            faction.PropertyChanged += (_, e) => { if (e.PropertyName == nameof(FactionViewModel.Name)) RefreshVisibilityOptions(); };
+            faction.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(FactionViewModel.Name))
+                    RefreshVisibilityOptions();
+                if (e.PropertyName == nameof(FactionViewModel.Color))
+                    foreach (var zone in Zones)
+                        zone.NotifySymbolColorChanged();
+            };
         RefreshVisibilityOptions();
     }
 
@@ -164,6 +193,11 @@ public partial class TerrainViewModel : ViewModelBase
         foreach (var faction in _factions?.Items ?? [])
             VisibilityOptions.Add(new ZoneVisibilityOption(ZoneVisibility.Faction, faction.Model.Id, $"Faction {faction.Name}"));
         OnPropertyChanged(nameof(SelectedZoneVisibility));
+        OwnerOptions.Clear();
+        OwnerOptions.Add(new FactionChoice(null, "Aucune (couleur du point)"));
+        foreach (var faction in _factions?.Items ?? [])
+            OwnerOptions.Add(new FactionChoice(faction.Model.Id, faction.Name));
+        OnPropertyChanged(nameof(SelectedZoneOwner));
     }
 
     /// <summary>En mode tracé, chaque clic sur la carte ajoute un sommet à la zone sélectionnée.</summary>
@@ -321,6 +355,7 @@ public partial class TerrainViewModel : ViewModelBase
     partial void OnSelectedZoneChanged(ZoneViewModel? value)
     {
         OnPropertyChanged(nameof(SelectedZoneVisibility));
+        OnPropertyChanged(nameof(SelectedZoneOwner));
         if (value is null || value.IsComplete)
             IsDrawing = false;
     }
@@ -334,7 +369,7 @@ public partial class TerrainViewModel : ViewModelBase
     {
         var zone = new Zone { Name = name, Kind = ZoneKind.Point, Color = color, Points = [point] };
         _file.Add(zone);
-        var viewModel = new ZoneViewModel(zone, () => _operation.CoordinateFormat);
+        var viewModel = new ZoneViewModel(zone, () => _operation.CoordinateFormat, FactionColor);
         Zones.Add(viewModel);
         return viewModel;
     }
@@ -348,7 +383,7 @@ public partial class TerrainViewModel : ViewModelBase
             Color = kind == ZoneKind.Area ? "#F9A825" : "#C62828",
         };
         _file.Add(zone);
-        var viewModel = new ZoneViewModel(zone, () => _operation.CoordinateFormat);
+        var viewModel = new ZoneViewModel(zone, () => _operation.CoordinateFormat, FactionColor);
         Zones.Add(viewModel);
         SelectedZone = viewModel;
         IsDrawing = true;

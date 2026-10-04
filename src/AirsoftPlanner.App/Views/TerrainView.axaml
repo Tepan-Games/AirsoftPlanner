@@ -71,8 +71,7 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:ZoneViewModel">
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Border Width="14" Height="14" CornerRadius="3"
-                                        Background="{Binding Color, Converter={x:Static conv:HexColorToBrushConverter.Instance}}" />
+                                <controls:SymbolView Symbol="{Binding ResolvedSymbol}" Color="{Binding SymbolColor}" Width="30" Height="22" />
                                 <StackPanel>
                                     <TextBlock Text="{Binding DisplayName}" />
                                     <TextBlock Text="{Binding Summary}" FontSize="11" Opacity="0.6" />
@@ -87,6 +86,27 @@
                     <TextBox Text="{Binding SelectedZone.Name, FallbackValue=''}" />
                     <TextBlock Text="Catégorie" Classes="label" />
                     <ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedZone.Category, FallbackValue={x:Null}}" MinWidth="240" />
+                    <TextBlock Text="Symbole militaire" Classes="label" />
+                    <ComboBox ItemsSource="{Binding Symbols}" SelectedItem="{Binding SelectedZone.Symbol, FallbackValue={x:Null}}" MinWidth="240">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:MilSymbolOption">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <controls:SymbolView Symbol="{Binding Value}" Width="40" Height="28" />
+                                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Faction (couleur du symbole)" Classes="label" />
+                            <ComboBox ItemsSource="{Binding OwnerOptions}" SelectedItem="{Binding SelectedZoneOwner}" MinWidth="150" />
+                        </StackPanel>
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="Taille d'unité" Classes="label" />
+                            <ComboBox ItemsSource="{Binding Echelons}" SelectedItem="{Binding SelectedZone.Echelon, FallbackValue={x:Null}}" MinWidth="120" />
+                        </StackPanel>
+                    </StackPanel>
                     <TextBlock Text="Visible par (téléphones des équipes, ordres de mission)" Classes="label" />
                     <ComboBox ItemsSource="{Binding VisibilityOptions}" SelectedItem="{Binding SelectedZoneVisibility}" MinWidth="240"
                               ToolTip.Tip="Bivouac d'une faction, campement, respawn… : affiché sur la carte et dans la liste de l'application des équipes concernées" />

@@ -82,6 +82,9 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         zone.Property(z => z.Kind).HasConversion<string>();
         zone.Property(z => z.Category).HasConversion<string>();
         zone.Property(z => z.Visibility).HasConversion<string>();
+        zone.Property(z => z.Symbol).HasConversion<string>();
+        zone.Property(z => z.Echelon).HasConversion<string>();
+        modelBuilder.Entity<Team>().Property(t => t.Symbol).HasConversion<string>();
         zone.Property(z => z.Points).HasJsonListConversion();
 
         var mission = modelBuilder.Entity<Mission>();

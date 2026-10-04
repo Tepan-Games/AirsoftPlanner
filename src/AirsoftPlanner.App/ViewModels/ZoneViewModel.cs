@@ -15,14 +15,80 @@ public record PoiCategoryOption(PoiCategory Value)
     public override string ToString() => Label;
 }
 
+public record MilSymbolOption(AirsoftPlanner.Core.Symbols.MilSymbol Value)
+{
+    public static IReadOnlyList<MilSymbolOption> All { get; } = AirsoftPlanner.Core.Symbols.MilitarySymbols.All.Select(s => new MilSymbolOption(s)).ToList();
+
+    /// <summary>Symboles proposés pour une équipe (pas de point tactique).</summary>
+    public static IReadOnlyList<MilSymbolOption> ForTeams { get; } = All.Where(o => o.Value is not (AirsoftPlanner.Core.Symbols.MilSymbol.Dot
+        or AirsoftPlanner.Core.Symbols.MilSymbol.Objective or AirsoftPlanner.Core.Symbols.MilSymbol.RallyPoint or AirsoftPlanner.Core.Symbols.MilSymbol.Checkpoint
+        or AirsoftPlanner.Core.Symbols.MilSymbol.Danger or AirsoftPlanner.Core.Symbols.MilSymbol.LandingZone or AirsoftPlanner.Core.Symbols.MilSymbol.Installation
+        or AirsoftPlanner.Core.Symbols.MilSymbol.Bivouac)).ToList();
+
+    public string Label => AirsoftPlanner.Core.Symbols.MilitarySymbols.Label(Value);
+
+    /// <summary>Aperçu : symbole « Auto » montré comme infanterie.</summary>
+    public AirsoftPlanner.Core.Symbols.MilSymbol Preview => Value == AirsoftPlanner.Core.Symbols.MilSymbol.Auto ? AirsoftPlanner.Core.Symbols.MilSymbol.Infantry : Value;
+
+    public override string ToString() => Label;
+}
+
+public record EchelonOption(AirsoftPlanner.Core.Symbols.Echelon Value)
+{
+    public static IReadOnlyList<EchelonOption> All { get; } = Enum.GetValues<AirsoftPlanner.Core.Symbols.Echelon>().Select(e => new EchelonOption(e)).ToList();
+
+    public string Label => AirsoftPlanner.Core.Symbols.MilitarySymbols.Label(Value);
+
+    public override string ToString() => Label;
+}
+
+/// <summary>Faction propriétaire d'un point (couleur de son symbole).</summary>
+public record FactionChoice(Guid? Id, string Label)
+{
+    public override string ToString() => Label;
+}
+
 /// <summary>Qui voit la zone : l'orga seulement, toutes les équipes ou une faction.</summary>
 public record ZoneVisibilityOption(ZoneVisibility Value, Guid? FactionId, string Label)
 {
     public override string ToString() => Label;
 }
 
-public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) : ViewModelBase
+public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat, Func<Guid, string?>? factionColor = null) : ViewModelBase
 {
+    public MilSymbolOption Symbol
+    {
+        get => MilSymbolOption.All.First(o => o.Value == zone.Symbol);
+        set
+        {
+            if (value is null || value.Value == zone.Symbol)
+                return;
+            zone.Symbol = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ResolvedSymbol));
+        }
+    }
+
+    public EchelonOption Echelon
+    {
+        get => EchelonOption.All.First(o => o.Value == zone.Echelon);
+        set
+        {
+            if (value is null || value.Value == zone.Echelon)
+                return;
+            zone.Echelon = value.Value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Symbole dessiné (Auto remplacé par celui de la catégorie).</summary>
+    public AirsoftPlanner.Core.Symbols.MilSymbol ResolvedSymbol => AirsoftPlanner.Core.Symbols.MilitarySymbols.Resolve(zone.Symbol, zone.Category);
+
+    /// <summary>Couleur du symbole : celle de la faction propriétaire, sinon celle du point.</summary>
+    public string SymbolColor => zone.OwnerFactionId is { } id && factionColor?.Invoke(id) is { } color ? color : zone.Color;
+
+    public void NotifySymbolColorChanged() => OnPropertyChanged(nameof(SymbolColor));
+
     public Zone Model => zone;
 
     public string Name
@@ -51,6 +117,7 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) :
             zone.Category = value.Value;
             OnPropertyChanged();
             OnPropertyChanged(nameof(DisplayName));
+            OnPropertyChanged(nameof(ResolvedSymbol));
         }
     }
 
@@ -60,7 +127,11 @@ public class ZoneViewModel(Zone zone, Func<CoordinateFormat> coordinateFormat) :
     public string Color
     {
         get => zone.Color;
-        set => SetProperty(zone.Color, value, zone, (z, v) => z.Color = v);
+        set
+        {
+            if (SetProperty(zone.Color, value, zone, (z, v) => z.Color = v))
+                OnPropertyChanged(nameof(SymbolColor));
+        }
     }
 
     public ZoneKind Kind => zone.Kind;

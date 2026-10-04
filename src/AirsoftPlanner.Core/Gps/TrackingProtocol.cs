@@ -35,7 +35,10 @@ public enum AllyShareMode
 }
 
 /// <summary>Position d'une équipe alliée (même faction), avec ses coordonnées déjà formatées selon l'OP.</summary>
-public record AllyPosition(string Team, double Latitude, double Longitude, string Coordinates, DateTimeOffset Time, string RadioFrequency);
+/// <param name="Military">Symbole militaire de l'équipe, dessiné aux couleurs de la faction (<paramref name="FactionColor"/>).</param>
+public record AllyPosition(string Team, double Latitude, double Longitude, string Coordinates, DateTimeOffset Time, string RadioFrequency,
+    AirsoftPlanner.Core.Symbols.MilSymbol Military = AirsoftPlanner.Core.Symbols.MilSymbol.Infantry,
+    AirsoftPlanner.Core.Symbols.Echelon Echelon = AirsoftPlanner.Core.Symbols.Echelon.None, string FactionColor = "");
 
 /// <summary>Récapitulatif d'une mission pour le chef d'équipe.</summary>
 /// <param name="IsCurrent">Vrai si elle est en cours, faux si c'est la prochaine.</param>
@@ -50,8 +53,11 @@ public record LatLon(double Latitude, double Longitude);
 /// <param name="Symbol">Symbole court (⛺, ✚...).</param>
 /// <param name="Coordinates">Coordonnées du centre, déjà formatées selon l'OP.</param>
 /// <param name="Outline">Contour d'une zone (vide pour un point).</param>
+/// <param name="Military">Symbole militaire, dessiné dans la couleur <paramref name="SymbolColor"/> (faction ou couleur du point).</param>
 public record PoiInfo(string Name, string Category, string Symbol, string Coordinates, double Latitude, double Longitude,
-    string Description, string Color, IReadOnlyList<LatLon> Outline);
+    string Description, string Color, IReadOnlyList<LatLon> Outline,
+    AirsoftPlanner.Core.Symbols.MilSymbol Military = AirsoftPlanner.Core.Symbols.MilSymbol.Dot,
+    AirsoftPlanner.Core.Symbols.Echelon Echelon = AirsoftPlanner.Core.Symbols.Echelon.None, string SymbolColor = "");
 
 /// <summary>Message de l'orga reçu par le téléphone (texte libre ou annonce de mission).</summary>
 /// <param name="Audience">« Toutes les équipes », « Faction OTAN » ou « Équipe ».</param>

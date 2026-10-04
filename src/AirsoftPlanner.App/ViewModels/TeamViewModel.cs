@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
@@ -64,6 +64,27 @@ public class TeamViewModel : ViewModelBase
             OnPropertyChanged();
         }
     }
+
+    /// <summary>Symbole de l'équipe sur les cartes.</summary>
+    public MilSymbolOption Symbol
+    {
+        get => MilSymbolOption.All.First(o => o.Value == _team.Symbol);
+        set
+        {
+            if (value is null || value.Value == _team.Symbol)
+                return;
+            _team.Symbol = value.Value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Symbole dessiné : Auto = QG pour l'équipe de commandement de la faction, infanterie sinon.</summary>
+    public AirsoftPlanner.Core.Symbols.MilSymbol ResolvedSymbol => _team.Symbol != AirsoftPlanner.Core.Symbols.MilSymbol.Auto
+        ? _team.Symbol
+        : Faction?.CommandTeam == this ? AirsoftPlanner.Core.Symbols.MilSymbol.Headquarters : AirsoftPlanner.Core.Symbols.MilSymbol.Infantry;
+
+    /// <summary>Indicateur de taille déduit de l'effectif.</summary>
+    public AirsoftPlanner.Core.Symbols.Echelon Echelon => AirsoftPlanner.Core.Symbols.MilitarySymbols.EchelonForSize(Size);
 
     public string RadioFrequency
     {

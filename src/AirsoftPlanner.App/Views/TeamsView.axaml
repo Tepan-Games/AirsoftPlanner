@@ -1,6 +1,7 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:controls="using:AirsoftPlanner.App.Controls"
              xmlns:conv="using:AirsoftPlanner.App.Converters"
              x:Class="AirsoftPlanner.App.Views.TeamsView"
              x:DataType="vm:TeamsViewModel">
@@ -81,6 +82,19 @@
                         <TextBlock Text="Identifiants GPS (appareils)" Classes="label" />
                         <TextBox Text="{Binding Selected.GpsDeviceIds, FallbackValue=''}" PlaceholderText="ex. alpha-tel, !a1b2c3d4"
                                  ToolTip.Tip="Identifiant saisi dans Traccar Client, ou identifiant du nœud Meshtastic ; plusieurs possibles, séparés par des virgules" />
+                    </StackPanel>
+                    <StackPanel Spacing="10" Margin="0,0,16,8">
+                        <TextBlock Text="Symbole sur les cartes" Classes="label" />
+                        <ComboBox ItemsSource="{x:Static vm:MilSymbolOption.ForTeams}" SelectedItem="{Binding Selected.Symbol, FallbackValue={x:Null}}" MinWidth="230">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MilSymbolOption">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <controls:SymbolView Symbol="{Binding Preview}" Width="40" Height="28" />
+                                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                     </StackPanel>
                     <StackPanel Spacing="10" Margin="0,0,16,8" Width="200">
                         <TextBlock Text="Fréquence radio de l'équipe" Classes="label" />

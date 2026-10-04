@@ -45,7 +45,8 @@ public record PlayerRow(MemberViewModel? Member, string Name, bool IsOut, string
 public record TeamTrail(string Color, IReadOnlyList<GeoPoint> Points);
 
 /// <summary>Objet d'objectif affiché sur la carte.</summary>
-public record ItemMarker(GeoPoint Point, string Label, bool IsSelected);
+/// <param name="SymbolColor">Véhicule : couleur de la faction (symbole militaire) ; null pour un objet.</param>
+public record ItemMarker(GeoPoint Point, string Label, bool IsSelected, string? SymbolColor = null);
 
 /// <summary>Option d'événement pour un objet d'objectif.</summary>
 public record ItemEventOption(ItemEventKind Kind, string Label, bool NeedsTeam, bool NeedsLocation)
@@ -87,7 +88,9 @@ public partial class TrackedItemViewModel(GameItemViewModel item) : ViewModelBas
 }
 
 /// <summary>Équipe affichée sur la carte de suivi.</summary>
-public record TeamMarker(GeoPoint Point, string Color, string Label, string StatusColor, GeoPoint? Target, bool IsSelected);
+public record TeamMarker(GeoPoint Point, string Color, string Label, string StatusColor, GeoPoint? Target, bool IsSelected,
+    AirsoftPlanner.Core.Symbols.MilSymbol Symbol = AirsoftPlanner.Core.Symbols.MilSymbol.Infantry,
+    AirsoftPlanner.Core.Symbols.Echelon Echelon = AirsoftPlanner.Core.Symbols.Echelon.None);
 
 /// <summary>État d'une équipe à l'instant suivi.</summary>
 public partial class TeamStatusViewModel(TeamViewModel team) : ViewModelBase
@@ -809,7 +812,9 @@ public partial class TrackingViewModel : ViewModelBase
                 s.Team.Name,
                 s.StatusColor,
                 s.Status is ProgressStatus.Late or ProgressStatus.Tight ? s.Target : null,
-                s == Selected))
+                s == Selected,
+                s.Team.ResolvedSymbol,
+                s.Team.Echelon))
             .ToList();
 
         var nowDate = new DateTimeOffset(_operation.ToDateTime(NowMinutes));
@@ -817,7 +822,7 @@ public partial class TrackingViewModel : ViewModelBase
             .SelectMany(t => t.Vehicles.Where(v => v.InGame).Select(v => (Team: t, Vehicle: v)))
             .Select(x => (x.Team, x.Vehicle, Point: Vehicles.LastPosition(x.Vehicle.Model.Id, nowDate)))
             .Where(x => x.Point is not null)
-            .Select(x => new ItemMarker(x.Point!.Value, $"🚙 {x.Team.Name} {x.Vehicle.Kind}", false));
+            .Select(x => new ItemMarker(x.Point!.Value, $"{x.Team.Name} {x.Vehicle.Kind}", false, x.Team.Faction?.Color ?? "#607D8B"));
         ItemMarkers = TrackedItems
             .Where(t => t.Location is not null && t.StateColor != "#2E7D32")
             .Select(t => new ItemMarker(t.Location!.Value, $"📦 {t.Item.Name}", t == SelectedItem))

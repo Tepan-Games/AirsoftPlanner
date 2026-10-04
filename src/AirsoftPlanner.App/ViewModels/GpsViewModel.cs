@@ -280,7 +280,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
         var allies = mode == AllyShareMode.None ? [] : _tracking.LatestPositions()
             .Where(p => p.Team != team && p.Team.Faction is not null && p.Team.Faction == team.Faction)
             .Select(p => new AllyPosition(p.Team.Name, p.Point.Latitude, p.Point.Longitude,
-                Core.Geo.Coordinates.Format(p.Point, format), p.Time, p.Team.RadioFrequency))
+                Core.Geo.Coordinates.Format(p.Point, format), p.Time, p.Team.RadioFrequency,
+                p.Team.ResolvedSymbol, p.Team.Echelon, p.Team.Faction?.Color ?? "#607D8B"))
             .ToList();
         var layer = _tracking.Terrain.SelectedLayer ?? _tracking.Terrain.Layers.FirstOrDefault();
         var map = mode == AllyShareMode.Map && layer is not null
@@ -293,7 +294,8 @@ public partial class GpsViewModel : ViewModelBase, IAsyncDisposable
                 var center = z.IsArea ? Core.Geo.GeoMath.Centroid(z.Points) : z.Points[0];
                 return new PoiInfo(z.Name, PoiCategories.Label(z.Model.Category), PoiCategories.Symbol(z.Model.Category),
                     Core.Geo.Coordinates.Format(center, format), center.Latitude, center.Longitude, z.Description, z.Color,
-                    z.IsArea ? z.Points.Select(p => new LatLon(p.Latitude, p.Longitude)).ToList() : []);
+                    z.IsArea ? z.Points.Select(p => new LatLon(p.Latitude, p.Longitude)).ToList() : [],
+                    z.ResolvedSymbol, z.Model.Echelon, z.SymbolColor);
             })
             .ToList();
         var dispatch = _tracking.Dispatch;

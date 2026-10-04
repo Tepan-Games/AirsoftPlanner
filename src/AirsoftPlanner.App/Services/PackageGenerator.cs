@@ -27,7 +27,8 @@ public record PackageInput(
     IReadOnlyDictionary<Guid, GameItem> Items,
     IReadOnlyList<RuleDocument> Rules,
     MapLayer? Map,
-    string? EnrollmentServer = null);
+    string? EnrollmentServer = null,
+    IReadOnlyDictionary<Guid, string>? FactionColors = null);
 
 /// <summary>
 /// Produit le package d'une équipe : un dossier contenant l'ordre de mission initial (PDF, avec carte),
@@ -195,7 +196,10 @@ public static class PackageGenerator
             if (input.Map is { } map)
             {
                 var missionZones = input.Missions.Select(m => m.ZoneId).OfType<Guid>().ToHashSet();
-                var image = MapSnapshot.Render(map, input.Zones.Values.Select(z => (z, missionZones.Contains(z.Id))));
+                // Les points réservés à l'orga ou à une autre faction (bivouac adverse...) ne figurent pas sur la carte de l'équipe.
+                var shown = input.Zones.Values.Where(z => missionZones.Contains(z.Id) || z.IsVisibleTo(input.Team));
+                var image = MapSnapshot.Render(map, shown.Select(z => (z, missionZones.Contains(z.Id))),
+                    factionColor: id => input.FactionColors?.GetValueOrDefault(id));
                 container.Page(page =>
                 {
                     page.Size(PageSizes.A4.Landscape());

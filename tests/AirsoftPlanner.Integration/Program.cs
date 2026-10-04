@@ -132,6 +132,8 @@ bivouac.PositionText = "43.6600, 5.9900";
 terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.FactionId == alpha.Model.FactionId);
 Check("Point d'intérêt de faction affiché sur le téléphone", () => Screen().Contains("Bivouac nord — Bivouac"), 25);
 Check("Point d'intérêt notifié", () => Notifications().Contains("Points d'intérêt mis à jour"), 10);
+Swipe(up: false);
+Capture("android-carte.png");
 terrain.SelectedZoneVisibility = terrain.VisibilityOptions.First(o => o.Value == ZoneVisibility.Orga);
 Check("Point repassé « orga seulement » : retiré du téléphone", () => !Screen().Contains("Bivouac nord"), 25);
 
@@ -288,6 +290,16 @@ List<(string Text, string Class, string Desc, int X, int Y)> ScreenNodes()
                 b.Length == 4 ? (b[0] + b[2]) / 2 : 0, b.Length == 4 ? (b[1] + b[3]) / 2 : 0);
         })
         .ToList();
+}
+
+// Capture d'écran du téléphone (documentation).
+void Capture(string name)
+{
+    var info = new ProcessStartInfo(adbPath, "exec-out screencap -p") { RedirectStandardOutput = true, UseShellExecute = false };
+    using var process = Process.Start(info)!;
+    using var file = File.Create(Path.Combine(AppContext.BaseDirectory, name));
+    process.StandardOutput.BaseStream.CopyTo(file);
+    process.WaitForExit();
 }
 
 string Notifications() => Adb("shell dumpsys notification --noredact");

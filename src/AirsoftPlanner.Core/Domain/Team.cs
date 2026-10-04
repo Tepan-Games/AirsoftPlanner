@@ -40,6 +40,9 @@ public class Team : Entity
     /// <summary>Mission diffusée par l'orga aux téléphones de l'équipe (null : aucune). Jamais modifiée automatiquement.</summary>
     public Guid? PublishedMissionId { get; set; }
 
+    /// <summary>Symbole de l'équipe sur les cartes (Auto : infanterie, QG pour l'équipe de commandement).</summary>
+    public AirsoftPlanner.Core.Symbols.MilSymbol Symbol { get; set; }
+
     /// <summary>Missions terminées par l'orga pour cette équipe.</summary>
     public List<Guid> CompletedMissionIds { get; set; } = [];
 }

@@ -30,4 +30,12 @@ public class Zone : Entity
     public ZoneVisibility Visibility { get; set; }
 
     public Guid? VisibleFactionId { get; set; }
+
+    /// <summary>Symbole militaire du point (Auto : selon la catégorie).</summary>
+    public AirsoftPlanner.Core.Symbols.MilSymbol Symbol { get; set; }
+
+    public AirsoftPlanner.Core.Symbols.Echelon Echelon { get; set; }
+
+    /// <summary>Faction à qui appartient le point (couleur du symbole) ; null : couleur du point.</summary>
+    public Guid? OwnerFactionId { get; set; }
 }

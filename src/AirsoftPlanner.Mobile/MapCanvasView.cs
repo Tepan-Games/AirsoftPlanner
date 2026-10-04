@@ -123,11 +123,9 @@ public class MapCanvasView(Context context) : View(context)
             }
 
             var p = ToScreen(new GeoPoint(poi.Latitude, poi.Longitude));
-            _poiPaint.Color = color;
-            canvas.DrawRoundRect(p.X - 16, p.Y - 16, p.X + 16, p.Y + 16, 6, 6, _poiPaint);
-            _ringPaint.SetStyle(Paint.Style.Stroke);
-            canvas.DrawRoundRect(p.X - 16, p.Y - 16, p.X + 16, p.Y + 16, 6, 6, _ringPaint);
-            Label(canvas, $"{poi.Symbol} {poi.Name}".Trim(), p.X, p.Y - 30);
+            SymbolPainter.Draw(canvas, p.X, p.Y, 40, AirsoftPlanner.Core.Symbols.MilitarySymbols.Draw(poi.Military, poi.Echelon),
+                poi.SymbolColor.Length > 0 ? poi.SymbolColor : poi.Color, _nightMode);
+            Label(canvas, poi.Name, p.X, p.Y - 40);
         }
 
         if (_target is { } target)
@@ -141,15 +139,18 @@ public class MapCanvasView(Context context) : View(context)
         foreach (var ally in _allies)
         {
             var a = ToScreen(new GeoPoint(ally.Latitude, ally.Longitude));
-            Dot(canvas, a, _allyPaint);
-            Label(canvas, ally.Team, a.X, a.Y - 34);
+            if (ally.FactionColor.Length > 0)
+                SymbolPainter.Draw(canvas, a.X, a.Y, 40, AirsoftPlanner.Core.Symbols.MilitarySymbols.Draw(ally.Military, ally.Echelon), ally.FactionColor, _nightMode);
+            else
+                Dot(canvas, a, _allyPaint);
+            Label(canvas, ally.Team, a.X, a.Y - 40);
         }
 
         if (_own is { } own)
         {
             var o = ToScreen(own);
             Dot(canvas, o, _ownPaint);
-            Label(canvas, "Vous", o.X, o.Y - 34);
+            Label(canvas, Prefs.Team.Length > 0 ? Prefs.Team : "Vous", o.X, o.Y - 34);
         }
     }
 

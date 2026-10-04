@@ -412,7 +412,8 @@ public partial class DocumentsViewModel : ViewModelBase
             _items.Items.ToDictionary(i => i.Model.Id, i => i.Model),
             Rules.Select(r => r.Model).ToList(),
             (_terrain.SelectedLayer ?? _terrain.Layers.FirstOrDefault())?.Model,
-            server);
+            server,
+            _factions.Items.ToDictionary(f => f.Model.Id, f => f.Color));
     }
 
     private string Fingerprint(TeamViewModel team) => PackageFingerprint.Compute(
