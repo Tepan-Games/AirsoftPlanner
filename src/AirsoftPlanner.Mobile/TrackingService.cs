@@ -151,8 +151,8 @@ public class TrackingService : Service, ILocationListener
         }
         catch (ServerApi.RevokedException ex)
         {
-            UpdateStatus($"⛔ {ex.Message}");
             Prefs.Unenroll();
+            UpdateStatus($"⛔ {ex.Message}"); // message conservé pour l'écran d'enrôlement
             StopSelf();
         }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException)

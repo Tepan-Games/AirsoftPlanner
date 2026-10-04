@@ -97,6 +97,8 @@ public class MainActivity : Activity
     private void BuildEnrollment(string server, string code)
     {
         AddTitle("Airsoft Planner");
+        if (Prefs.Status.StartsWith('⛔'))
+            Text(Prefs.Status, 15).SetTextColor(Color.Rgb(198, 40, 40));
         Text("Scannez le QR code d'enrôlement affiché par l'orga avec l'appareil photo du téléphone, ou saisissez l'adresse du PC de l'OP et le code de votre équipe.", 14, secondary: true);
 
         Label("Adresse du PC de l'OP");
@@ -148,7 +150,7 @@ public class MainActivity : Activity
         _ownPosition = Text("", 15);
 
         Section("Alliés");
-        _map = new MapCanvasView(this);
+        _map = new MapCanvasView(this) { ContentDescription = "Carte du terrain" };
         _root.AddView(_map, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent));
         _allies = Text("", 15);
 
@@ -168,7 +170,15 @@ public class MainActivity : Activity
 
     private void RefreshDashboard()
     {
-        if (_status is null || !Prefs.IsEnrolled)
+        // Révoqué par l'orga pendant l'affichage du suivi : retour à l'écran d'enrôlement.
+        if (_status is not null && !Prefs.IsEnrolled)
+        {
+            _status = null;
+            Show();
+            return;
+        }
+
+        if (_status is null)
             return;
 
         var response = Prefs.LastResponse;

@@ -65,6 +65,7 @@ internal static class Prefs
         Store.Edit()!.Clear()!.Apply();
         ServerUrl = server;
         DeviceName = device;
+        // Le message de révocation éventuel est réécrit juste après par le service.
     }
 
     private static string Get(string key) => Store.GetString(key, "") ?? "";

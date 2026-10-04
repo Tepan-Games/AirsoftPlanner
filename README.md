@@ -102,6 +102,27 @@ Le PC qui mène l'OP active son **serveur local** (onglet Suivi → Réception G
 Construire l'application Android nécessite le module .NET pour Android, à installer une fois dans un
 terminal administrateur : `dotnet workload install android`.
 
+## Application Android
+
+```bash
+dotnet build src/AirsoftPlanner.Mobile -c Release
+```
+
+produit `src/AirsoftPlanner.Mobile/bin/Release/net10.0-android/com.tepangames.airsoftplanner-Signed.apk`,
+installable directement sur les téléphones. Première fois : `dotnet workload install android`
+(terminal administrateur), puis `dotnet build src/AirsoftPlanner.Mobile -t:InstallAndroidDependencies
+-p:AcceptAndroidSDKLicenses=True` (SDK Android et JDK dans le profil).
+
+**Tests d'interaction application ↔ logiciel** (émulateur démarré, APK installé) :
+
+```bash
+dotnet run --project tests/AirsoftPlanner.Integration -- "Démo Fontainebleau v12.aop"
+```
+
+Enrôlement (code faux, saisie manuelle, lien du QR code), positions reçues, mission affichée,
+intervalle et partage des alliés modifiés par l'orga, numéro d'urgence, coupure du serveur et
+rattrapage des positions, arrêt de l'envoi, révocation.
+
 ## Distribution
 
 ```bash

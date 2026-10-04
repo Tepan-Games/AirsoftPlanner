@@ -1,0 +1,243 @@
+// Tests d'interaction entre l'application Android (émulateur, pilotée par adb) et le logiciel
+// (code réel, piloté par programme comme le ferait l'orga).
+using System.Diagnostics;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using System.Xml.Linq;
+using AirsoftPlanner.App;
+using AirsoftPlanner.App.Services;
+using AirsoftPlanner.App.ViewModels;
+using AirsoftPlanner.App.Views;
+using AirsoftPlanner.Core.Domain;
+using AirsoftPlanner.Core.Gps;
+using AirsoftPlanner.Data;
+using Avalonia;
+using Avalonia.Headless;
+using Avalonia.Threading;
+
+const string Package = "com.tepangames.airsoftplanner";
+const string Activity = Package + "/crc64f68f6e5c0b1c5f44.MainActivity";
+const int Port = 5098;
+var adbPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Android\Sdk\platform-tools\adb.exe");
+var results = new List<(string Name, bool Ok, string Detail)>();
+
+// ----- PC de l'OP (code réel du logiciel) -----
+var opPath = Path.Combine(AppContext.BaseDirectory, "op-integration.aop");
+File.Copy(args[0], opPath, overwrite: true);
+AppBuilder.Configure<App>().UseSkia().UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false }).SetupWithoutStarting();
+AvaloniaSynchronizationContext.InstallIfNeeded();
+var main = new MainViewModel(new SilentDialogs());
+new MainWindow { DataContext = main }.Show();
+typeof(MainViewModel).GetMethod("Load", BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(main, [OperationFile.Open(opPath)]);
+var ws = main.Workspace!;
+var tracking = ws.Tracking;
+var gps = tracking.Gps!;
+var alpha = ws.Teams.Items.First(t => t.Name == "Alpha");
+tracking.IsSimulation = true;
+tracking.SimulatedMinutes = 10 * 60 + 20;
+ws.General.EmergencyPhone = "06 99 99 99 99";
+gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
+gps.IntervalSeconds = 5;
+alpha.EnrollmentCode = "K7P4QZ";
+gps.ServerPort = Port;
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+Console.WriteLine($"PC de l'OP : serveur {(gps.IsServerRunning ? "actif" : "ARRÊTÉ")} sur {Port}");
+
+var positionsField = typeof(TrackingViewModel).GetField("_positions", BindingFlags.NonPublic | BindingFlags.Instance)!;
+List<TeamPosition> AlphaPositions() => ((List<TeamPosition>)positionsField.GetValue(tracking)!)
+    .Where(p => p.TeamId == alpha.Model.Id && p.Source == "Appli Android").ToList();
+
+// ----- Téléphone (émulateur) -----
+Adb($"shell pm clear {Package}");
+foreach (var permission in new[] { "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "POST_NOTIFICATIONS" })
+    Adb($"shell pm grant {Package} android.permission.{permission}");
+Geo(48.4060, 2.6965);
+
+// 1. Code faux saisi à la main
+Adb($"shell am start -n {Activity}");
+Check("Écran d'enrôlement affiché", () => Screen().Contains("S'enrôler"), 15);
+TypeInto(0, $"10.0.2.2:{Port}");
+TypeInto(1, "ZZZ-ZZZ");
+Tap("S'enrôler");
+Check("Code faux : refusé par le PC", () => gps.Journal.Any(j => j.Contains("Enrôlement refusé")), 15);
+var activeBefore = gps.Devices.Count(d => !d.IsRevoked);
+Check("Code faux : le téléphone reste sur l'enrôlement, aucun téléphone ajouté", () => Screen().Contains("S'enrôler") && gps.Devices.Count(d => !d.IsRevoked) == activeBefore, 3);
+
+// 2. Enrôlement par saisie manuelle (code en minuscules, avec tiret)
+TypeInto(1, "k7p-4qz");
+Tap("S'enrôler");
+Check("Saisie manuelle : téléphone enrôlé côté PC", () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && gps.Devices.First(d => !d.IsRevoked).Team == "Alpha", 20);
+Check("Saisie manuelle : écran de suivi de l'équipe Alpha", () => Screen().Contains("Suivi actif"), 20);
+
+// 3. Positions reçues par le PC
+Geo(48.4062, 2.6970);
+Check("Positions du téléphone reçues par le PC", () => AlphaPositions().Count >= 1, 25);
+Geo(48.4070, 2.6980);
+Check("Nouvelle position transmise (≈ 48.4070, 2.6980)",
+    () => AlphaPositions().LastOrDefault() is { } p && Math.Abs(p.Latitude - 48.4070) < 1e-4 && Math.Abs(p.Longitude - 2.6980) < 1e-4, 25);
+Check("PC : téléphone vu récemment", () => gps.Devices.First(d => !d.IsRevoked).LastSeen.StartsWith("dernier envoi"), 10);
+
+// 4. Mission en cours
+Check("Mission en cours affichée sur le téléphone", () => Screen().Contains("EN COURS : Reconnaissance du village"), 15);
+
+// 5. Intervalle modifié par l'orga
+gps.IntervalSeconds = 8;
+Check("Intervalle 8 s appliqué par le téléphone", () => Screen().Contains("envoi toutes les 8 s"), 30);
+gps.IntervalSeconds = 5;
+Check("Intervalle 5 s rétabli", () => Screen().Contains("envoi toutes les 5 s"), 30);
+
+// 6. Partage des alliés
+Check("Mode carte : carte affichée", () => ScreenNodes().Any(n => n.Desc == "Carte du terrain"), 25);
+gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Coordinates);
+Check("Mode coordonnées : plus de carte, alliés en coordonnées",
+    () => !ScreenNodes().Any(n => n.Desc == "Carte du terrain") && Regex.IsMatch(Screen(), @"Charlie \(.*\)\s*31U \d{6} \d{7}"), 25);
+gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.None);
+Check("Mode rien : alliés non partagés", () => Screen().Contains("non partagées par l'orga"), 25);
+gps.ShareMode = AllyShareModeOption.Of(AllyShareMode.Map);
+
+// 7. Numéro d'urgence modifié
+ws.General.EmergencyPhone = "06 11 22 33 44";
+Check("Nouveau numéro d'urgence reçu", () => Screen().Contains("Urgence orga : 06 11 22 33 44"), 25);
+
+// 8. Coupure du serveur (Wi-Fi perdu) puis retour
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+var outageStart = DateTimeOffset.Now;
+Check("Serveur coupé : le téléphone signale le PC injoignable", () => Screen().Contains("injoignable"), 30);
+Geo(48.4080, 2.6990);
+Wait(7);
+Geo(48.4090, 2.7000);
+Wait(7);
+Check("Serveur coupé : positions mises en attente", () => Regex.Match(Screen(), @"(\d+) position\(s\) en attente") is { Success: true } m && int.Parse(m.Groups[1].Value) >= 2, 20);
+var beforeReconnect = AlphaPositions().Count;
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+Check("Retour du serveur : positions en attente rattrapées",
+    () => AlphaPositions().Count(p => p.ReceivedAt >= outageStart) >= 2 && AlphaPositions().Count >= beforeReconnect + 2, 30);
+Check("Retour du serveur : téléphone de nouveau à jour", () => Screen().Contains("Dernier envoi"), 20);
+
+// 9. Arrêt de l'envoi depuis le téléphone
+Tap("Arrêter l'envoi de la position");
+Check("Téléphone : suivi arrêté", () => Screen().Contains("Suivi arrêté"), 15);
+var stoppedCount = AlphaPositions().Count;
+Geo(48.4100, 2.7010);
+Wait(12);
+Check("PC : plus aucune position reçue après l'arrêt", () => AlphaPositions().Count == stoppedCount, 1);
+Tap("Démarrer l'envoi de la position");
+Check("Téléphone : suivi relancé, positions de nouveau reçues", () => AlphaPositions().Count > stoppedCount, 30);
+
+// 10. Révocation par l'orga
+gps.SelectedDevice = gps.Devices.First(d => !d.IsRevoked);
+gps.RevokeDeviceCommand.Execute(null);
+Check("Révocation : le téléphone revient à l'écran d'enrôlement", () => Screen().Contains("S'enrôler"), 30);
+Check("Révocation : message « plus autorisé » affiché", () => Screen().Contains("n'est plus autorisé par l'orga"), 3);
+Check("Révocation : PC indique le téléphone révoqué", () => gps.Devices.Any(d => d.IsRevoked), 1);
+
+// 11. Nouvel enrôlement par le lien du QR code
+var link = EnrollmentLink.Create($"http://10.0.2.2:{Port}", "K7P4QZ");
+Adb($"shell am start -a android.intent.action.VIEW -d '{link}' {Package}");
+Check("Lien du QR code : nouvel enrôlement accepté", () => gps.Devices.Count(d => !d.IsRevoked) == activeBefore + 1 && Screen().Contains("Suivi actif"), 30);
+
+// ----- Bilan -----
+Console.WriteLine();
+Console.WriteLine("=== RÉSULTATS ===");
+foreach (var (name, ok, detail) in results)
+    Console.WriteLine($"{(ok ? "OK   " : "ÉCHEC")} {name}{(ok ? "" : $" — {detail}")}");
+Console.WriteLine($"{results.Count(r => r.Ok)}/{results.Count} vérifications réussies");
+Pump(gps.ToggleServerCommand.ExecuteAsync(null));
+main.Dispose();
+return results.All(r => r.Ok) ? 0 : 1;
+
+// ----- Outils -----
+void Pump(Task t) { while (!t.IsCompleted) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); } t.GetAwaiter().GetResult(); }
+
+void Wait(double seconds)
+{
+    var end = DateTime.Now.AddSeconds(seconds);
+    while (DateTime.Now < end) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(20); }
+}
+
+void Check(string name, Func<bool> condition, double timeoutSeconds)
+{
+    var end = DateTime.Now.AddSeconds(timeoutSeconds);
+    while (true)
+    {
+        Dispatcher.UIThread.RunJobs();
+        bool ok;
+        try { ok = condition(); } catch (Exception ex) { ok = false; Console.WriteLine($"  ({ex.Message})"); }
+        if (ok) { results.Add((name, true, "")); Console.WriteLine($"OK    {name}"); return; }
+        if (DateTime.Now > end)
+        {
+            var detail = $"écran : {Screen().Replace('\n', ' ')[..Math.Min(260, Screen().Length)]}";
+            results.Add((name, false, detail));
+            Console.WriteLine($"ÉCHEC {name}\n      {detail}");
+            return;
+        }
+        Wait(1);
+    }
+}
+
+string Adb(string arguments)
+{
+    var info = new ProcessStartInfo(adbPath, arguments)
+    {
+        RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false,
+        StandardOutputEncoding = System.Text.Encoding.UTF8,
+    };
+    using var process = Process.Start(info)!;
+    var task = process.StandardOutput.ReadToEndAsync();
+    while (!process.HasExited) { Dispatcher.UIThread.RunJobs(); Thread.Sleep(10); }
+    return task.Result;
+}
+
+void Geo(double lat, double lon) => Adb(FormattableString.Invariant($"emu geo fix {lon} {lat}"));
+
+List<(string Text, string Class, string Desc, int X, int Y)> ScreenNodes()
+{
+    Adb("shell uiautomator dump /sdcard/ui.xml");
+    var xml = Adb("exec-out cat /sdcard/ui.xml");
+    var start = xml.IndexOf("<?xml", StringComparison.Ordinal);
+    if (start < 0) return [];
+    var document = XDocument.Parse(xml[start..]);
+    return document.Descendants("node")
+        .Where(n => (string?)n.Attribute("package") == Package)
+        .Select(n =>
+        {
+            var b = Regex.Matches((string?)n.Attribute("bounds") ?? "", @"\d+").Select(m => int.Parse(m.Value)).ToArray();
+            return ((string?)n.Attribute("text") ?? "", (string?)n.Attribute("class") ?? "", (string?)n.Attribute("content-desc") ?? "",
+                b.Length == 4 ? (b[0] + b[2]) / 2 : 0, b.Length == 4 ? (b[1] + b[3]) / 2 : 0);
+        })
+        .ToList();
+}
+
+string Screen() => string.Join("\n", ScreenNodes().Select(n => n.Text).Where(t => t.Length > 0));
+
+void Tap(string text)
+{
+    var node = ScreenNodes().First(n => n.Text.Contains(text));
+    Adb($"shell input tap {node.X} {node.Y}");
+    Wait(1);
+}
+
+void TypeInto(int fieldIndex, string text)
+{
+    var field = ScreenNodes().Where(n => n.Class == "android.widget.EditText").ElementAt(fieldIndex);
+    Adb($"shell input tap {field.X} {field.Y}");
+    Adb("shell input keyevent KEYCODE_MOVE_END");
+    Adb("shell input keyevent " + string.Join(" ", Enumerable.Repeat("KEYCODE_DEL", 40)));
+    Adb($"shell input text '{text.Replace(" ", "%s")}'");
+    Wait(0.5);
+}
+
+class SilentDialogs : IFileDialogService
+{
+    public Task<string?> PickNewOperationFileAsync(string suggestedName) => Task.FromResult<string?>(null);
+    public Task<string?> PickExistingOperationFileAsync() => Task.FromResult<string?>(null);
+    public Task<string?> PickImageFileAsync() => Task.FromResult<string?>(null);
+    public Task<string?> PickDocumentFileAsync() => Task.FromResult<string?>(null);
+    public Task<string?> PickFolderAsync(string title, string? startFolder) => Task.FromResult<string?>(null);
+    public Task<string?> PickOpenFileAsync(string title, string typeName, IReadOnlyList<string> patterns) => Task.FromResult<string?>(null);
+    public Task<string?> PickSaveFileAsync(string title, string suggestedName, string typeName, string extension) => Task.FromResult<string?>(null);
+    public Task ShowInfoAsync(string title, string message) => Task.CompletedTask;
+    public Task ShowImageAsync(string title, string message, byte[] png) => Task.CompletedTask;
+    public Task<SaveChoice> AskSaveChangesAsync(string fileName) => Task.FromResult(SaveChoice.Discard);
+    public Task ShowErrorAsync(string message) { Console.WriteLine("  [PC] erreur : " + message); return Task.CompletedTask; }
+}
