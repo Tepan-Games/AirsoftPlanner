@@ -45,6 +45,9 @@ public class AppSettings
     /// <summary>Option de lancement « --serveur-gps » : serveur démarré pour cette session, sans changer le réglage.</summary>
     public static bool StartGpsServerOnce { get; set; }
 
+    /// <summary>Tests automatiques : ne pas ouvrir les documents générés.</summary>
+    public static bool SuppressOpening { get; set; }
+
     /// <summary>
     /// Adresse de mise à jour du nom DynDNS (contient le jeton du compte, chiffrée pour l'utilisateur Windows),
     /// avec le repère {ip} remplacé par l'adresse du PC. Ex. https://www.duckdns.org/update?domains=monop&amp;token=...&amp;ip={ip}

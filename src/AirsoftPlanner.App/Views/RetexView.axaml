@@ -1,0 +1,50 @@
+﻿<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:AirsoftPlanner.App.ViewModels"
+             xmlns:retex="using:AirsoftPlanner.Core.Retex"
+             x:Class="AirsoftPlanner.App.Views.RetexView"
+             x:DataType="vm:RetexViewModel">
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,10">
+            <TextBlock Text="RETEX — retour d'expérience" Classes="h1" />
+            <TextBlock Text="{Binding Status}" Opacity="0.8" />
+            <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" />
+            <WrapPanel>
+                <Button Content="⟳ Actualiser" Command="{Binding RefreshCommand}" Margin="0,0,8,4" />
+                <Button Content="RETEX global (PDF)…" Command="{Binding GlobalPdfCommand}" Margin="0,0,8,4" Classes="accent"
+                        ToolTip.Tip="Bilan de toutes les équipes, chronologie complète et carte des trajets" />
+                <Button Content="RETEX de l'équipe (PDF)…" Command="{Binding TeamPdfCommand}" Margin="0,0,8,4"
+                        ToolTip.Tip="Missions (prévues, diffusées, terminées), trajet, messages transmis (photos comprises)" />
+                <Button Content="Tous les RETEX d'équipe (PDF)…" Command="{Binding AllTeamsPdfCommand}" Margin="0,0,8,4" />
+            </WrapPanel>
+        </StackPanel>
+        <Grid RowDefinitions="Auto,*,Auto,2*">
+            <TextBlock Text="Bilan par équipe (sélectionnez une équipe pour voir sa chronologie)" FontWeight="SemiBold" Margin="0,0,0,4" />
+            <DataGrid Grid.Row="1" ItemsSource="{Binding Teams}" SelectedItem="{Binding SelectedTeam}" AutoGenerateColumns="False"
+                      IsReadOnly="True" CanUserSortColumns="True" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      BorderThickness="1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Équipe" Binding="{Binding Team}" Width="1.4*" />
+                    <DataGridTextColumn Header="Faction" Binding="{Binding Faction}" Width="*" />
+                    <DataGridTextColumn Header="Missions diffusées" Binding="{Binding Missions}" Width="*" />
+                    <DataGridTextColumn Header="Terminées" Binding="{Binding Completed}" Width="*" />
+                    <DataGridTextColumn Header="Retard moyen de diffusion" Binding="{Binding AverageDelay}" Width="1.3*" />
+                    <DataGridTextColumn Header="Distance" Binding="{Binding Distance}" Width="*" />
+                    <DataGridTextColumn Header="Sorties de jeu" Binding="{Binding PlayersOut}" Width="*" />
+                    <DataGridTextColumn Header="Messages reçus" Binding="{Binding Messages}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+            <TextBlock Grid.Row="2" Text="Chronologie" FontWeight="SemiBold" Margin="0,12,0,4" />
+            <DataGrid Grid.Row="3" ItemsSource="{Binding Timeline}" AutoGenerateColumns="False" IsReadOnly="True"
+                      GridLinesVisibility="Horizontal" HeadersVisibility="Column" BorderThickness="1"
+                      BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Heure" Binding="{Binding Time}" Width="110" />
+                    <DataGridTextColumn Header="Équipe" Binding="{Binding Team}" Width="140" />
+                    <DataGridTextColumn Header="Type" Binding="{Binding Category}" Width="150" />
+                    <DataGridTextColumn Header="Détail" Binding="{Binding Text}" Width="*" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+    </DockPanel>
+</UserControl>

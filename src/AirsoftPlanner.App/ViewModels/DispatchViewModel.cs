@@ -123,6 +123,9 @@ public partial class DispatchViewModel : ViewModelBase
 
     // ----- Messages -----
 
+    /// <summary>Tous les messages envoyés (RETEX).</summary>
+    public IReadOnlyList<OrgaMessage> AllMessages => _messages;
+
     public ObservableCollection<MessageTargetOption> Targets { get; } = [];
 
     [ObservableProperty]

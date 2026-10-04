@@ -25,6 +25,7 @@ public class WorkspaceViewModel : ViewModelBase
         Tracking.RadioCheck = RadioCheck;
         Tracking.Gps = new GpsViewModel(file, Tracking, Teams, dialogs, Vehicles);
         Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
+        Retex = new RetexViewModel(file, General, Teams, Factions, Tracking, GameItems, dialogs);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
     }
 
@@ -53,4 +54,6 @@ public class WorkspaceViewModel : ViewModelBase
     public DocumentsViewModel Documents { get; }
 
     public FinancesViewModel Finances { get; }
+
+    public RetexViewModel Retex { get; }
 }

@@ -15,7 +15,7 @@ public static class MapSnapshot
     /// <param name="maxSide">Taille maximale de l'image produite, en pixels.</param>
     /// <param name="factionColor">Couleur d'une faction (symboles des points qui lui appartiennent).</param>
     public static byte[] Render(MapLayer layer, IEnumerable<(Zone Zone, bool Highlighted)> zones, int maxSide = 1800,
-        Func<Guid, string?>? factionColor = null)
+        Func<Guid, string?>? factionColor = null, IEnumerable<(string Color, IReadOnlyList<GeoPoint> Points)>? trails = null)
     {
         using var source = SKBitmap.Decode(layer.Image) ?? throw new InvalidOperationException("Fond de carte illisible.");
         var scale = Math.Min(1.0, (double)maxSide / Math.Max(source.Width, source.Height));
@@ -33,6 +33,26 @@ public static class MapSnapshot
         }
 
         DrawUtmGrid(canvas, info, bounds, ToPixel);
+
+        // Trajets des équipes (RETEX), cercle au départ, rond plein à l'arrivée.
+        foreach (var (trailColor, trailPoints) in trails ?? [])
+        {
+            if (trailPoints.Count < 2)
+                continue;
+            var color = SKColor.TryParse(trailColor, out var parsed) ? parsed : SKColors.Orange;
+            using var path = new SKPath();
+            path.AddPoly(trailPoints.Select(ToPixel).ToArray(), false);
+            using var halo = new SKPaint { Color = SKColors.White.WithAlpha(170), IsStroke = true, StrokeWidth = 7, IsAntialias = true, StrokeJoin = SKStrokeJoin.Round };
+            using var line = new SKPaint { Color = color, IsStroke = true, StrokeWidth = 4, IsAntialias = true, StrokeJoin = SKStrokeJoin.Round };
+            canvas.DrawPath(path, halo);
+            canvas.DrawPath(path, line);
+            using var dot = new SKPaint { Color = color, IsAntialias = true };
+            using var ring = new SKPaint { Color = SKColors.White, IsStroke = true, StrokeWidth = 3, IsAntialias = true };
+            var (first, last) = (ToPixel(trailPoints[0]), ToPixel(trailPoints[^1]));
+            canvas.DrawCircle(first, 7, ring);
+            canvas.DrawCircle(last, 10, dot);
+            canvas.DrawCircle(last, 10, ring);
+        }
 
         using var font = new SKFont(SKTypeface.FromFamilyName("Segoe UI", SKFontStyle.Bold), Math.Max(14, info.Width / 70f));
         foreach (var (zone, highlighted) in zones.OrderBy(z => z.Highlighted).Where(z => z.Zone.Points.Count > 0))

@@ -253,6 +253,13 @@ public partial class TrackingViewModel : ViewModelBase
 
     public MissionsViewModel Missions { get; }
 
+    /// <summary>Positions, objets et effectifs enregistrés pendant l'OP (RETEX).</summary>
+    public IReadOnlyList<TeamPosition> RecordedPositions => _positions;
+
+    public IReadOnlyList<ItemEvent> RecordedItemEvents => _itemEvents;
+
+    public IReadOnlyList<PlayerStatusEvent> RecordedPlayerEvents => _playerEvents;
+
     private DispatchViewModel? _dispatch;
 
     /// <summary>Messages de l'orga et diffusion des missions aux téléphones.</summary>

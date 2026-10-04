@@ -125,6 +125,9 @@
                             <TabItem Header="Suivi de l'OP">
                                 <views:TrackingView DataContext="{Binding Tracking}" />
                             </TabItem>
+                            <TabItem Header="RETEX">
+                                <views:RetexView DataContext="{Binding Retex}" />
+                            </TabItem>
                         </TabControl>
                     </TabItem>
                 </TabControl>
