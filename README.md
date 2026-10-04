@@ -148,9 +148,11 @@ L'icône de l'application est générée par `tools/make_icons.py` (Windows et A
 powershell -ExecutionPolicy Bypass -File scripts/release.ps1 -Exemple "exemple.aop"
 ```
 
-produit `artifacts/AirsoftPlanner-<version>.zip` : logiciel Windows autonome (sans installation de
-.NET) avec `Installer.cmd` (installation pour l'utilisateur, raccourcis, fichiers `.aop` ouverts par
-double-clic), application Android (`AirsoftPlanner.apk`), guide d'utilisation PDF et OP d'exemple.
+produit `artifacts/AirsoftPlanner-<version>.zip` : programme d'installation Windows
+(`AirsoftPlanner-<version>-Setup.exe`, Inno Setup 6 requis : `winget install JRSoftware.InnoSetup` ;
+installation pour l'utilisateur sans .NET à installer, raccourcis, fichiers `.aop` ouverts par double-clic,
+désinstallation depuis Paramètres › Applications), application Android (`AirsoftPlanner.apk`), guide
+d'utilisation PDF et OP d'exemple.
 `scripts/publish.ps1` seul produit uniquement le logiciel Windows.
 
 ## Structure

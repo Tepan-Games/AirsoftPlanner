@@ -28,13 +28,14 @@ public class UpdateCheckerTests
               "assets": [
                 { "name": "AirsoftPlanner-1.1.0-win-x64.zip", "browser_download_url": "https://example.org/win.zip" },
                 { "name": "AirsoftPlanner-1.1.0.zip", "browser_download_url": "https://example.org/full.zip" },
+                { "name": "AirsoftPlanner-1.1.0-Setup.exe", "browser_download_url": "https://example.org/setup.exe" },
                 { "name": "AirsoftPlanner.apk", "browser_download_url": "https://example.org/app.apk" }
               ]
             }
             """;
         var release = UpdateChecker.Parse(json)!;
         Assert.Equal(new Version(1, 1, 0), release.Version);
-        Assert.Equal("https://example.org/full.zip", release.ArchiveUrl);
+        Assert.Equal("https://example.org/setup.exe", release.SetupUrl);
         Assert.Equal("https://example.org/app.apk", release.ApkUrl);
         Assert.True(UpdateChecker.IsNewer(release, new Version(0, 9, 0, 0)));
         Assert.False(UpdateChecker.IsNewer(release, new Version(1, 1, 0)));

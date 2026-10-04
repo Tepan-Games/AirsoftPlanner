@@ -4,9 +4,9 @@ using System.Text.Json;
 namespace AirsoftPlanner.Core.Updates;
 
 /// <summary>Version publiée sur GitHub (dernière « release »).</summary>
-/// <param name="ArchiveUrl">Archive complète (logiciel Windows avec installation, application, guide).</param>
+/// <param name="SetupUrl">Programme d'installation Windows (« …-Setup.exe »).</param>
 /// <param name="ApkUrl">Application Android.</param>
-public record ReleaseInfo(Version Version, string Tag, string Name, string PageUrl, string? ArchiveUrl, string? ApkUrl, string Notes);
+public record ReleaseInfo(Version Version, string Tag, string Name, string PageUrl, string? SetupUrl, string? ApkUrl, string Notes);
 
 /// <summary>
 /// Recherche d'une nouvelle version sur le dépôt GitHub du projet (API publique des « releases »).
@@ -47,7 +47,7 @@ public static class UpdateChecker
             if (ParseVersion(tag) is not { } version)
                 return null;
 
-            string? archive = null, apk = null;
+            string? setup = null, apk = null;
             if (root.TryGetProperty("assets", out var assets))
                 foreach (var asset in assets.EnumerateArray())
                 {
@@ -55,14 +55,14 @@ public static class UpdateChecker
                     var url = asset.GetProperty("browser_download_url").GetString();
                     if (name.EndsWith(".apk", StringComparison.OrdinalIgnoreCase))
                         apk ??= url;
-                    else if (name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) && !name.Contains("win-x64", StringComparison.OrdinalIgnoreCase))
-                        archive ??= url;
+                    else if (name.EndsWith("-Setup.exe", StringComparison.OrdinalIgnoreCase))
+                        setup ??= url;
                 }
 
             return new ReleaseInfo(version, tag!,
                 root.TryGetProperty("name", out var n) && n.GetString() is { Length: > 0 } title ? title : tag!,
                 root.TryGetProperty("html_url", out var page) ? page.GetString() ?? ProjectUrl : ProjectUrl,
-                archive, apk,
+                setup, apk,
                 root.TryGetProperty("body", out var body) ? body.GetString() ?? "" : "");
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or KeyNotFoundException)

@@ -1,14 +1,16 @@
-AIRSOFT PLANNER — Tepan Games
+﻿AIRSOFT PLANNER — Tepan Games
 Préparer, mener et analyser une opération d'airsoft.
 Code source et nouvelles versions : https://github.com/Tepan-Games/AirsoftPlanner
 
 CONTENU DE L'ARCHIVE
 
 1 - Logiciel Windows
-    Double-cliquer sur Installer.cmd : le logiciel est installé pour votre compte Windows
-    (aucun droit administrateur), avec un raccourci dans le menu Démarrer et sur le bureau,
-    et les fichiers .aop s'ouvrent par double-clic.
-    Sans installation : lancer directement AirsoftPlanner.exe depuis ce dossier.
+    Double-cliquer sur « Installer Airsoft Planner » : le logiciel est installé pour votre
+    compte Windows (aucun droit administrateur), avec un raccourci dans le menu Démarrer et
+    sur le bureau, et les fichiers .aop s'ouvrent par double-clic. Désinstallation depuis
+    Paramètres › Applications. Les nouvelles versions s'installent depuis le logiciel.
+    Si Windows affiche « Windows a protégé votre ordinateur » : « Informations
+    complémentaires » puis « Exécuter quand même ».
     Au premier démarrage du serveur de positions, autoriser le logiciel dans le pare-feu
     Windows (réseaux privés).
 

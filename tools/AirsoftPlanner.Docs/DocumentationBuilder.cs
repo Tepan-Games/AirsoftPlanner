@@ -93,8 +93,9 @@ public static class DocumentationBuilder
         H1(col, "2. Installation");
         H2(col, "Logiciel Windows");
         Bullets(col,
-            "Dans l'archive, dossier « 1 - Logiciel Windows » : double-cliquer sur Installer.cmd. Le logiciel est installé pour votre compte Windows (aucun droit administrateur, .NET inclus), avec des raccourcis dans le menu Démarrer et sur le bureau, et les fichiers .aop s'ouvrent par double-clic.",
-            "Sans installation : lancer directement AirsoftPlanner.exe depuis le dossier. Désinstallation : Desinstaller.ps1 dans le dossier d'installation (%LOCALAPPDATA%\\Programs\\AirsoftPlanner).",
+            "Dans l'archive, dossier « 1 - Logiciel Windows » : double-cliquer sur « Installer Airsoft Planner ». Le logiciel est installé pour votre compte Windows (aucun droit administrateur, .NET inclus), avec des raccourcis dans le menu Démarrer et sur le bureau, et les fichiers .aop s'ouvrent par double-clic.",
+            "Si Windows affiche « Windows a protégé votre ordinateur » (programme récent, encore peu connu de SmartScreen) : « Informations complémentaires » puis « Exécuter quand même ».",
+            "Désinstallation : Paramètres Windows › Applications › Airsoft Planner. Vos fichiers d'OP et vos réglages sont conservés.",
             "Au premier démarrage du serveur de positions, Windows demande d'autoriser le logiciel dans le pare-feu : accepter pour les réseaux privés (port TCP 5055 par défaut et UDP 5056 pour la recherche automatique).",
             "Un fichier d'exemple (dossier « 4 - Exemple ») permet de découvrir le logiciel avec une OP complète.",
             "Option de lancement « --serveur-gps » : démarre le serveur de positions dès l'ouverture (utile pour le PC du terrain).");

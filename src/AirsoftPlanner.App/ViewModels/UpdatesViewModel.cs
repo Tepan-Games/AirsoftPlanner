@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using AirsoftPlanner.App.Services;
@@ -17,7 +15,7 @@ namespace AirsoftPlanner.App.ViewModels;
 
 /// <summary>
 /// Mises à jour : recherche d'une nouvelle version sur GitHub (au démarrage, une fois par jour, ou à la demande),
-/// puis téléchargement de l'archive et installation automatique (le logiciel redémarre).
+/// puis téléchargement du programme d'installation et installation automatique (le logiciel redémarre).
 /// </summary>
 public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool>> confirmDiscardOrSave) : ViewModelBase
 {
@@ -97,15 +95,15 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
         Available = null;
     }
 
-    /// <summary>Télécharge l'archive de la nouvelle version et lance son installation (le logiciel se ferme puis redémarre).</summary>
+    /// <summary>Télécharge le programme d'installation de la nouvelle version et le lance (le logiciel se ferme puis redémarre).</summary>
     [RelayCommand(CanExecute = nameof(CanInstall))]
     private async Task InstallAsync()
     {
         if (Available is not { } release)
             return;
-        if (release.ArchiveUrl is null)
+        if (release.SetupUrl is null)
         {
-            // Pas d'archive jointe à la version : page de téléchargement.
+            // Pas de programme d'installation joint à la version : page de téléchargement.
             Open(release.PageUrl);
             return;
         }
@@ -120,15 +118,15 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
             if (Directory.Exists(folder))
                 Directory.Delete(folder, recursive: true);
             Directory.CreateDirectory(folder);
-            var zip = Path.Combine(folder, "archive.zip");
+            var setup = Path.Combine(folder, "AirsoftPlanner-Setup.exe");
 
             Status = L.F("telechargement_de_x", release.Name);
-            using (var response = await Http.GetAsync(release.ArchiveUrl, HttpCompletionOption.ResponseHeadersRead))
+            using (var response = await Http.GetAsync(release.SetupUrl, HttpCompletionOption.ResponseHeadersRead))
             {
                 response.EnsureSuccessStatusCode();
                 var total = response.Content.Headers.ContentLength;
                 await using var source = await response.Content.ReadAsStreamAsync();
-                await using var target = File.Create(zip);
+                await using var target = File.Create(setup);
                 var buffer = new byte[81920];
                 long read = 0;
                 int n;
@@ -141,20 +139,14 @@ public partial class UpdatesViewModel(IFileDialogService dialogs, Func<Task<bool
                 }
             }
 
-            Status = L.T("preparation_de_l_installation");
-            await Task.Run(() => ZipFile.ExtractToDirectory(zip, folder));
-            var installer = Directory.GetFiles(folder, "Installer.ps1", SearchOption.AllDirectories).FirstOrDefault()
-                            ?? throw new InvalidOperationException(L.T("archive_sans_programme_d_installation"));
-
-            Process.Start(new ProcessStartInfo("powershell.exe",
-                $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{installer}\" -Relancer")
+            // Installation silencieuse au même endroit ; le programme d'installation relance le logiciel ensuite.
+            Process.Start(new ProcessStartInfo(setup, "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART /RELANCER=1")
             {
-                UseShellExecute = false,
-                CreateNoWindow = true,
+                UseShellExecute = true,
             });
             (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown();
         }
-        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidDataException or InvalidOperationException
+        catch (Exception ex) when (ex is HttpRequestException or IOException or InvalidOperationException
                                        or UnauthorizedAccessException or System.ComponentModel.Win32Exception or TaskCanceledException)
         {
             Status = "";
