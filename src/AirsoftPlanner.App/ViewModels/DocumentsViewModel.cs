@@ -36,9 +36,17 @@ public class RuleDocumentViewModel(RuleDocument rule) : ViewModelBase
 
     public bool IsWritten => !rule.IsImported;
 
-    public string KindText => rule.IsImported
-        ? L.F("fichier_importe_x_x_ko", rule.FileName, rule.FileContent.Length / 1024.0)
-        : L.T("redige_dans_le_logiciel");
+    public string KindText => rule.Origin == AcpRules.Origin
+        ? L.F("reglement_officiel_telecharge_depuis_x_x_ko", "acp-rules.org", rule.FileContent.Length / 1024.0)
+        : rule.IsImported
+            ? L.F("fichier_importe_x_x_ko", rule.FileName, rule.FileContent.Length / 1024.0)
+            : L.T("redige_dans_le_logiciel");
+
+    public void Refresh()
+    {
+        OnPropertyChanged(nameof(Title));
+        OnPropertyChanged(nameof(KindText));
+    }
 
     public void Replace(string fileName, byte[] content)
     {
@@ -162,6 +170,98 @@ public partial class DocumentsViewModel : ViewModelBase
     private bool _isGenerating;
 
     // ----- Règles -----
+
+    /// <summary>Règlement ACP choisi pour l'OP (informations générales).</summary>
+    public bool IsAcp => _file.Operation.RuleSet == GameRuleSet.Acp;
+
+    [ObservableProperty]
+    private string _acpStatus = "";
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(UpdateAcpRulesCommand))]
+    private bool _isDownloadingAcp;
+
+    /// <summary>
+    /// Règlement choisi dans les informations générales : ACP → PDF officiel ajouté aux documents (téléchargé s'il
+    /// n'y est pas encore) ; règles de l'OP → document ACP retiré.
+    /// </summary>
+    public async Task ApplyRuleSetAsync(GameRuleSet set)
+    {
+        OnPropertyChanged(nameof(IsAcp));
+        if (set == GameRuleSet.Acp)
+        {
+            if (!Rules.Any(r => r.Model.Origin == AcpRules.Origin))
+                await UpdateAcpRulesAsync();
+            return;
+        }
+
+        foreach (var rule in Rules.Where(r => r.Model.Origin == AcpRules.Origin).ToList())
+        {
+            _file.Remove(rule.Model);
+            Rules.Remove(rule);
+        }
+        SelectedRule = Rules.FirstOrDefault();
+        AcpStatus = "";
+        Refresh();
+    }
+
+    /// <summary>Télécharge la dernière version du règlement ACP (ajoutée en tête des documents, ou remplaçant l'ancienne).</summary>
+    [RelayCommand(CanExecute = nameof(CanUpdateAcpRules))]
+    private async Task UpdateAcpRulesAsync()
+    {
+        IsDownloadingAcp = true;
+        AcpStatus = L.T("telechargement_du_reglement_acp");
+        try
+        {
+            var file = await AcpRulesDownloader.DownloadAsync();
+            var existing = Rules.FirstOrDefault(r => r.Model.Origin == AcpRules.Origin);
+            if (existing is not null && existing.Model.FileContent.AsSpan().SequenceEqual(file.Content))
+            {
+                AcpStatus = L.F("reglement_acp_x_deja_a_jour", file.Version);
+                return;
+            }
+
+            if (existing is not null)
+            {
+                existing.Model.Title = AcpRules.Title(file.Version);
+                existing.Replace(AcpRules.FileName(file.Version), file.Content);
+                existing.Refresh();
+                SelectedRule = existing;
+            }
+            else
+            {
+                // En tête des documents : c'est le règlement de référence de l'OP.
+                foreach (var rule in Rules)
+                    rule.Model.SortOrder++;
+                var acp = new RuleDocument
+                {
+                    Title = AcpRules.Title(file.Version),
+                    FileName = AcpRules.FileName(file.Version),
+                    FileContent = file.Content,
+                    Origin = AcpRules.Origin,
+                    SortOrder = 0,
+                };
+                _file.Add(acp);
+                var viewModel = new RuleDocumentViewModel(acp);
+                Rules.Insert(0, viewModel);
+                SelectedRule = viewModel;
+            }
+
+            AcpStatus = L.F("reglement_acp_x_ajoute_aux_documents", file.Version);
+            Refresh();
+        }
+        catch (Exception ex) when (ex is System.Net.Http.HttpRequestException or TaskCanceledException or IOException)
+        {
+            AcpStatus = L.F("reglement_acp_non_telecharge_x", ex.Message);
+            await _dialogs.ShowErrorAsync(AcpStatus);
+        }
+        finally
+        {
+            IsDownloadingAcp = false;
+        }
+    }
+
+    private bool CanUpdateAcpRules => !IsDownloadingAcp;
 
     [RelayCommand]
     private async Task ImportRuleAsync()

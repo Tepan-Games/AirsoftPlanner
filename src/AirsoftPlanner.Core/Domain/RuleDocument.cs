@@ -18,5 +18,8 @@ public class RuleDocument : Entity
 
     public int SortOrder { get; set; }
 
+    /// <summary>Document ajouté automatiquement (« acp » : règlement ACP), vide pour un document de l'orga.</summary>
+    public string Origin { get; set; } = "";
+
     public bool IsImported => FileContent.Length > 0;
 }

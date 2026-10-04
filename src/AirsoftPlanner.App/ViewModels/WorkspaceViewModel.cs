@@ -30,6 +30,7 @@ public class WorkspaceViewModel : ViewModelBase
         Finances = new FinancesViewModel(file, Teams, dialogs, Vehicles);
         Retex = new RetexViewModel(file, General, Teams, Factions, Tracking, GameItems, dialogs);
         Documents = new DocumentsViewModel(file, dialogs, Teams, Factions, Terrain, Missions, GameItems);
+        General.RuleSetChanged += set => _ = Documents.ApplyRuleSetAsync(set);
     }
 
     /// <summary>Relie la réception GPS aux onglets Équipes et Orgas (enrôlement), y compris après un rechargement de l'OP.</summary>

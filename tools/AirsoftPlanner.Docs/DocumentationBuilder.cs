@@ -241,6 +241,7 @@ public static class DocumentationBuilder
         Bullets(col,
             "Ordre de mission de chaque équipe (PDF) : identification, transmissions, effectif, missions avec zones, coordonnées et matériel, points d'intérêt de l'équipe, QR code et code d'enrôlement de l'application, carte avec les zones de ses missions et les points qui lui sont visibles.",
             "Règles du jeu : rédigées dans le logiciel (mise en page PDF) ou importées (PDF, Word…).",
+            "Règlement ACP : choisi dans Général › Règlement de jeu, le PDF officiel est téléchargé depuis acp-rules.org et placé en tête des documents (joint tel quel, licence CC BY-NC-ND) ; le bouton 🔄 de l'onglet Documents récupère la dernière version, et revenir aux règles de l'OP le retire.",
             "Package par équipe : dossier et archive ZIP (ordre de mission + règles), avec le suivi de l'envoi et de la réception (« reçu par… »), et l'alerte « à renvoyer » si le contenu a changé.");
     }
 

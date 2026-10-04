@@ -8,6 +8,15 @@ using AirsoftPlanner.Core.Localization;
 
 namespace AirsoftPlanner.App.ViewModels;
 
+/// <summary>Règlement de jeu proposé dans une liste.</summary>
+public record RuleSetOption(AirsoftPlanner.Core.Documents.GameRuleSet Value, string Label)
+{
+    public static IReadOnlyList<RuleSetOption> All { get; } =
+        Enum.GetValues<AirsoftPlanner.Core.Documents.GameRuleSet>().Select(r => new RuleSetOption(r, AirsoftPlanner.Core.Documents.AcpRules.Label(r))).ToList();
+
+    public override string ToString() => Label;
+}
+
 /// <summary>Édition des informations générales d'une OP.</summary>
 public class OperationViewModel : ViewModelBase
 {
@@ -173,6 +182,27 @@ public class OperationViewModel : ViewModelBase
     }
 
     public IReadOnlyList<CoordinateFormatOption> CoordinateFormats => CoordinateFormatOption.All;
+
+    public IReadOnlyList<RuleSetOption> RuleSets => RuleSetOption.All;
+
+    /// <summary>Règlement de jeu ; ACP : le PDF officiel est ajouté aux documents (retiré si on revient aux règles de l'OP).</summary>
+    public RuleSetOption SelectedRuleSet
+    {
+        get => RuleSets.First(r => r.Value == operation.RuleSet);
+        set
+        {
+            if (value is null || value.Value == operation.RuleSet)
+                return;
+            operation.RuleSet = value.Value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsAcp));
+            RuleSetChanged?.Invoke(value.Value);
+        }
+    }
+
+    public bool IsAcp => operation.RuleSet == AirsoftPlanner.Core.Documents.GameRuleSet.Acp;
+
+    public event Action<AirsoftPlanner.Core.Documents.GameRuleSet>? RuleSetChanged;
 
     /// <summary>Format d'affichage à l'écran : paramètre de l'application (barre du haut), commun à toutes les OP.</summary>
     public CoordinateFormat CoordinateFormat => AppSettings.Current.CoordinateFormat;

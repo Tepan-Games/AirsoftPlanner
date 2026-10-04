@@ -48,6 +48,9 @@
             <TextBlock Text="{l:T format_des_coordonnees_dans_les_documents_imprim}" TextWrapping="Wrap" Classes="label" />
             <ComboBox ItemsSource="{Binding CoordinateFormats}" SelectedItem="{Binding SelectedCoordinateFormat}"
                       MinWidth="320" />
+            <TextBlock Text="{l:T reglement_de_jeu}" Classes="label" />
+            <ComboBox ItemsSource="{Binding RuleSets}" SelectedItem="{Binding SelectedRuleSet}" MinWidth="320" />
+            <TextBlock Text="{l:T reglement_acp_aide}" IsVisible="{Binding IsAcp}" TextWrapping="Wrap" FontSize="12" Opacity="0.75" />
             <TextBlock Text="{l:T description_contexte}" Classes="label" />
             <TextBox Text="{Binding Description}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="140" />
         </StackPanel>

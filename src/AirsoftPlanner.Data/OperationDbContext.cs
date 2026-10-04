@@ -126,6 +126,7 @@ public class OperationDbContext(DbContextOptions<OperationDbContext> options) : 
         modelBuilder.Entity<Operation>().Property(o => o.TrackingIntervalSeconds).HasDefaultValue(30);
         modelBuilder.Entity<Operation>().Property(o => o.AllyShareMode).HasConversion<string>();
         modelBuilder.Entity<Operation>().Property(o => o.HqDifficulty).HasConversion<string>();
+        modelBuilder.Entity<Operation>().Property(o => o.RuleSet).HasConversion<string>();
         modelBuilder.Entity<Faction>().Property(f => f.HqDifficulty).HasConversion<string>();
         modelBuilder.Entity<Operation>().Property(o => o.VehicleSpeedKmh).HasDefaultValue(25.0);
         modelBuilder.Entity<Organizer>().HasQueryFilter(e => !e.IsDeleted);

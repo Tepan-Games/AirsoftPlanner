@@ -56,4 +56,7 @@ public class Operation : Entity
 
     /// <summary>Niveau de difficulté de l'onglet QG des téléphones (chaque faction peut avoir le sien).</summary>
     public HqDifficulty HqDifficulty { get; set; } = HqDifficulty.Easy;
+
+    /// <summary>Règlement de jeu : règles propres à l'OP ou règlement ACP (PDF officiel joint automatiquement aux documents).</summary>
+    public AirsoftPlanner.Core.Documents.GameRuleSet RuleSet { get; set; }
 }

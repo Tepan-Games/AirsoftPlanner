@@ -18,6 +18,17 @@
                 <Button Content="▼" Command="{Binding MoveRuleDownCommand}" ToolTip.Tip="{l:T descendre}" />
                 <Button Content="🗑" Classes="icon" ToolTip.Tip="{l:T supprimer}" AutomationProperties.Name="{l:T supprimer}" Command="{Binding RemoveRuleCommand}" />
             </StackPanel>
+            <Border DockPanel.Dock="Top" IsVisible="{Binding IsAcp}" Background="#1A1565C0" CornerRadius="4" Padding="8,6" Margin="0,0,0,8">
+                <StackPanel Spacing="4">
+                    <WrapPanel ItemSpacing="8" LineSpacing="4">
+                        <TextBlock Text="{l:T reglement_acp_choisi_pour_l_op}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button Content="🔄" Classes="icon" Command="{Binding UpdateAcpRulesCommand}"
+                                ToolTip.Tip="{l:T mettre_a_jour_le_reglement_acp}" AutomationProperties.Name="{l:T mettre_a_jour_le_reglement_acp}" />
+                    </WrapPanel>
+                    <TextBlock Text="{Binding AcpStatus}" IsVisible="{Binding AcpStatus.Length}" TextWrapping="Wrap" FontSize="12" />
+                    <TextBlock Text="{l:T reglement_acp_licence}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+                </StackPanel>
+            </Border>
             <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}" MaxHeight="180">
                 <ListBox.ItemTemplate>
                     <DataTemplate x:DataType="vm:RuleDocumentViewModel">
