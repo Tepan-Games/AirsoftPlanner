@@ -44,6 +44,21 @@ public record PlayerRow(MemberViewModel? Member, string Name, bool IsOut, string
 /// <summary>Parcours d'une équipe sur la carte.</summary>
 public record TeamTrail(string Color, IReadOnlyList<GeoPoint> Points);
 
+/// <summary>Vitesse de lecture de la simulation (minutes d'OP par seconde réelle).</summary>
+public record PlaybackSpeed(double MinutesPerSecond, string Label)
+{
+    public static IReadOnlyList<PlaybackSpeed> All { get; } =
+    [
+        new(1 / 60.0, "× 1 (temps réel)"),
+        new(10 / 60.0, "× 10"),
+        new(1, "× 60 (1 min/s)"),
+        new(5, "× 300 (5 min/s)"),
+        new(15, "× 900 (15 min/s)"),
+    ];
+
+    public override string ToString() => Label;
+}
+
 /// <summary>Objet d'objectif affiché sur la carte.</summary>
 /// <param name="SymbolColor">Véhicule : couleur de la faction (symbole militaire) ; null pour un objet.</param>
 public record ItemMarker(GeoPoint Point, string Label, bool IsSelected, string? SymbolColor = null);
@@ -284,6 +299,67 @@ public partial class TrackingViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(NowMinutes), nameof(NowText))]
     private double _simulatedMinutes;
+
+    // ----- Lecture de la simulation : lecture, avance rapide, retour -----
+
+    private System.Threading.Timer? _player;
+
+    public IReadOnlyList<PlaybackSpeed> PlaybackSpeeds => PlaybackSpeed.All;
+
+    [ObservableProperty]
+    private PlaybackSpeed _playbackSpeed = PlaybackSpeed.All[2];
+
+    /// <summary>1 : lecture, -1 : retour, 0 : pause.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsPlaying))]
+    private int _playDirection;
+
+    public bool IsPlaying => PlayDirection != 0;
+
+    [RelayCommand]
+    private void PlayForward() => Play(1);
+
+    [RelayCommand]
+    private void PlayBackward() => Play(-1);
+
+    [RelayCommand]
+    private void PausePlayback() => PlayDirection = 0;
+
+    /// <summary>Saut de 5 minutes en avant (+) ou en arrière (-).</summary>
+    [RelayCommand]
+    private void Step(string minutes)
+    {
+        IsSimulation = true;
+        SimulatedMinutes = Math.Clamp(SimulatedMinutes + double.Parse(minutes, System.Globalization.CultureInfo.InvariantCulture), SimulationStart, SimulationEnd);
+    }
+
+    private void Play(int direction)
+    {
+        IsSimulation = true;
+        // Lecture depuis la fin (ou retour depuis le début) : on repart de l'autre bout.
+        if (direction > 0 && SimulatedMinutes >= SimulationEnd)
+            SimulatedMinutes = SimulationStart;
+        if (direction < 0 && SimulatedMinutes <= SimulationStart)
+            SimulatedMinutes = SimulationEnd;
+        PlayDirection = direction;
+        _player ??= new System.Threading.Timer(_ => Dispatcher.UIThread.Post(AdvancePlayback));
+        _player.Change(TimeSpan.FromMilliseconds(200), TimeSpan.FromMilliseconds(200));
+    }
+
+    private void AdvancePlayback()
+    {
+        if (PlayDirection == 0 || !IsSimulation)
+        {
+            PlayDirection = 0;
+            _player?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            return;
+        }
+
+        var next = SimulatedMinutes + PlayDirection * PlaybackSpeed.MinutesPerSecond * 0.2;
+        SimulatedMinutes = Math.Clamp(next, SimulationStart, SimulationEnd);
+        if (next <= SimulationStart || next >= SimulationEnd)
+            PlayDirection = 0;
+    }
 
     public double SimulationStart => _operation.StartMinutes;
 

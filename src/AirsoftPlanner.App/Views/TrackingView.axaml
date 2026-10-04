@@ -15,8 +15,18 @@
                     <RadioButton Content="Heure réelle" IsChecked="{Binding !IsSimulation}" GroupName="clock" />
                     <RadioButton Content="Simulation" IsChecked="{Binding IsSimulation}" GroupName="clock" />
                     <Slider Minimum="{Binding SimulationStart}" Maximum="{Binding SimulationEnd}" Value="{Binding SimulatedMinutes}"
-                            SmallChange="5" LargeChange="30" TickFrequency="5" IsSnapToTickEnabled="True" Width="260"
+                            SmallChange="5" LargeChange="30" Width="260"
                             IsEnabled="{Binding IsSimulation}" VerticalAlignment="Center" />
+                    <!-- Lecture de l'OP enregistrée : retour, pause, lecture, sauts de 5 min, vitesse -->
+                    <StackPanel Orientation="Horizontal" Spacing="2" VerticalAlignment="Center">
+                        <Button Content="⏮" Command="{Binding StepCommand}" CommandParameter="-5" ToolTip.Tip="5 minutes en arrière" Padding="6,2" />
+                        <Button Content="⏪" Command="{Binding PlayBackwardCommand}" ToolTip.Tip="Retour (lecture à l'envers)" Padding="6,2" />
+                        <Button Content="⏸" Command="{Binding PausePlaybackCommand}" ToolTip.Tip="Pause" Padding="6,2" IsEnabled="{Binding IsPlaying}" />
+                        <Button Content="▶" Command="{Binding PlayForwardCommand}" ToolTip.Tip="Lecture / avance rapide selon la vitesse choisie" Padding="6,2" />
+                        <Button Content="⏭" Command="{Binding StepCommand}" CommandParameter="5" ToolTip.Tip="5 minutes en avant" Padding="6,2" />
+                        <ComboBox ItemsSource="{Binding PlaybackSpeeds}" SelectedItem="{Binding PlaybackSpeed}" MinWidth="130" Margin="4,0,0,0"
+                                  ToolTip.Tip="Vitesse de lecture" />
+                    </StackPanel>
                     <TextBlock Text="{Binding NowText}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" Spacing="12" HorizontalAlignment="Right">
