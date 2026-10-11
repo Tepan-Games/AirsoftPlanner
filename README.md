@@ -15,14 +15,14 @@ et application Android du chef d'équipe (**Airsoft Planner · Field Link**).
 Vos retours décident de la suite : bug, idée, fonction qui manque pour vos OP.
 
 - **Sans compte** : menu « ⋯ » › *Donner mon avis* dans le logiciel, ou bouton *Donner mon avis* en bas de
-  l'application Android (formulaire rapide, la version utilisée est jointe automatiquement).
+  l'application Android ([formulaire rapide](https://tally.so/r/NpKYkl), la version utilisée est jointe automatiquement).
 - **Avec un compte GitHub** : [signaler un problème ou proposer une idée](https://github.com/Tepan-Games/AirsoftPlanner/issues/new/choose).
 
 ## Soutenir le projet
 
 Airsoft Planner est gratuit et libre, développé sur le temps libre. Pour aider à son développement :
 menu « ⋯ » › *Soutenir le projet* dans le logiciel, ou bouton *Soutenir le projet* dans l'application
-(page Ko-fi, don ponctuel par carte ou PayPal). Partager le logiciel avec d'autres organisateurs aide aussi beaucoup.
+([page Ko-fi](https://ko-fi.com/tepangames), don ponctuel par carte ou PayPal). Partager le logiciel avec d'autres organisateurs aide aussi beaucoup.
 
 ## Fichiers d'OP partageables (`.aop`)
 

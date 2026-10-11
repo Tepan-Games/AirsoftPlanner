@@ -38,11 +38,11 @@ des chefs d'équipe vers le QG ou l'orga
 https://github.com/Tepan-Games/AirsoftPlanner/releases/latest
 
 C'est une **bêta** : il reste sûrement des bugs et des manques. Vos retours vont décider de la suite — dans le
-logiciel, menu « ⋯ » › **Donner mon avis** (sans inscription), ou directement en commentaire ici. Ce qui
+logiciel, menu « ⋯ » › **Donner mon avis** ou https://tally.so/r/NpKYkl (sans inscription), ou directement en commentaire ici. Ce qui
 m'intéresse le plus : comment vous organisez vos OP aujourd'hui, et ce qui vous ferait gagner du temps.
 
 Le projet est développé sur mon temps libre : si l'outil vous rend service, vous pouvez le soutenir via
-menu « ⋯ » › **Soutenir le projet** — et partager ce post à d'autres orgas aide aussi énormément 🙏
+menu « ⋯ » › **Soutenir le projet** ou https://ko-fi.com/tepangames — et partager ce post à d'autres orgas aide aussi énormément 🙏
 
 Bonnes parties à tous !
 

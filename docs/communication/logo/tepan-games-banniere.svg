@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500">
+  <defs>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M50 0H0V50" fill="none" stroke="#2b352c" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="1500" height="500" fill="#1e2620"/>
+  <rect width="1500" height="500" fill="url(#grid)"/>
+  <!-- courbes de niveau -->
+  <g fill="none" stroke="#c9b37e" stroke-opacity=".12" stroke-width="3">
+    <path d="M900 520 C 960 380, 1150 360, 1220 250 S 1420 120, 1520 140"/>
+    <path d="M960 520 C 1020 420, 1190 400, 1270 290 S 1450 180, 1520 190"/>
+    <path d="M1030 520 C 1080 460, 1230 440, 1320 330 S 1470 240, 1520 245"/>
+  </g>
+  <g transform="translate(110 70) scale(0.703)">
+    <circle cx="256" cy="256" r="182" fill="none" stroke="#c9b37e" stroke-width="12"/>
+    <circle cx="256" cy="256" r="150" fill="none" stroke="#c9b37e" stroke-opacity=".25" stroke-width="3" stroke-dasharray="6 10"/>
+    <g stroke="#c9b37e" stroke-width="12" stroke-linecap="square">
+      <line x1="256" y1="46" x2="256" y2="104"/><line x1="256" y1="408" x2="256" y2="466"/>
+      <line x1="46" y1="256" x2="104" y2="256"/><line x1="408" y1="256" x2="466" y2="256"/>
+    </g>
+    <path d="M256 30 l14 0 l-14 22 l-14 -22 z" fill="#e0662f"/>
+    <text x="256" y="256" dy=".35em" text-anchor="middle" font-family="Bahnschrift, 'Segoe UI', sans-serif"
+          font-weight="700" font-size="178" letter-spacing="-4" fill="#efe6cf">TG</text>
+  </g>
+  <text x="530" y="250" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-weight="700" font-size="120"
+        letter-spacing="10" fill="#efe6cf">TEPAN GAMES</text>
+  <rect x="534" y="282" width="90" height="8" fill="#e0662f"/>
+  <text x="534" y="350" font-family="Bahnschrift, 'Segoe UI', sans-serif" font-size="40" letter-spacing="2"
+        fill="#c9b37e">Outils libres pour l'airsoft et le milsim</text>
+</svg>

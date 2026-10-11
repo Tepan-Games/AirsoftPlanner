@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="104" fill="#1e2620"/>
+  <rect x="14" y="14" width="484" height="484" rx="92" fill="none" stroke="#2f3a30" stroke-width="4"/>
+  <!-- réticule -->
+  <circle cx="256" cy="256" r="182" fill="none" stroke="#c9b37e" stroke-width="12"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#c9b37e" stroke-opacity=".25" stroke-width="3" stroke-dasharray="6 10"/>
+  <g stroke="#c9b37e" stroke-width="12" stroke-linecap="square">
+    <line x1="256" y1="46" x2="256" y2="104"/>
+    <line x1="256" y1="408" x2="256" y2="466"/>
+    <line x1="46" y1="256" x2="104" y2="256"/>
+    <line x1="408" y1="256" x2="466" y2="256"/>
+  </g>
+  <path d="M256 30 l14 -0 l-14 22 l-14 -22 z" fill="#e0662f"/>
+  <!-- monogramme -->
+  <text x="256" y="256" dy=".35em" text-anchor="middle" font-family="Bahnschrift, 'Segoe UI', sans-serif"
+        font-weight="700" font-size="178" letter-spacing="-4" fill="#efe6cf">TG</text>
+</svg>
