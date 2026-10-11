@@ -7,8 +7,10 @@ Texte prêt à coller. Joindre les 5 visuels de `docs/communication/visuels/` da
 
 🎯 **Orgas d'OP : un logiciel gratuit pour préparer, mener et débriefer vos parties — bêta ouverte**
 
-Salut à tous ! Je développe **Airsoft Planner**, un logiciel pensé pour les organisateurs d'OP milsim, et je cherche
-des orgas pour le tester sur de vraies parties.
+Salut à tous ! Certains me connaissent sous le pseudo d'**Arcuce** : j'ai participé à l'organisation d'événements au
+sein de l'association Airsoft-Provence (ASP Milsim), notamment sur les OP Search & Destroy. Je développe aujourd'hui
+**Airsoft Planner**, un logiciel pensé pour les organisateurs d'OP milsim, et je cherche des orgas pour le tester sur
+de vraies parties.
 
 **Avant l'OP**
 🗺️ Factions, équipes, inscriptions et paiements, terrain sur cartes IGN (photo aérienne / Plan IGN, coordonnées UTM
