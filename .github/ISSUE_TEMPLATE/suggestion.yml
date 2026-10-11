@@ -1,0 +1,30 @@
+name: 💡 Proposer une idée
+description: Une fonction qui vous manque pour organiser ou mener une OP, une amélioration.
+labels: ["suggestion", "bêta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Les idées des organisateurs et des joueurs guident la suite du développement. Décrivez le besoin sur le terrain
+        plutôt que la solution technique : comment faites-vous aujourd'hui, et qu'est-ce qui vous ferait gagner du temps ?
+  - type: dropdown
+    id: role
+    attributes:
+      label: Vous êtes
+      options:
+        - Organisateur d'OP
+        - Chef d'équipe
+        - Joueur
+        - Autre
+  - type: textarea
+    id: besoin
+    attributes:
+      label: Le besoin
+      description: Dans quelle situation (préparation, pendant l'OP, après) ? Qu'est-ce qui manque ?
+    validations:
+      required: true
+  - type: textarea
+    id: idee
+    attributes:
+      label: Votre idée
+      description: Comment l'imaginez-vous dans le logiciel ou l'application ?

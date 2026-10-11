@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📝 Donner son avis sans compte GitHub
+    url: https://github.com/Tepan-Games/AirsoftPlanner#donner-son-avis-bêta
+    about: Formulaire rapide (sans inscription), accessible aussi depuis le logiciel et l'application.
+  - name: ❤ Soutenir le projet
+    url: https://github.com/Tepan-Games/AirsoftPlanner#soutenir-le-projet
+    about: Logiciel gratuit et libre, développé sur le temps libre.

@@ -4,7 +4,25 @@ Logiciel de gestion d'OP (parties organisées) d'airsoft : création des faction
 inscription des équipes, frise temporelle des missions avec gestion des retards, suivi GPS des
 équipes, génération des ordres de mission et des règles du jeu, suivi des finances.
 
-Application de bureau **hors ligne d'abord**, en C# / .NET 10 avec [Avalonia](https://avaloniaui.net/).
+Application de bureau **hors ligne d'abord**, en C# / .NET 10 avec [Avalonia](https://avaloniaui.net/),
+et application Android du chef d'équipe (**Airsoft Planner · Field Link**).
+
+**Version bêta** — téléchargement : [dernière version](https://github.com/Tepan-Games/AirsoftPlanner/releases/latest)
+(installateur Windows, application Android, guide d'utilisation PDF, OP d'exemple).
+
+## Donner son avis (bêta)
+
+Vos retours décident de la suite : bug, idée, fonction qui manque pour vos OP.
+
+- **Sans compte** : menu « ⋯ » › *Donner mon avis* dans le logiciel, ou bouton *Donner mon avis* en bas de
+  l'application Android (formulaire rapide, la version utilisée est jointe automatiquement).
+- **Avec un compte GitHub** : [signaler un problème ou proposer une idée](https://github.com/Tepan-Games/AirsoftPlanner/issues/new/choose).
+
+## Soutenir le projet
+
+Airsoft Planner est gratuit et libre, développé sur le temps libre. Pour aider à son développement :
+menu « ⋯ » › *Soutenir le projet* dans le logiciel, ou bouton *Soutenir le projet* dans l'application
+(page Ko-fi, don ponctuel par carte ou PayPal). Partager le logiciel avec d'autres organisateurs aide aussi beaucoup.
 
 ## Fichiers d'OP partageables (`.aop`)
 

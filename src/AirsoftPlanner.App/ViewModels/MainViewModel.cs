@@ -234,7 +234,7 @@ public partial class MainViewModel : ViewModelBase, IDisposable
 
     // ----- Installation -----
 
-    public string VersionText => L.F("airsoft_planner_x", typeof(MainViewModel).Assembly.GetName().Version?.ToString(3));
+    public string VersionText => L.F("airsoft_planner_x", typeof(MainViewModel).Assembly.GetName().Version?.ToString(3)) + " " + L.T("beta");
 
     /// <summary>Associe les fichiers .aop au logiciel (utilisateur courant) : ouverture par double-clic.</summary>
     [RelayCommand]
@@ -260,9 +260,38 @@ public partial class MainViewModel : ViewModelBase, IDisposable
     [RelayCommand]
     private async Task AboutAsync() => await dialogs.ShowInfoAsync(L.T("a_propos"),
         L.F("x_tepan_games_logiciel_de_preparation_et_de_suiv", VersionText)
+        + L.T("version_beta_avis") + "\n\n"
         + L.F("code_source_et_nouvelles_versions_x", ProjectSite)
-        + L.T("licence_gpl") + "\n\n"
+        + L.T("soutenir_le_projet_a_propos") + "\n\n"
+        + L.T("licence_gpl") + "\n"
+        + L.T("confidentialite_a_propos") + "\n\n"
         + L.T("cartes_ign_geoplateforme_licence_ouverte_pdf_que"));
+
+    private static readonly System.Net.Http.HttpClient LinksHttp = new() { Timeout = TimeSpan.FromSeconds(5) };
+
+    /// <summary>Formulaire d'avis de la bêta (version, plateforme et langue jointes).</summary>
+    [RelayCommand]
+    private async Task GiveFeedbackAsync()
+    {
+        var links = await Core.Updates.ProjectLinks.GetAsync(LinksHttp);
+        OpenUrl(Core.Updates.ProjectLinks.WithContext(links.Feedback, UpdatesViewModel.CurrentVersion.ToString(3), "windows", AirsoftPlanner.Core.Localization.L.Code));
+    }
+
+    /// <summary>Page de dons (Ko-fi) pour soutenir le développement.</summary>
+    [RelayCommand]
+    private async Task SupportProjectAsync() => OpenUrl((await Core.Updates.ProjectLinks.GetAsync(LinksHttp)).Donate);
+
+    private static void OpenUrl(string url)
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            // Pas de navigateur par défaut.
+        }
+    }
 
     /// <summary>Change la langue : enregistrée pour ce poste, appliquée en redémarrant le logiciel (l'OP ouverte est rouverte).</summary>
     [RelayCommand]

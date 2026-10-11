@@ -100,7 +100,11 @@ public static class DocumentationBuilder
             "Le logiciel vérifie à chaque démarrage si une nouvelle version est publiée sur GitHub (et à la demande : menu « ⋯ » › Rechercher une mise à jour).",
             "Un bandeau propose alors « Mettre à jour » : la nouvelle version est téléchargée, installée, et le logiciel redémarre (l'OP en cours est enregistrée d'abord). « Plus tard » masque la proposition jusqu'au prochain démarrage. La vérification automatique se désactive dans le menu « ⋯ ».",
             "L'application affiche un bouton de téléchargement de la nouvelle APK.",
-            "Sans connexion Internet, ou tant que le dépôt du projet n'est pas public, aucune alerte n'est affichée.");
+            "Sans connexion Internet, aucune alerte n'est affichée.");
+        H2(col, "Version bêta : donner son avis, soutenir le projet");
+        Bullets(col,
+            "Menu « ⋯ » › Donner mon avis (ou bouton en bas de l'application) : formulaire rapide, sans inscription ; la version utilisée est jointe automatiquement. Avec un compte GitHub, le dépôt propose aussi des modèles « Signaler un problème » et « Proposer une idée ».",
+            "Menu « ⋯ » › Soutenir le projet : page de dons pour aider au développement de ce logiciel gratuit et libre.");
     }
 
     private static void Preparation(PdfFlow col, IReadOnlyDictionary<string, byte[]> img)

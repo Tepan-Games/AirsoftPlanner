@@ -907,8 +907,22 @@ public class MainActivity : Activity
     private void About()
     {
         var version = PackageManager?.GetPackageInfo(PackageName!, 0)?.VersionName ?? "";
-        Text(L.F("a_propos_airsoft_planner_x_tepan_games_code_sour", version, AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl) + "\n" + L.T("licence_gpl"), 12, secondary: true)
+        Text(L.F("a_propos_airsoft_planner_x_tepan_games_code_sour", version + " " + L.T("beta"), AirsoftPlanner.Core.Updates.UpdateChecker.ProjectUrl)
+             + "\n" + L.T("licence_gpl") + "\n" + L.T("confidentialite_a_propos"), 12, secondary: true)
             .AutoLinkMask = Android.Text.Util.MatchOptions.WebUrls;
+        // Bêta : avis des testeurs et soutien du développement.
+        var links = new LinearLayout(this) { Orientation = Orientation.Horizontal };
+        var feedback = new Button(this) { Text = L.T("donner_mon_avis_menu"), TextSize = 12 };
+        feedback.Click += async (_, _) =>
+        {
+            var set = await AirsoftPlanner.Core.Updates.ProjectLinks.GetAsync(UpdateHttp);
+            OpenUrl(AirsoftPlanner.Core.Updates.ProjectLinks.WithContext(set.Feedback, version, "android", L.Code));
+        };
+        var support = new Button(this) { Text = L.T("soutenir_le_projet_menu"), TextSize = 12 };
+        support.Click += async (_, _) => OpenUrl((await AirsoftPlanner.Core.Updates.ProjectLinks.GetAsync(UpdateHttp)).Donate);
+        links.AddView(feedback, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        links.AddView(support, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WrapContent, 1));
+        _target.AddView(links, Spaced(4));
         var update = PrimaryButton("", Color.Rgb(46, 125, 50));
         update.Visibility = ViewStates.Gone;
         // Seule communication engagée par l'application d'elle-même, hors échanges avec le PC de l'OP : désactivable.
@@ -927,6 +941,18 @@ public class MainActivity : Activity
     }
 
     private static readonly HttpClient UpdateHttp = new() { Timeout = TimeSpan.FromSeconds(15) };
+
+    private void OpenUrl(string url)
+    {
+        try
+        {
+            StartActivity(new Intent(Intent.ActionView, Android.Net.Uri.Parse(url)));
+        }
+        catch (ActivityNotFoundException)
+        {
+            Toast.MakeText(this, url, ToastLength.Long)!.Show();
+        }
+    }
 
     private async Task ShowUpdateAsync(Button button, string installed)
     {
