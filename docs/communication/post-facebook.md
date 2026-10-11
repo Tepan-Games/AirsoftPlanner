@@ -1,7 +1,7 @@
 # Post Facebook — lancement de la bêta (groupes milsim / airsoft)
 
-Texte prêt à coller. Joindre 3 ou 4 captures : suivi de l'OP (frise + carte), ordre de mission PDF, application
-Android (onglet QG), RETEX. Les captures du guide (`docs/Airsoft Planner - Guide d'utilisation.pdf`) conviennent.
+Texte prêt à coller. Joindre les 5 visuels de `docs/communication/visuels/` dans l'ordre (fb-1 à fb-5, format carré
+1200×1200) : présentation, scénario sur la frise, terrain sur cartes IGN, suivi de l'OP, application du chef d'équipe.
 
 ---
 

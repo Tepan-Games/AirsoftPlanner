@@ -18,7 +18,7 @@ using Avalonia.VisualTree;
 
 if (args.Length < 3)
 {
-    Console.WriteLine("Usage : AirsoftPlanner.Docs <démo.aop> <dossier captures Android> <documentation.pdf>");
+    Console.WriteLine("Usage : AirsoftPlanner.Docs <démo.aop> <dossier captures Android> <documentation.pdf> [dossier des captures PNG]");
     return 1;
 }
 
@@ -104,6 +104,13 @@ var android = Directory.Exists(args[1])
     ? Directory.GetFiles(args[1], "android-*.png").OrderBy(f => f).ToDictionary(f => Path.GetFileNameWithoutExtension(f), File.ReadAllBytes)
     : [];
 Console.WriteLine($"{shots.Count} captures du logiciel, {android.Count} captures Android");
+// Dossier facultatif : captures brutes en PNG (visuels de communication).
+if (args.Length > 3)
+{
+    Directory.CreateDirectory(args[3]);
+    foreach (var (name, png) in shots)
+        File.WriteAllBytes(Path.Combine(args[3], name + ".png"), png);
+}
 // L'OP préparée sert aussi de fichier d'exemple pour l'archive de distribution.
 var save = main.SaveCommand.ExecuteAsync(null);
 while (!save.IsCompleted)
